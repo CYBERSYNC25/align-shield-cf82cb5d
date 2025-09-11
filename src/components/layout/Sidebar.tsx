@@ -55,6 +55,7 @@ const sidebarItems: SidebarItem[] = [
     id: 'access-reviews',
     label: 'Revisões de Acesso',
     icon: Users,
+    href: '/access-reviews',
     badge: 3
   },
   {

@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import ControlsFrameworks from "./pages/ControlsFrameworks";
 import IntegrationsHub from "./pages/IntegrationsHub";
 import PoliciesTraining from "./pages/PoliciesTraining";
+import AccessReviews from "./pages/AccessReviews";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/controls" element={<ControlsFrameworks />} />
           <Route path="/integrations" element={<IntegrationsHub />} />
           <Route path="/policies" element={<PoliciesTraining />} />
+          <Route path="/access-reviews" element={<AccessReviews />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
