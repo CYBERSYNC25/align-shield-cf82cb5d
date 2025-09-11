@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useReports } from '@/hooks/useReports';
+import { toast } from '@/hooks/use-toast';
 import { 
   Plus, 
   Calendar, 
@@ -16,74 +18,58 @@ import {
 } from 'lucide-react';
 
 const ScheduledReports = () => {
-  const scheduledReports = [
-    {
-      name: 'Executive Security Summary',
-      description: 'Relatório executivo semanal com KPIs de segurança',
-      schedule: 'Toda segunda-feira às 08:00',
-      nextRun: '25/11/2024 08:00',
-      lastRun: '18/11/2024 08:00',
-      status: 'active',
-      format: 'PDF',
-      recipients: [
-        { name: 'CEO', email: 'ceo@empresa.com' },
-        { name: 'CISO', email: 'ciso@empresa.com' },
-        { name: 'CTO', email: 'cto@empresa.com' }
-      ],
-      deliveryMethod: 'email',
-      successRate: 100,
-      lastStatus: 'success'
-    },
-    {
-      name: 'Compliance Dashboard Monthly',
-      description: 'Dashboard mensal de conformidade para auditores',
-      schedule: '1º dia útil do mês às 09:00',
-      nextRun: '01/12/2024 09:00',
-      lastRun: '01/11/2024 09:00',
-      status: 'active',
-      format: 'PowerPoint',
-      recipients: [
-        { name: 'Compliance Officer', email: 'compliance@empresa.com' },
-        { name: 'Risk Manager', email: 'risk@empresa.com' },
-        { name: 'External Auditor', email: 'auditor@auditfirm.com' }
-      ],
-      deliveryMethod: 'email',
-      successRate: 95,
-      lastStatus: 'success'
-    },
-    {
-      name: 'SOC 2 Evidence Package',
-      description: 'Pacote trimestral de evidências SOC 2 para auditoria',
-      schedule: 'Último dia do trimestre às 17:00',
-      nextRun: '31/12/2024 17:00',
-      lastRun: '30/09/2024 17:00',
-      status: 'paused',
-      format: 'ZIP Archive',
-      recipients: [
-        { name: 'SOC 2 Auditor', email: 'soc2@auditfirm.com' },
-        { name: 'Compliance Team', email: 'compliance-team@empresa.com' }
-      ],
-      deliveryMethod: 'secure_link',
-      successRate: 88,
-      lastStatus: 'warning'
-    },
-    {
-      name: 'Weekly Risk Assessment',
-      description: 'Avaliação semanal de riscos e incidentes de segurança',
-      schedule: 'Toda sexta-feira às 16:00',
-      nextRun: '22/11/2024 16:00',
-      lastRun: '15/11/2024 16:00',
-      status: 'active',
-      format: 'Excel',
-      recipients: [
-        { name: 'Risk Team', email: 'risk-team@empresa.com' },
-        { name: 'Security Analysts', email: 'security@empresa.com' }
-      ],
-      deliveryMethod: 'email',
-      successRate: 92,
-      lastStatus: 'success'
-    }
-  ];
+  const { scheduledReports, loading, toggleScheduledReport } = useReports();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-7 bg-muted rounded w-48 animate-pulse"></div>
+          <div className="h-10 bg-muted rounded w-32 animate-pulse"></div>
+        </div>
+        <div className="space-y-4 max-h-[600px] overflow-y-auto">
+          {[...Array(4)].map((_, index) => (
+            <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+              <CardHeader className="pb-3">
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-6 bg-muted rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-16 bg-muted rounded"></div>
+                <div className="h-4 bg-muted rounded w-3/4"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                  <div className="h-12 bg-muted rounded"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const handleToggleReport = async (reportId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+    await toggleScheduledReport(reportId, newStatus as 'active' | 'paused');
+  };
+
+  const handleEditSchedule = (reportName: string) => {
+    toast({
+      title: "Editar Agendamento",
+      description: `Abrindo editor para "${reportName}"...`,
+    });
+  };
+
+  const handleRunNow = (reportName: string) => {
+    toast({
+      title: "Executando Relatório",
+      description: `"${reportName}" está sendo executado agora.`,
+    });
+  };
 
   const getStatusBadge = (status: string, lastStatus: string) => {
     if (status === 'paused') {
@@ -149,15 +135,27 @@ const ScheduledReports = () => {
                 </div>
                 
                 <div className="flex gap-1">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleEditSchedule(report.name)}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                   {report.status === 'paused' ? (
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleToggleReport(report.id, report.status)}
+                    >
                       <Play className="h-4 w-4" />
                     </Button>
                   ) : (
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleToggleReport(report.id, report.status)}
+                    >
                       <Pause className="h-4 w-4" />
                     </Button>
                   )}
@@ -219,11 +217,21 @@ const ScheduledReports = () => {
 
               {/* Actions */}
               <div className="flex gap-2 pt-2 border-t border-border">
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleRunNow(report.name)}
+                >
                   <Play className="h-4 w-4 mr-2" />
                   Executar Agora
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleEditSchedule(report.name)}
+                >
                   <Calendar className="h-4 w-4 mr-2" />
                   Editar Agenda
                 </Button>

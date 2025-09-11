@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useReports } from '@/hooks/useReports';
 import { 
   FileText, 
   Download, 
@@ -13,50 +14,73 @@ import {
 } from 'lucide-react';
 
 const ReportsStats = () => {
-  const stats = [
+  const { stats, loading } = useReports();
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, index) => (
+          <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="h-4 bg-muted rounded w-24"></div>
+              <div className="h-8 w-8 bg-muted rounded-lg"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="h-8 bg-muted rounded w-16"></div>
+                <div className="h-4 bg-muted rounded w-20"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  const statsData = [
     {
       title: 'Relatórios Gerados',
-      value: '247',
-      change: '+18 esta semana',
+      value: stats.totalGenerated.toString(),
+      change: `+${stats.weeklyGrowth} esta semana`,
       icon: FileText,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      subtitle: '89 este mês'
+      subtitle: `${stats.monthlyCount} este mês`
     },
     {
       title: 'Downloads Totais',
-      value: '1,423',
+      value: stats.totalDownloads.toLocaleString(),
       change: '+47',
       icon: Download,
       color: 'text-success',
       bgColor: 'bg-success/10',
-      subtitle: '156 únicos'
+      subtitle: `${stats.uniqueDownloads} únicos`
     },
     {
       title: 'Relatórios Agendados',
-      value: '12',
-      active: 8,
-      total: 12,
+      value: stats.scheduledReports.toString(),
+      active: stats.activeScheduled,
+      total: stats.scheduledReports,
       icon: Calendar,
       color: 'text-info',
       bgColor: 'bg-info/10',
-      progress: 67,
-      subtitle: '8 ativos'
+      progress: Math.round((stats.activeScheduled / stats.scheduledReports) * 100),
+      subtitle: `${stats.activeScheduled} ativos`
     },
     {
       title: 'Links Compartilhados',
-      value: '34',
+      value: stats.sharedLinks.toString(),
       status: 'active',
       icon: Share2,
       color: 'text-accent',
       bgColor: 'bg-accent/10',
-      subtitle: 'Expirando: 3'
+      subtitle: `Expirando: ${stats.expiringLinks}`
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
+      {statsData.map((stat, index) => (
         <Card key={index} className="bg-surface-elevated border-card-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
