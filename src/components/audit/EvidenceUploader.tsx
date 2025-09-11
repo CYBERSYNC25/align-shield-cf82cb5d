@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Upload, 
   FileText, 
@@ -40,6 +40,7 @@ const EvidenceUploader = ({ trigger }: EvidenceUploaderProps) => {
   const [uploading, setUploading] = useState(false);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const { toast } = useToast();
   
   const [evidenceData, setEvidenceData] = useState({
     title: '',

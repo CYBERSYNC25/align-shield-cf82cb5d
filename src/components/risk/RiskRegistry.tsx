@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useRisks } from '@/hooks/useRisks';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   AlertTriangle, 
@@ -17,6 +17,7 @@ import {
 
 const RiskRegistry = () => {
   const { risks, loading, updateRiskStatus } = useRisks();
+  const { toast } = useToast();
 
   if (loading) {
     return (

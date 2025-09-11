@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useIncidents } from '@/hooks/useIncidents';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   AlertTriangle, 
@@ -17,6 +17,7 @@ import {
 
 const ActiveIncidents = () => {
   const { incidents, loading, updateIncidentStatus, escalateIncident } = useIncidents();
+  const { toast } = useToast();
 
   if (loading) {
     return (

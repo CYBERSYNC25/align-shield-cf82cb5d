@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { LogIn, Mail, Lock, Shield } from 'lucide-react';
 
 interface AuthModalProps {
@@ -17,6 +17,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
+  const { toast } = useToast();
   
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '' });

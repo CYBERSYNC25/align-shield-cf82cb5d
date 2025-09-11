@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useIncidents } from '@/hooks/useIncidents';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   BookOpen, 
@@ -17,6 +17,7 @@ import {
 
 const IncidentPlaybooks = () => {
   const { playbooks, loading, executePlaybook } = useIncidents();
+  const { toast } = useToast();
 
   if (loading) {
     return (

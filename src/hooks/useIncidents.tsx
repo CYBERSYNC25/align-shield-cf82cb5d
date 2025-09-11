@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export interface Incident {
   id: string;
@@ -86,6 +86,7 @@ export const useIncidents = () => {
     scheduledTests: 0
   });
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   // Mock data - substitua por dados reais do Supabase quando configurado
   const mockIncidents: Incident[] = [

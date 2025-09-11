@@ -12,7 +12,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useTasks } from '@/hooks/useTasks';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   CalendarIcon, 
@@ -33,6 +33,7 @@ interface CreateTaskModalProps {
 const CreateTaskModal = ({ trigger }: CreateTaskModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const [date, setDate] = useState<Date>();
   const { createTask } = useTasks();
   

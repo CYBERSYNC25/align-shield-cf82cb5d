@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useReports } from '@/hooks/useReports';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   FileText, 
   Download, 
@@ -19,6 +19,7 @@ import {
 
 const ReadyReports = () => {
   const { reports, loading, generateReport } = useReports();
+  const { toast } = useToast();
 
   if (loading) {
     return (

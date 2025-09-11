@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useReports } from '@/hooks/useReports';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   Calendar, 
@@ -19,6 +19,7 @@ import {
 
 const ScheduledReports = () => {
   const { scheduledReports, loading, toggleScheduledReport } = useReports();
+  const { toast } = useToast();
 
   if (loading) {
     return (

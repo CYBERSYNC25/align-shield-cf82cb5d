@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useRisks } from '@/hooks/useRisks';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   FileText,
   Shield,
@@ -21,6 +21,7 @@ import {
 
 const VendorTable = () => {
   const { vendors, loading } = useRisks();
+  const { toast } = useToast();
 
   const handleAssessVendor = async (vendorName: string) => {
     toast({

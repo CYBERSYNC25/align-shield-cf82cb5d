@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRisks } from '@/hooks/useRisks';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Plus, 
   FileText, 
@@ -21,6 +21,7 @@ import {
 
 const RiskAssessments = () => {
   const { assessments, loading, sendAssessment } = useRisks();
+  const { toast } = useToast();
 
   if (loading) {
     return (

@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useIncidents } from '@/hooks/useIncidents';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Shield, 
   Calendar, 
@@ -17,6 +17,7 @@ import {
 
 const BusinessContinuity = () => {
   const { bcpPlans, loading, runBcpTest } = useIncidents();
+  const { toast } = useToast();
 
   if (loading) {
     return (
