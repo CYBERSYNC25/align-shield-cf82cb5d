@@ -33,11 +33,12 @@ export default function CreateAuditModal() {
 
     try {
       const audit = await createAudit({
-        ...formData,
-        start_date: new Date(formData.start_date).toISOString(),
-        end_date: new Date(formData.end_date).toISOString(),
-        evidence_count: 0,
-        findings_count: 0
+        name: formData.title,
+        framework: formData.framework,
+        auditor: formData.auditor_name,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        status: formData.status
       });
 
       if (audit) {

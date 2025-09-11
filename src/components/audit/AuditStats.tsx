@@ -44,7 +44,7 @@ const AuditStats = () => {
       icon: Database,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      subtitle: `${formatFileSize(stats.totalSize)} de dados seguros`
+      subtitle: `${stats.totalEvidence} arquivos de evidência`
     },
     {
       title: 'Auditorias Ativas',
