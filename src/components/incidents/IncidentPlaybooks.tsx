@@ -1,6 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useIncidents } from '@/hooks/useIncidents';
+import { toast } from '@/hooks/use-toast';
 import { 
   Plus, 
   BookOpen, 
@@ -14,73 +16,59 @@ import {
 } from 'lucide-react';
 
 const IncidentPlaybooks = () => {
-  const playbooks = [
-    {
-      name: 'Security Breach Response',
-      category: 'Security',
-      severity: 'critical',
-      estimatedTime: '2-4 horas',
-      lastUsed: '21/11/2024',
-      usageCount: 3,
-      steps: 12,
-      roles: ['CISO', 'Security Analyst', 'IT Manager', 'Communications'],
-      description: 'Resposta completa a incidentes de segurança incluindo contenção, investigação e comunicação',
-      triggers: ['Tentativa de acesso não autorizado', 'Malware detectado', 'Data exfiltration'],
-      icon: '🛡️'
-    },
-    {
-      name: 'Backup System Failure Response',
-      category: 'Infrastructure',
-      severity: 'high',
-      estimatedTime: '1-3 horas',
-      lastUsed: '21/11/2024',
-      usageCount: 1,
-      steps: 8,
-      roles: ['Infrastructure Lead', 'DevOps', 'Database Admin'],
-      description: 'Procedimentos para falhas no sistema de backup e recuperação de dados',
-      triggers: ['Falha no backup automatizado', 'Corrupção de backup', 'Hardware failure'],
-      icon: '💾'
-    },
-    {
-      name: 'Performance Degradation Response',
-      category: 'Performance',
-      severity: 'medium',
-      estimatedTime: '30min-2h',
-      lastUsed: '21/11/2024',
-      usageCount: 2,
-      steps: 6,
-      roles: ['DevOps Engineer', 'SRE', 'Database Admin'],
-      description: 'Investigação e resolução de problemas de performance em sistemas críticos',
-      triggers: ['API latency elevada', 'Database slowdown', 'Memory/CPU spikes'],
-      icon: '⚡'
-    },
-    {
-      name: 'Data Loss Prevention',
-      category: 'Data Protection',
-      severity: 'high',
-      estimatedTime: '1-6 horas',
-      lastUsed: '15/11/2024',
-      usageCount: 0,
-      steps: 10,
-      roles: ['DPO', 'Legal', 'IT Security', 'Management'],
-      description: 'Resposta a incidentes de perda ou exposição de dados pessoais',
-      triggers: ['Data breach detectado', 'Acesso indevido a dados', 'Vazamento acidental'],
-      icon: '🔒'
-    },
-    {
-      name: 'Ransomware Response',
-      category: 'Security',
-      severity: 'critical',
-      estimatedTime: '4-12 horas',
-      lastUsed: 'Nunca usado',
-      usageCount: 0,
-      steps: 15,
-      roles: ['CISO', 'IT Manager', 'Legal', 'Communications', 'CEO'],
-      description: 'Procedimentos de resposta a ataques de ransomware incluindo isolamento e recuperação',
-      triggers: ['Detecção de criptografia maliciosa', 'Nota de resgate', 'Sistemas inacessíveis'],
-      icon: '🚨'
-    }
-  ];
+  const { playbooks, loading, executePlaybook } = useIncidents();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-7 bg-muted rounded w-48 animate-pulse"></div>
+          <div className="h-10 bg-muted rounded w-32 animate-pulse"></div>
+        </div>
+        <div className="space-y-4 max-h-[600px] overflow-y-auto">
+          {[...Array(5)].map((_, index) => (
+            <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+              <CardHeader className="pb-3">
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-6 bg-muted rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-16 bg-muted rounded"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const handleExecutePlaybook = async (playbookId: string) => {
+    await executePlaybook(playbookId);
+  };
+
+  const handleViewPlaybook = (playbookName: string) => {
+    toast({
+      title: "Visualizar Playbook",
+      description: `Abrindo "${playbookName}"...`,
+    });
+  };
+
+  const getPlaybookIcon = (category: string) => {
+    const iconMap: Record<string, string> = {
+      'Security': '🛡️',
+      'Infrastructure': '💾',
+      'Performance': '⚡',
+      'Data Protection': '🔒'
+    };
+    return iconMap[category] || '📋';
+  };
 
   const getSeverityBadge = (severity: string) => {
     const config = {
@@ -124,7 +112,7 @@ const IncidentPlaybooks = () => {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="text-xl">{playbook.icon}</div>
+                  <div className="text-xl">{getPlaybookIcon(playbook.category)}</div>
                   <div>
                     <CardTitle className="text-base font-semibold mb-2">
                       {playbook.name}
@@ -139,7 +127,12 @@ const IncidentPlaybooks = () => {
                   </div>
                 </div>
                 
-                <Button variant="outline" size="sm" className="gap-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-1"
+                  onClick={() => handleExecutePlaybook(playbook.id)}
+                >
                   <Play className="h-4 w-4" />
                   Executar
                 </Button>
@@ -200,7 +193,12 @@ const IncidentPlaybooks = () => {
                   Último uso: {playbook.lastUsed}
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="text-xs h-6">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs h-6"
+                    onClick={() => handleViewPlaybook(playbook.name)}
+                  >
                     <BookOpen className="h-3 w-3 mr-1" />
                     Visualizar
                   </Button>

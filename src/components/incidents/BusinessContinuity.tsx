@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { useIncidents } from '@/hooks/useIncidents';
+import { toast } from '@/hooks/use-toast';
 import { 
   Shield, 
   Calendar, 
@@ -14,68 +16,50 @@ import {
 } from 'lucide-react';
 
 const BusinessContinuity = () => {
-  const bcpPlans = [
-    {
-      name: 'Plano de Recuperação de Desastres',
-      type: 'DR Plan',
-      status: 'tested',
-      lastTested: '15/10/2024',
-      nextTest: '15/01/2025',
-      rto: '4 horas',
-      rpo: '1 hora',
-      coverage: 95,
-      criticalSystems: ['Database Principal', 'API Gateway', 'Auth Service'],
-      testResults: 'Sucesso - RTO atingido em 3.2h'
-    },
-    {
-      name: 'Continuidade de Operações TI',
-      type: 'BCP',
-      status: 'updated',
-      lastTested: '08/11/2024',
-      nextTest: '08/02/2025',
-      rto: '2 horas',
-      rpo: '30 min',
-      coverage: 88,
-      criticalSystems: ['Payment System', 'Customer Portal', 'Monitoring'],
-      testResults: 'Sucesso - Todos os sistemas restaurados'
-    },
-    {
-      name: 'Plano de Backup e Restore',
-      type: 'Backup Plan',
-      status: 'scheduled',
-      lastTested: '20/09/2024',
-      nextTest: '20/12/2024',
-      rto: '6 horas',
-      rpo: '4 horas',
-      coverage: 92,
-      criticalSystems: ['File Storage', 'Database Backup', 'Configuration'],
-      testResults: 'Teste agendado para dezembro'
-    }
-  ];
+  const { bcpPlans, loading, runBcpTest } = useIncidents();
 
-  const upcomingTests = [
-    {
-      plan: 'DR Plan - Datacenter Failover',
-      scheduledDate: '15/01/2025',
-      duration: '4 horas',
-      participants: ['Infraestrutura', 'DevOps', 'Segurança'],
-      scope: 'Failover completo para datacenter secundário'
-    },
-    {
-      plan: 'BCP - Simulação de Ransomware',
-      scheduledDate: '08/02/2025',
-      duration: '6 horas',
-      participants: ['Security Team', 'IT Management', 'Communications'],
-      scope: 'Resposta a incidente de ransomware com restore'
-    },
-    {
-      plan: 'Backup Test - Database Recovery',
-      scheduledDate: '20/12/2024',
-      duration: '2 horas',
-      participants: ['DBA', 'DevOps'],
-      scope: 'Restauração pontual de banco de dados'
-    }
-  ];
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-7 bg-muted rounded w-48 animate-pulse"></div>
+          <div className="h-10 bg-muted rounded w-32 animate-pulse"></div>
+        </div>
+        <div className="space-y-4">
+          <div className="h-6 bg-muted rounded w-40 animate-pulse"></div>
+          {[...Array(3)].map((_, index) => (
+            <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+              <CardHeader className="pb-3">
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-6 bg-muted rounded w-1/2"></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-16 bg-muted rounded"></div>
+                <div className="h-2 bg-muted rounded w-full"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const handleRunBcpTest = async (planId: string) => {
+    await runBcpTest(planId);
+  };
+
+  const handleGenerateReport = () => {
+    toast({
+      title: "Gerando Relatório BCP",
+      description: "Preparando relatório de continuidade de negócios...",
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     const config = {
@@ -102,7 +86,11 @@ const BusinessContinuity = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Continuidade de Negócios
         </h2>
-        <Button variant="outline" size="sm">
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleGenerateReport}
+        >
           <FileText className="h-4 w-4 mr-2" />
           Relatório BCP
         </Button>
@@ -128,7 +116,11 @@ const BusinessContinuity = () => {
                   </div>
                 </div>
                 
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleRunBcpTest(plan.id)}
+                >
                   <Play className="h-4 w-4 mr-2" />
                   Executar Teste
                 </Button>
@@ -193,14 +185,36 @@ const BusinessContinuity = () => {
         ))}
       </div>
 
-      {/* Upcoming Tests */}
+      {/* Upcoming Tests - Static data for now */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-foreground">Testes Programados</h3>
         
         <Card className="bg-surface-elevated border-card-border">
           <CardContent className="p-4">
             <div className="space-y-3">
-              {upcomingTests.map((test, index) => (
+              {[
+                {
+                  plan: 'DR Plan - Datacenter Failover',
+                  scheduledDate: '15/01/2025',
+                  duration: '4 horas',
+                  participants: ['Infraestrutura', 'DevOps', 'Segurança'],
+                  scope: 'Failover completo para datacenter secundário'
+                },
+                {
+                  plan: 'BCP - Simulação de Ransomware',
+                  scheduledDate: '08/02/2025',
+                  duration: '6 horas',
+                  participants: ['Security Team', 'IT Management', 'Communications'],
+                  scope: 'Resposta a incidente de ransomware com restore'
+                },
+                {
+                  plan: 'Backup Test - Database Recovery',
+                  scheduledDate: '20/12/2024',
+                  duration: '2 horas',
+                  participants: ['DBA', 'DevOps'],
+                  scope: 'Restauração pontual de banco de dados'
+                }
+              ].map((test, index) => (
                 <div key={index} className="flex items-start justify-between p-3 bg-muted/10 rounded-lg">
                   <div className="flex-1">
                     <h4 className="font-semibold text-sm text-foreground mb-1">

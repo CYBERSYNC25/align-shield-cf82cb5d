@@ -199,6 +199,165 @@ export type Database = {
           user_id?: string
         }
       }
+      incidents: {
+        Row: {
+          id: string
+          title: string
+          description: string
+          severity: 'low' | 'medium' | 'high' | 'critical'
+          status: 'investigating' | 'identified' | 'resolving' | 'resolved'
+          reported_at: string
+          assigned_to: string
+          assigned_role: string
+          affected_systems: string[]
+          impact_level: 'low' | 'medium' | 'high'
+          estimated_resolution: string
+          updates: number
+          watchers: number
+          playbook: string
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          description: string
+          severity: 'low' | 'medium' | 'high' | 'critical'
+          status: 'investigating' | 'identified' | 'resolving' | 'resolved'
+          reported_at: string
+          assigned_to: string
+          assigned_role: string
+          affected_systems: string[]
+          impact_level: 'low' | 'medium' | 'high'
+          estimated_resolution: string
+          updates: number
+          watchers: number
+          playbook: string
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          description?: string
+          severity?: 'low' | 'medium' | 'high' | 'critical'
+          status?: 'investigating' | 'identified' | 'resolving' | 'resolved'
+          reported_at?: string
+          assigned_to?: string
+          assigned_role?: string
+          affected_systems?: string[]
+          impact_level?: 'low' | 'medium' | 'high'
+          estimated_resolution?: string
+          updates?: number
+          watchers?: number
+          playbook?: string
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+      }
+      incident_playbooks: {
+        Row: {
+          id: string
+          name: string
+          category: string
+          severity: 'low' | 'medium' | 'high' | 'critical'
+          estimated_time: string
+          last_used: string
+          usage_count: number
+          steps: number
+          roles: string[]
+          description: string
+          triggers: string[]
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          category: string
+          severity: 'low' | 'medium' | 'high' | 'critical'
+          estimated_time: string
+          last_used: string
+          usage_count: number
+          steps: number
+          roles: string[]
+          description: string
+          triggers: string[]
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          category?: string
+          severity?: 'low' | 'medium' | 'high' | 'critical'
+          estimated_time?: string
+          last_used?: string
+          usage_count?: number
+          steps?: number
+          roles?: string[]
+          description?: string
+          triggers?: string[]
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+      }
+      bcp_plans: {
+        Row: {
+          id: string
+          name: string
+          type: string
+          status: 'tested' | 'updated' | 'scheduled' | 'expired'
+          last_tested: string
+          next_test: string
+          rto: string
+          rpo: string
+          coverage: number
+          critical_systems: string[]
+          test_results: string
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          type: string
+          status: 'tested' | 'updated' | 'scheduled' | 'expired'
+          last_tested: string
+          next_test: string
+          rto: string
+          rpo: string
+          coverage: number
+          critical_systems: string[]
+          test_results: string
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          type?: string
+          status?: 'tested' | 'updated' | 'scheduled' | 'expired'
+          last_tested?: string
+          next_test?: string
+          rto?: string
+          rpo?: string
+          coverage?: number
+          critical_systems?: string[]
+          test_results?: string
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+      }
       risks: {
         Row: {
           id: string
@@ -480,6 +639,76 @@ CREATE TABLE scheduled_reports (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Tabelas de Incidentes
+CREATE TABLE incidents (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title VARCHAR NOT NULL,
+  description TEXT,
+  severity VARCHAR NOT NULL,
+  status VARCHAR DEFAULT 'investigating',
+  reported_at VARCHAR,
+  assigned_to VARCHAR,
+  assigned_role VARCHAR,
+  affected_systems TEXT[], -- Array de sistemas
+  impact_level VARCHAR,
+  estimated_resolution VARCHAR,
+  updates INTEGER DEFAULT 0,
+  watchers INTEGER DEFAULT 0,
+  playbook VARCHAR,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE incident_playbooks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  category VARCHAR NOT NULL,
+  severity VARCHAR NOT NULL,
+  estimated_time VARCHAR,
+  last_used VARCHAR,
+  usage_count INTEGER DEFAULT 0,
+  steps INTEGER DEFAULT 0,
+  roles TEXT[], -- Array de roles
+  description TEXT,
+  triggers TEXT[], -- Array de triggers
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE bcp_plans (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  type VARCHAR NOT NULL,
+  status VARCHAR DEFAULT 'scheduled',
+  last_tested VARCHAR,
+  next_test VARCHAR,
+  rto VARCHAR,
+  rpo VARCHAR,
+  coverage INTEGER DEFAULT 0,
+  critical_systems TEXT[], -- Array de sistemas críticos
+  test_results TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Habilitar RLS para tabelas de incidentes
+ALTER TABLE incidents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE incident_playbooks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bcp_plans ENABLE ROW LEVEL SECURITY;
+
+-- Políticas RLS para incidentes
+CREATE POLICY "Users can view incidents" ON incidents FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can insert incidents" ON incidents FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Users can update incidents" ON incidents FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Users can view incident_playbooks" ON incident_playbooks FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can insert incident_playbooks" ON incident_playbooks FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Users can update incident_playbooks" ON incident_playbooks FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Users can view bcp_plans" ON bcp_plans FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can insert bcp_plans" ON bcp_plans FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Users can update bcp_plans" ON bcp_plans FOR UPDATE USING (auth.role() = 'authenticated');
 
 -- Tabelas de Riscos
 CREATE TABLE risks (

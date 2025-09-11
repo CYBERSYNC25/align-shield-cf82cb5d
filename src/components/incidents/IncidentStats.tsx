@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useIncidents } from '@/hooks/useIncidents';
 import { 
   AlertTriangle, 
   Clock, 
@@ -12,11 +13,34 @@ import {
 } from 'lucide-react';
 
 const IncidentStats = () => {
-  const stats = [
+  const { stats, loading } = useIncidents();
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, index) => (
+          <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="h-4 bg-muted rounded w-24"></div>
+              <div className="h-8 w-8 bg-muted rounded-lg"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="h-8 bg-muted rounded w-16"></div>
+                <div className="h-4 bg-muted rounded w-20"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  const statsData = [
     {
       title: 'Incidentes Ativos',
-      value: '3',
-      breakdown: { critical: 1, high: 1, medium: 1, low: 0 },
+      value: stats.activeIncidents.toString(),
+      breakdown: stats.incidentBreakdown,
       icon: AlertTriangle,
       color: 'text-warning',
       bgColor: 'bg-warning/10',
@@ -24,18 +48,18 @@ const IncidentStats = () => {
     },
     {
       title: 'MTTR Médio',
-      value: '4.2h',
-      target: '6h',
+      value: stats.mttr,
+      target: stats.mttrTarget,
       icon: Timer,
       color: 'text-success',
       bgColor: 'bg-success/10',
-      progress: 70,
-      subtitle: 'Meta: < 6h'
+      progress: stats.mttrProgress,
+      subtitle: `Meta: < ${stats.mttrTarget}`
     },
     {
       title: 'Disponibilidade',
-      value: '99.94%',
-      change: '+0.02%',
+      value: stats.availability,
+      change: stats.availabilityChange,
       icon: Activity,
       color: 'text-info',
       bgColor: 'bg-info/10',
@@ -43,18 +67,18 @@ const IncidentStats = () => {
     },
     {
       title: 'Testes BCP',
-      value: '12',
+      value: stats.bcpTests.toString(),
       status: 'completed',
       icon: Shield,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      subtitle: '3 programados este mês'
+      subtitle: `${stats.scheduledTests} programados este mês`
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
+      {statsData.map((stat, index) => (
         <Card key={index} className="bg-surface-elevated border-card-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">

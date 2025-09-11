@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useIncidents } from '@/hooks/useIncidents';
+import { toast } from '@/hooks/use-toast';
 import { 
   Plus, 
   AlertTriangle, 
@@ -14,56 +16,57 @@ import {
 } from 'lucide-react';
 
 const ActiveIncidents = () => {
-  const incidents = [
-    {
-      id: 'INC-2024-0087',
-      title: 'Falha no Sistema de Backup Principal',
-      severity: 'critical',
-      status: 'investigating',
-      reportedAt: '2024-11-21 14:23',
-      assignedTo: 'Carlos Silva',
-      assignedRole: 'Infrastructure Lead',
-      description: 'Sistema de backup principal apresentando falhas intermitentes',
-      affectedSystems: ['Backup Server', 'Database Replication'],
-      impactLevel: 'high',
-      estimatedResolution: '2 horas',
-      updates: 3,
-      watchers: 8,
-      playbook: 'Backup System Failure Response'
-    },
-    {
-      id: 'INC-2024-0086',
-      title: 'Tentativa de Acesso Não Autorizado',
-      severity: 'high',
-      status: 'investigating',
-      reportedAt: '2024-11-21 09:45',
-      assignedTo: 'Ana Rodrigues',
-      assignedRole: 'Security Analyst',
-      description: 'Múltiplas tentativas de login com credenciais comprometidas detectadas',
-      affectedSystems: ['Okta Identity', 'VPN Gateway'],
-      impactLevel: 'medium',
-      estimatedResolution: '4 horas',
-      updates: 7,
-      watchers: 12,
-      playbook: 'Security Breach Response'
-    },
-    {
-      id: 'INC-2024-0085',
-      title: 'Lentidão na API de Pagamentos',
-      severity: 'medium',
-      status: 'identified',
-      reportedAt: '2024-11-21 08:15',
-      assignedTo: 'Roberto Lima',
-      assignedRole: 'DevOps Engineer',
-      description: 'API apresentando latência elevada durante picos de tráfego',
-      affectedSystems: ['Payment Gateway', 'Database Cluster'],
-      impactLevel: 'medium',
-      estimatedResolution: '6 horas',
-      updates: 5,
-      watchers: 6,
-      playbook: 'Performance Degradation Response'
-    }
-  ];
+  const { incidents, loading, updateIncidentStatus, escalateIncident } = useIncidents();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-7 bg-muted rounded w-48 animate-pulse"></div>
+          <div className="h-10 bg-muted rounded w-32 animate-pulse"></div>
+        </div>
+        <div className="space-y-4">
+          {[...Array(3)].map((_, index) => (
+            <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+              <CardHeader className="pb-3">
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-6 bg-muted rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-16 bg-muted rounded"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const handleOpenIncident = (incidentTitle: string) => {
+    toast({
+      title: "Abrindo Incidente",
+      description: `Abrindo detalhes de "${incidentTitle}"...`,
+    });
+  };
+
+  const handleUpdateIncident = (incidentId: string) => {
+    toast({
+      title: "Atualizando Incidente",
+      description: "Abrindo formulário de atualização...",
+    });
+  };
+
+  const handleEscalateIncident = async (incidentId: string) => {
+    await escalateIncident(incidentId);
+  };
 
   const getSeverityBadge = (severity: string) => {
     const config = {
@@ -140,7 +143,12 @@ const ActiveIncidents = () => {
                   </p>
                 </div>
                 
-                <Button variant="outline" size="sm" className="gap-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-1"
+                  onClick={() => handleOpenIncident(incident.title)}
+                >
                   <ExternalLink className="h-4 w-4" />
                   Abrir
                 </Button>
@@ -207,11 +215,18 @@ const ActiveIncidents = () => {
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleUpdateIncident(incident.id)}
+                  >
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Atualizar
                   </Button>
-                  <Button size="sm">
+                  <Button 
+                    size="sm"
+                    onClick={() => handleEscalateIncident(incident.id)}
+                  >
                     <Play className="h-4 w-4 mr-2" />
                     Escalar
                   </Button>
