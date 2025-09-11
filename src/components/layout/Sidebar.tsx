@@ -67,7 +67,8 @@ const sidebarItems: SidebarItem[] = [
   {
     id: 'incidents',
     label: 'Incidentes & Continuidade',
-    icon: Building
+    icon: Building,
+    href: '/incidents'
   },
   {
     id: 'audit',
