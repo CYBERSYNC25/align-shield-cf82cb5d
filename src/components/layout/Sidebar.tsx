@@ -70,6 +70,12 @@ const sidebarItems: SidebarItem[] = [
     icon: Building
   },
   {
+    id: 'audit',
+    label: 'Auditorias Contínuas',
+    icon: Shield,
+    href: '/audit'
+  },
+  {
     id: 'settings',
     label: 'Configurações',
     icon: Settings
