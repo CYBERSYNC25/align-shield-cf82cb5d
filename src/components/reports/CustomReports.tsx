@@ -173,7 +173,7 @@ const CustomReports = () => {
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground">Frameworks:</span>
-                      <div className="font-medium text-sm">{report.filters.frameworks.join(', ')}</div>
+                      <div className="font-medium text-sm">{report.filters.frameworks?.join(', ') || 'N/A'}</div>
                     </div>
                   </div>
 
