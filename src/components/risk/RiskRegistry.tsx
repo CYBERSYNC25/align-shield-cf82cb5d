@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useRisks } from '@/hooks/useRisks';
+import { toast } from '@/hooks/use-toast';
 import { 
   Plus, 
   AlertTriangle, 
@@ -14,93 +16,52 @@ import {
 } from 'lucide-react';
 
 const RiskRegistry = () => {
-  const risks = [
-    {
-      id: 'RISK-001',
-      title: 'Falha de Backup Crítico',
-      category: 'Operacional',
-      probability: 'medium',
-      impact: 'high',
-      riskScore: 12,
-      level: 'high',
-      owner: 'Carlos Silva',
-      ownerRole: 'Infrastructure Lead',
-      status: 'active',
-      lastReview: '15/11/2024',
-      nextReview: '15/02/2025',
-      controls: ['Backup Automatizado', 'Monitoramento 24/7', 'Testes Regulares'],
-      trend: 'stable',
-      description: 'Risco de perda de dados por falha no sistema de backup principal'
-    },
-    {
-      id: 'RISK-002',
-      title: 'Vazamento de Dados Pessoais',
-      category: 'Segurança',
-      probability: 'low',
-      impact: 'critical',
-      riskScore: 15,
-      level: 'critical',
-      owner: 'Ana Rodrigues',
-      ownerRole: 'DPO',
-      status: 'active',
-      lastReview: '10/11/2024',
-      nextReview: '10/01/2025',
-      controls: ['Criptografia End-to-End', 'DLP', 'Treinamento LGPD'],
-      trend: 'decreasing',
-      description: 'Exposição não autorizada de dados pessoais de clientes'
-    },
-    {
-      id: 'RISK-003',
-      title: 'Indisponibilidade de Fornecedor Crítico',
-      category: 'Terceiros',
-      probability: 'medium',
-      impact: 'medium',
-      riskScore: 9,
-      level: 'medium',
-      owner: 'Roberto Lima',
-      ownerRole: 'Procurement Manager',
-      status: 'mitigated',
-      lastReview: '08/11/2024',
-      nextReview: '08/05/2025',
-      controls: ['Fornecedores Alternativos', 'SLA Rigoroso', 'Monitoramento'],
-      trend: 'stable',
-      description: 'Interrupção de serviços essenciais por falha de fornecedor principal'
-    },
-    {
-      id: 'RISK-004',
-      title: 'Ataque de Ransomware',
-      category: 'Cibersegurança',
-      probability: 'high',
-      impact: 'critical',
-      riskScore: 20,
-      level: 'critical',
-      owner: 'Maria Santos',
-      ownerRole: 'CISO',
-      status: 'active',
-      lastReview: '12/11/2024',
-      nextReview: '12/12/2024',
-      controls: ['EDR', 'Backup Offline', 'Treinamento Phishing'],
-      trend: 'increasing',
-      description: 'Criptografia maliciosa de sistemas críticos por ransomware'
-    },
-    {
-      id: 'RISK-005',
-      title: 'Não Conformidade Regulatória',
-      category: 'Compliance',
-      probability: 'medium',
-      impact: 'high',
-      riskScore: 12,
-      level: 'high',
-      owner: 'Fernanda Costa',
-      ownerRole: 'Compliance Officer',
-      status: 'active',
-      lastReview: '20/11/2024',
-      nextReview: '20/02/2025',
-      controls: ['Monitoramento Contínuo', 'Auditoria Interna', 'Gap Analysis'],
-      trend: 'stable',
-      description: 'Penalidades por não atendimento a requisitos LGPD/SOC2'
-    }
-  ];
+  const { risks, loading, updateRiskStatus } = useRisks();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-7 bg-muted rounded w-48 animate-pulse"></div>
+          <div className="h-10 bg-muted rounded w-32 animate-pulse"></div>
+        </div>
+        <div className="space-y-4 max-h-[500px] overflow-y-auto">
+          {[...Array(5)].map((_, index) => (
+            <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+              <CardHeader className="pb-3">
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-6 bg-muted rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-16 bg-muted rounded"></div>
+                <div className="h-8 bg-muted rounded w-1/2"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const handleViewDetails = (riskTitle: string) => {
+    toast({
+      title: "Detalhes do Risco",
+      description: `Abrindo detalhes de "${riskTitle}"...`,
+    });
+  };
+
+  const handleStatusChange = async (riskId: string, currentStatus: string) => {
+    // Simular mudança de status
+    const newStatus = currentStatus === 'active' ? 'mitigated' : 'active';
+    await updateRiskStatus(riskId, newStatus as any);
+  };
 
   const getRiskLevelBadge = (level: string) => {
     const config = {
@@ -152,7 +113,7 @@ const RiskRegistry = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="text-xs font-mono">
-                      {risk.id}
+                      RISK-{String(index + 1).padStart(3, '0')}
                     </Badge>
                     {getRiskLevelBadge(risk.level)}
                     {getStatusBadge(risk.status)}
@@ -167,7 +128,11 @@ const RiskRegistry = () => {
                 
                 <div className="flex items-center gap-2">
                   {getTrendIcon(risk.trend)}
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleViewDetails(risk.title)}
+                  >
                     <Eye className="h-4 w-4 mr-2" />
                     Detalhes
                   </Button>

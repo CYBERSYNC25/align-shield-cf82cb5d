@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useRisks } from '@/hooks/useRisks';
+import { toast } from '@/hooks/use-toast';
 import { 
   Plus, 
   FileText, 
@@ -18,6 +20,64 @@ import {
 } from 'lucide-react';
 
 const RiskAssessments = () => {
+  const { assessments, loading, sendAssessment } = useRisks();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-7 bg-muted rounded w-48 animate-pulse"></div>
+          <div className="h-10 bg-muted rounded w-32 animate-pulse"></div>
+        </div>
+        <Tabs defaultValue="active" className="w-full">
+          <TabsList>
+            <TabsTrigger value="active">Avaliações Ativas</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
+          </TabsList>
+          <TabsContent value="active" className="mt-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {[...Array(4)].map((_, index) => (
+                <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+                  <CardHeader className="pb-3">
+                    <div className="space-y-2">
+                      <div className="h-4 bg-muted rounded w-3/4"></div>
+                      <div className="h-6 bg-muted rounded w-1/2"></div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="h-2 bg-muted rounded w-full"></div>
+                    <div className="h-12 bg-muted rounded"></div>
+                    <div className="h-8 bg-muted rounded"></div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
+
+  const handleViewAssessment = (vendorName: string) => {
+    toast({
+      title: "Visualizar Avaliação",
+      description: `Abrindo avaliação de "${vendorName}"...`,
+    });
+  };
+
+  const handleDownloadReport = (vendorName: string) => {
+    toast({
+      title: "Download Iniciado",
+      description: `Baixando relatório de "${vendorName}"...`,
+    });
+  };
+
+  const handleUseTemplate = (templateName: string) => {
+    toast({
+      title: "Usar Template",
+      description: `Configurando "${templateName}"...`,
+    });
+  };
   const assessmentTemplates = [
     {
       name: 'SOC 2 Vendor Assessment',
@@ -142,16 +202,16 @@ const RiskAssessments = () => {
       <Tabs defaultValue="active" className="w-full">
         <TabsList>
           <TabsTrigger value="active">
-            Avaliações Ativas ({activeAssessments.length})
+            Avaliações Ativas ({assessments.length})
           </TabsTrigger>
           <TabsTrigger value="templates">
-            Templates ({assessmentTemplates.length})
+            Templates (4)
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="mt-6">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            {activeAssessments.map((assessment, index) => (
+            {assessments.map((assessment, index) => (
               <Card key={index} className="bg-surface-elevated border-card-border">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -220,12 +280,21 @@ const RiskAssessments = () => {
 
                   {/* Actions */}
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleViewAssessment(assessment.vendor)}
+                    >
                       <FileText className="h-4 w-4 mr-2" />
                       Visualizar
                     </Button>
                     {assessment.status === 'completed' && (
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDownloadReport(assessment.vendor)}
+                      >
                         <Download className="h-4 w-4 mr-2" />
                         Relatório
                       </Button>
@@ -239,7 +308,40 @@ const RiskAssessments = () => {
 
         <TabsContent value="templates" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {assessmentTemplates.map((template, index) => (
+            {[
+              {
+                name: 'SOC 2 Vendor Assessment',
+                category: 'Security',
+                questions: 45,
+                avgCompletionTime: '35 min',
+                frameworks: ['SOC 2', 'ISO 27001'],
+                description: 'Avaliação completa de controles de segurança para fornecedores críticos'
+              },
+              {
+                name: 'LGPD Data Processing',
+                category: 'Privacy',
+                questions: 32,
+                avgCompletionTime: '25 min',
+                frameworks: ['LGPD', 'GDPR'],
+                description: 'Questionário específico para processamento de dados pessoais'
+              },
+              {
+                name: 'Financial Services Risk',
+                category: 'Compliance',
+                questions: 28,
+                avgCompletionTime: '20 min',
+                frameworks: ['PCI DSS', 'SOX'],
+                description: 'Avaliação para fornecedores de serviços financeiros'
+              },
+              {
+                name: 'General Vendor Onboarding',
+                category: 'General',
+                questions: 18,
+                avgCompletionTime: '15 min',
+                frameworks: ['ISO 9001'],
+                description: 'Questionário padrão para onboarding de novos fornecedores'
+              }
+            ].map((template, index) => (
               <Card key={index} className="bg-surface-elevated border-card-border">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -288,7 +390,11 @@ const RiskAssessments = () => {
                       <FileText className="h-4 w-4 mr-2" />
                       Prévia
                     </Button>
-                    <Button size="sm" className="flex-1">
+                    <Button 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleUseTemplate(template.name)}
+                    >
                       <Send className="h-4 w-4 mr-2" />
                       Usar Template
                     </Button>

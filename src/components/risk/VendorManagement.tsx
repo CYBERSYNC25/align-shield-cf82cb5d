@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { useRisks } from '@/hooks/useRisks';
+import { toast } from '@/hooks/use-toast';
 import { 
   Plus, 
   Building, 
@@ -14,78 +16,54 @@ import {
 } from 'lucide-react';
 
 const VendorManagement = () => {
-  const vendors = [
-    {
-      name: 'CloudSecure Inc.',
-      category: 'Cloud Infrastructure',
-      criticality: 'critical',
-      riskLevel: 'high',
-      contractValue: '$120k/ano',
-      lastAssessment: '15/10/2024',
-      nextAssessment: '15/04/2025',
-      complianceScore: 85,
-      status: 'active',
-      certifications: ['SOC 2', 'ISO 27001', 'FedRAMP'],
-      pendingActions: 3,
-      logo: '☁️'
-    },
-    {
-      name: 'DataProtect Solutions',
-      category: 'Security Services',
-      criticality: 'high',
-      riskLevel: 'medium',
-      contractValue: '$85k/ano',
-      lastAssessment: '22/09/2024',
-      nextAssessment: '22/03/2025',
-      complianceScore: 92,
-      status: 'active',
-      certifications: ['ISO 27001', 'PCI DSS'],
-      pendingActions: 1,
-      logo: '🛡️'
-    },
-    {
-      name: 'TechSupport Pro',
-      category: 'IT Services',
-      criticality: 'medium',
-      riskLevel: 'low',
-      contractValue: '$45k/ano',
-      lastAssessment: '05/11/2024',
-      nextAssessment: '05/05/2025',
-      complianceScore: 78,
-      status: 'review',
-      certifications: ['ISO 9001'],
-      pendingActions: 0,
-      logo: '🔧'
-    },
-    {
-      name: 'Analytics Corp',
-      category: 'Data Processing',
-      criticality: 'critical',
-      riskLevel: 'medium',
-      contractValue: '$200k/ano',
-      lastAssessment: '30/10/2024',
-      nextAssessment: '30/04/2025',
-      complianceScore: 89,
-      status: 'active',
-      certifications: ['SOC 2', 'GDPR Certified'],
-      pendingActions: 2,
-      logo: '📊'
-    },
-    {
-      name: 'OfficeSpace Ltd',
-      category: 'Facilities',
-      criticality: 'low',
-      riskLevel: 'low',
-      contractValue: '$30k/ano',
-      lastAssessment: '12/08/2024',
-      nextAssessment: '12/02/2025',
-      complianceScore: 72,
-      status: 'expired',
-      certifications: ['ISO 14001'],
-      pendingActions: 5,
-      logo: '🏢'
-    }
-  ];
+  const { vendors, loading, updateVendorCompliance, sendAssessment } = useRisks();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="h-7 bg-muted rounded w-48 animate-pulse"></div>
+          <div className="h-10 bg-muted rounded w-32 animate-pulse"></div>
+        </div>
+        <div className="space-y-4 max-h-[500px] overflow-y-auto">
+          {[...Array(5)].map((_, index) => (
+            <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+              <CardHeader className="pb-3">
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-6 bg-muted rounded w-1/2"></div>
+                  <div className="h-4 bg-muted rounded w-full"></div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-16 bg-muted rounded"></div>
+                <div className="h-2 bg-muted rounded w-full"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4"></div>
+                  <div className="h-4 bg-muted rounded w-1/2"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const handleAssessVendor = async (vendorName: string) => {
+    await sendAssessment('vendor-id', 'SOC 2 Vendor Assessment');
+  };
+
+  const getVendorLogo = (name: string) => {
+    const logoMap: Record<string, string> = {
+      'CloudSecure Inc.': '☁️',
+      'DataProtect Solutions': '🛡️',
+      'TechSupport Pro': '🔧',
+      'Analytics Corp': '📊',
+      'OfficeSpace Ltd': '🏢'
+    };
+    return logoMap[name] || '🏢';
+  };
 
   const getCriticalityBadge = (criticality: string) => {
     const config = {
@@ -146,7 +124,7 @@ const VendorManagement = () => {
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="text-xl">{vendor.logo}</div>
+                  <div className="text-xl">{getVendorLogo(vendor.name)}</div>
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-base font-semibold mb-2">
                       {vendor.name}
@@ -162,7 +140,11 @@ const VendorManagement = () => {
                   </div>
                 </div>
                 
-                <Button variant="outline" size="sm">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleAssessVendor(vendor.name)}
+                >
                   <FileText className="h-4 w-4 mr-2" />
                   Avaliar
                 </Button>

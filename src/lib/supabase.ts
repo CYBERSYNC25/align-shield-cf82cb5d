@@ -199,88 +199,82 @@ export type Database = {
           user_id?: string
         }
       }
-      reports: {
+      risks: {
         Row: {
           id: string
-          name: string
+          title: string
           description: string
-          type: 'dashboard' | 'detailed' | 'executive'
-          format: 'PDF' | 'Excel' | 'PowerPoint' | 'CSV' | 'ZIP Archive'
-          framework: string
-          readiness: number
-          status: 'ready' | 'updating' | 'generating'
-          last_generated: string
-          size: string
-          pages: number
-          sections: string[]
-          audience: string
-          metrics: string[]
-          filters: any
-          recipients: string[]
+          category: string
+          probability: 'low' | 'medium' | 'high'
+          impact: 'low' | 'medium' | 'high' | 'critical'
+          risk_score: number
+          level: 'low' | 'medium' | 'high' | 'critical'
+          owner: string
+          owner_role: string
+          status: 'active' | 'mitigated' | 'accepted' | 'transferred'
+          trend: 'increasing' | 'stable' | 'decreasing'
+          last_review: string
+          next_review: string
+          controls: string[]
           created_at: string
           updated_at: string
           user_id: string
         }
         Insert: {
           id?: string
-          name: string
+          title: string
           description: string
-          type: 'dashboard' | 'detailed' | 'executive'
-          format: 'PDF' | 'Excel' | 'PowerPoint' | 'CSV' | 'ZIP Archive'
-          framework: string
-          readiness: number
-          status: 'ready' | 'updating' | 'generating'
-          last_generated: string
-          size: string
-          pages: number
-          sections: string[]
-          audience: string
-          metrics: string[]
-          filters: any
-          recipients: string[]
+          category: string
+          probability: 'low' | 'medium' | 'high'
+          impact: 'low' | 'medium' | 'high' | 'critical'
+          risk_score: number
+          level: 'low' | 'medium' | 'high' | 'critical'
+          owner: string
+          owner_role: string
+          status: 'active' | 'mitigated' | 'accepted' | 'transferred'
+          trend: 'increasing' | 'stable' | 'decreasing'
+          last_review: string
+          next_review: string
+          controls: string[]
           created_at?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           id?: string
-          name?: string
+          title?: string
           description?: string
-          type?: 'dashboard' | 'detailed' | 'executive'
-          format?: 'PDF' | 'Excel' | 'PowerPoint' | 'CSV' | 'ZIP Archive'
-          framework?: string
-          readiness?: number
-          status?: 'ready' | 'updating' | 'generating'
-          last_generated?: string
-          size?: string
-          pages?: number
-          sections?: string[]
-          audience?: string
-          metrics?: string[]
-          filters?: any
-          recipients?: string[]
+          category?: string
+          probability?: 'low' | 'medium' | 'high'
+          impact?: 'low' | 'medium' | 'high' | 'critical'
+          risk_score?: number
+          level?: 'low' | 'medium' | 'high' | 'critical'
+          owner?: string
+          owner_role?: string
+          status?: 'active' | 'mitigated' | 'accepted' | 'transferred'
+          trend?: 'increasing' | 'stable' | 'decreasing'
+          last_review?: string
+          next_review?: string
+          controls?: string[]
           created_at?: string
           updated_at?: string
           user_id?: string
         }
       }
-      scheduled_reports: {
+      vendors: {
         Row: {
           id: string
           name: string
-          description: string
-          schedule: string
-          next_run: string
-          last_run: string
-          status: 'active' | 'paused'
-          format: string
-          recipients: Array<{
-            name: string
-            email: string
-          }>
-          delivery_method: 'email' | 'secure_link'
-          success_rate: number
-          last_status: 'success' | 'warning' | 'error'
+          category: string
+          criticality: 'low' | 'medium' | 'high' | 'critical'
+          risk_level: 'low' | 'medium' | 'high'
+          contract_value: string
+          last_assessment: string
+          next_assessment: string
+          compliance_score: number
+          status: 'active' | 'review' | 'expired'
+          certifications: string[]
+          pending_actions: number
           created_at: string
           updated_at: string
           user_id: string
@@ -288,19 +282,16 @@ export type Database = {
         Insert: {
           id?: string
           name: string
-          description: string
-          schedule: string
-          next_run: string
-          last_run: string
-          status: 'active' | 'paused'
-          format: string
-          recipients: Array<{
-            name: string
-            email: string
-          }>
-          delivery_method: 'email' | 'secure_link'
-          success_rate: number
-          last_status: 'success' | 'warning' | 'error'
+          category: string
+          criticality: 'low' | 'medium' | 'high' | 'critical'
+          risk_level: 'low' | 'medium' | 'high'
+          contract_value: string
+          last_assessment: string
+          next_assessment: string
+          compliance_score: number
+          status: 'active' | 'review' | 'expired'
+          certifications: string[]
+          pending_actions: number
           created_at?: string
           updated_at?: string
           user_id: string
@@ -308,19 +299,69 @@ export type Database = {
         Update: {
           id?: string
           name?: string
-          description?: string
-          schedule?: string
-          next_run?: string
-          last_run?: string
-          status?: 'active' | 'paused'
-          format?: string
-          recipients?: Array<{
-            name: string
-            email: string
-          }>
-          delivery_method?: 'email' | 'secure_link'
-          success_rate?: number
-          last_status?: 'success' | 'warning' | 'error'
+          category?: string
+          criticality?: 'low' | 'medium' | 'high' | 'critical'
+          risk_level?: 'low' | 'medium' | 'high'
+          contract_value?: string
+          last_assessment?: string
+          next_assessment?: string
+          compliance_score?: number
+          status?: 'active' | 'review' | 'expired'
+          certifications?: string[]
+          pending_actions?: number
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+      }
+      risk_assessments: {
+        Row: {
+          id: string
+          vendor: string
+          template: string
+          status: 'sent' | 'in_progress' | 'completed' | 'overdue'
+          progress: number
+          sent_date: string
+          due_date: string
+          completed_questions: number
+          total_questions: number
+          risk_flags: number
+          contact_person: string
+          contact_email: string
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          vendor: string
+          template: string
+          status: 'sent' | 'in_progress' | 'completed' | 'overdue'
+          progress: number
+          sent_date: string
+          due_date: string
+          completed_questions: number
+          total_questions: number
+          risk_flags: number
+          contact_person: string
+          contact_email: string
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          vendor?: string
+          template?: string
+          status?: 'sent' | 'in_progress' | 'completed' | 'overdue'
+          progress?: number
+          sent_date?: string
+          due_date?: string
+          completed_questions?: number
+          total_questions?: number
+          risk_flags?: number
+          contact_person?: string
+          contact_email?: string
           created_at?: string
           updated_at?: string
           user_id?: string
@@ -440,6 +481,61 @@ CREATE TABLE scheduled_reports (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Tabelas de Riscos
+CREATE TABLE risks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  title VARCHAR NOT NULL,
+  description TEXT,
+  category VARCHAR NOT NULL,
+  probability VARCHAR NOT NULL,
+  impact VARCHAR NOT NULL,
+  risk_score INTEGER NOT NULL,
+  level VARCHAR NOT NULL,
+  owner VARCHAR NOT NULL,
+  owner_role VARCHAR,
+  status VARCHAR DEFAULT 'active',
+  trend VARCHAR DEFAULT 'stable',
+  last_review VARCHAR,
+  next_review VARCHAR,
+  controls TEXT[], -- Array de controles
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE vendors (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  category VARCHAR NOT NULL,
+  criticality VARCHAR NOT NULL,
+  risk_level VARCHAR NOT NULL,
+  contract_value VARCHAR,
+  last_assessment VARCHAR,
+  next_assessment VARCHAR,
+  compliance_score INTEGER DEFAULT 0,
+  status VARCHAR DEFAULT 'active',
+  certifications TEXT[], -- Array de certificações
+  pending_actions INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE risk_assessments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  vendor VARCHAR NOT NULL,
+  template VARCHAR NOT NULL,
+  status VARCHAR DEFAULT 'sent',
+  progress INTEGER DEFAULT 0,
+  sent_date VARCHAR,
+  due_date VARCHAR,
+  completed_questions INTEGER DEFAULT 0,
+  total_questions INTEGER DEFAULT 0,
+  risk_flags INTEGER DEFAULT 0,
+  contact_person VARCHAR,
+  contact_email VARCHAR,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Habilitar RLS
 ALTER TABLE audits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE audit_evidence ENABLE ROW LEVEL SECURITY;
@@ -447,6 +543,9 @@ ALTER TABLE frameworks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE framework_controls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE scheduled_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE vendors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE risk_assessments ENABLE ROW LEVEL SECURITY;
 
 -- Políticas RLS (permitir acesso a usuários autenticados)
 CREATE POLICY "Users can view audits" ON audits FOR SELECT USING (auth.role() = 'authenticated');
@@ -467,4 +566,16 @@ CREATE POLICY "Users can update reports" ON reports FOR UPDATE USING (auth.role(
 CREATE POLICY "Users can view scheduled_reports" ON scheduled_reports FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Users can insert scheduled_reports" ON scheduled_reports FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Users can update scheduled_reports" ON scheduled_reports FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Users can view risks" ON risks FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can insert risks" ON risks FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Users can update risks" ON risks FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Users can view vendors" ON vendors FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can insert vendors" ON vendors FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Users can update vendors" ON vendors FOR UPDATE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Users can view risk_assessments" ON risk_assessments FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Users can insert risk_assessments" ON risk_assessments FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Users can update risk_assessments" ON risk_assessments FOR UPDATE USING (auth.role() = 'authenticated');
 */

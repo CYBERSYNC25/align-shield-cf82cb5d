@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { useRisks } from '@/hooks/useRisks';
 import { 
   AlertTriangle, 
   TrendingUp, 
@@ -12,11 +13,34 @@ import {
 } from 'lucide-react';
 
 const RiskStats = () => {
-  const stats = [
+  const { stats, loading } = useRisks();
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, index) => (
+          <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="h-4 bg-muted rounded w-24"></div>
+              <div className="h-8 w-8 bg-muted rounded-lg"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="h-8 bg-muted rounded w-16"></div>
+                <div className="h-4 bg-muted rounded w-20"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  const statsData = [
     {
       title: 'Riscos Ativos',
-      value: '47',
-      breakdown: { critical: 3, high: 12, medium: 18, low: 14 },
+      value: stats.activeRisks.toString(),
+      breakdown: stats.riskBreakdown,
       icon: AlertTriangle,
       color: 'text-warning',
       bgColor: 'bg-warning/10',
@@ -24,37 +48,37 @@ const RiskStats = () => {
     },
     {
       title: 'Fornecedores Críticos',
-      value: '23',
-      total: '89',
+      value: stats.criticalVendors.toString(),
+      total: stats.totalVendors.toString(),
       icon: Building,
       color: 'text-info',
       bgColor: 'bg-info/10',
-      progress: 26,
-      subtitle: '66 fornecedores regulares'
+      progress: Math.round((stats.criticalVendors / stats.totalVendors) * 100),
+      subtitle: `${stats.totalVendors - stats.criticalVendors} fornecedores regulares`
     },
     {
       title: 'Controles Implementados',
-      value: '156',
+      value: stats.implementedControls.toString(),
       change: '+8',
       icon: Shield,
       color: 'text-success',
       bgColor: 'bg-success/10',
-      subtitle: '89% de efetividade'
+      subtitle: `${stats.controlEffectiveness}% de efetividade`
     },
     {
       title: 'Avaliações Pendentes',
-      value: '12',
+      value: stats.pendingAssessments.toString(),
       status: 'attention',
       icon: FileText,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      subtitle: '7 vencendo em 30 dias'
+      subtitle: `${stats.assessmentsDue} vencendo em 30 dias`
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
+      {statsData.map((stat, index) => (
         <Card key={index} className="bg-surface-elevated border-card-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
