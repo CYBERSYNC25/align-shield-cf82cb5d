@@ -41,6 +41,7 @@ const sidebarItems: SidebarItem[] = [
     id: 'integrations',
     label: 'Hub de Integrações',
     icon: Database,
+    href: '/integrations',
     badge: 12
   },
   {
