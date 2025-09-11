@@ -93,7 +93,8 @@ const sidebarItems: SidebarItem[] = [
   {
     id: 'settings',
     label: 'Configurações',
-    icon: Settings
+    icon: Settings,
+    href: '/settings'
   }
 ];
 

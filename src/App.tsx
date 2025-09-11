@@ -16,6 +16,7 @@ import AuditPortal from "./pages/AuditPortal";
 import IncidentsManagement from "./pages/IncidentsManagement";
 import ReportsExports from "./pages/ReportsExports";
 import Analytics from "./pages/Analytics";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,11 @@ const App = () => (
           <Route path="/analytics" element={
             <ProtectedRoute>
               <Analytics />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

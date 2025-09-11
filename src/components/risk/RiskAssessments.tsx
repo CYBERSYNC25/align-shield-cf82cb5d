@@ -6,6 +6,9 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRisks } from '@/hooks/useRisks';
 import { useToast } from '@/hooks/use-toast';
+import ViewAssessmentModal from './ViewAssessmentModal';
+import NewAssessmentModal from './NewAssessmentModal';
+import UseTemplateModal from './UseTemplateModal';
 import { 
   Plus, 
   FileText, 
@@ -22,6 +25,11 @@ import {
 const RiskAssessments = () => {
   const { assessments, loading, sendAssessment } = useRisks();
   const { toast } = useToast();
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [newAssessmentModalOpen, setNewAssessmentModalOpen] = useState(false);
+  const [useTemplateModalOpen, setUseTemplateModalOpen] = useState(false);
+  const [selectedVendor, setSelectedVendor] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState('');
 
   if (loading) {
     return (
@@ -60,10 +68,8 @@ const RiskAssessments = () => {
   }
 
   const handleViewAssessment = (vendorName: string) => {
-    toast({
-      title: "Visualizar Avaliação",
-      description: `Abrindo avaliação de "${vendorName}"...`,
-    });
+    setSelectedVendor(vendorName);
+    setViewModalOpen(true);
   };
 
   const handleDownloadReport = (vendorName: string) => {
@@ -74,10 +80,8 @@ const RiskAssessments = () => {
   };
 
   const handleUseTemplate = (templateName: string) => {
-    toast({
-      title: "Usar Template",
-      description: `Configurando "${templateName}"...`,
-    });
+    setSelectedTemplate(templateName);
+    setUseTemplateModalOpen(true);
   };
   const assessmentTemplates = [
     {
@@ -194,7 +198,7 @@ const RiskAssessments = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Avaliações de Risco
         </h2>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setNewAssessmentModalOpen(true)}>
           <Plus className="h-4 w-4" />
           Nova Avaliação
         </Button>
@@ -406,6 +410,24 @@ const RiskAssessments = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Modals */}
+      <ViewAssessmentModal
+        isOpen={viewModalOpen}
+        onClose={() => setViewModalOpen(false)}
+        vendorName={selectedVendor}
+      />
+      
+      <NewAssessmentModal
+        isOpen={newAssessmentModalOpen}
+        onClose={() => setNewAssessmentModalOpen(false)}
+      />
+      
+      <UseTemplateModal
+        isOpen={useTemplateModalOpen}
+        onClose={() => setUseTemplateModalOpen(false)}
+        templateName={selectedTemplate}
+      />
     </div>
   );
 };
