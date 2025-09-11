@@ -4,6 +4,7 @@ import ComplianceScoreCard from '@/components/dashboard/ComplianceScoreCard';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import TasksPanel from '@/components/dashboard/TasksPanel';
 import ConnectionStatus from '@/components/dashboard/ConnectionStatus';
+import EvidenceUploader from '@/components/audit/EvidenceUploader';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -158,6 +159,20 @@ const Index = () => {
             <div className="space-y-6">
               {/* Connection Status */}
               <ConnectionStatus />
+              
+              {/* Evidence Upload */}
+              <div className="bg-surface-elevated/80 backdrop-blur-sm rounded-xl border border-card-border/60 p-6 space-y-4 shadow-card hover-lift">
+                <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-success/10 rounded-lg">
+                    <Shield className="h-5 w-5 text-success" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Upload de Evidências</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Faça upload de documentos e evidências para compliance
+                </p>
+                <EvidenceUploader />
+              </div>
               
               {/* Quick Actions */}
               <div className="bg-surface-elevated/80 backdrop-blur-sm rounded-xl border border-card-border/60 p-6 space-y-4 shadow-card hover-lift">
