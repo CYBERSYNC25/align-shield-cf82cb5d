@@ -14,10 +14,43 @@ export function useTasks() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Fetch tasks
   const fetchTasks = async () => {
     if (!user) {
       setTasks([]);
+      setLoading(false);
+      return;
+    }
+
+    // Se não há configuração real do Supabase, usar dados mocados
+    if (!import.meta.env.VITE_SUPABASE_URL) {
+      setTasks([
+        {
+          id: '1',
+          title: 'Configurar MFA obrigatório no AWS',
+          description: 'Controle IAM.8 do SOC 2 detectou 15 usuários sem MFA ativado',
+          status: 'pending' as const,
+          priority: 'high' as const,
+          due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          assigned_to: 'Carlos Santos',
+          framework: 'SOC 2',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user_id: user.id
+        },
+        {
+          id: '2',
+          title: 'Revisar acessos privilegiados Azure AD',
+          description: 'Revisão trimestral de acessos administrativos vence em 3 dias',
+          status: 'pending' as const,
+          priority: 'high' as const,
+          due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          assigned_to: 'Ana Silva',
+          framework: 'ISO 27001',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          user_id: user.id
+        }
+      ]);
       setLoading(false);
       return;
     }
