@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Home
 } from 'lucide-react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
 
@@ -18,7 +19,7 @@ interface SidebarItem {
   id: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  active?: boolean;
+  href?: string;
   badge?: string | number;
   children?: SidebarItem[];
 }
@@ -28,24 +29,13 @@ const sidebarItems: SidebarItem[] = [
     id: 'dashboard',
     label: 'Dashboard',
     icon: Home,
-    active: true
-  },
-  {
-    id: 'compliance',
-    label: 'Postura de Conformidade',
-    icon: Shield,
-    badge: '87%'
+    href: '/'
   },
   {
     id: 'controls',
     label: 'Controles & Frameworks',
-    icon: BarChart3,
-    children: [
-      { id: 'soc2', label: 'SOC 2 Type II', icon: Shield },
-      { id: 'iso27001', label: 'ISO 27001', icon: Shield },
-      { id: 'lgpd', label: 'LGPD', icon: Shield },
-      { id: 'gdpr', label: 'GDPR', icon: Shield }
-    ]
+    icon: Shield,
+    href: '/controls'
   },
   {
     id: 'integrations',
@@ -83,7 +73,8 @@ const sidebarItems: SidebarItem[] = [
 ];
 
 const Sidebar = () => {
-  const [expandedItems, setExpandedItems] = useState<string[]>(['controls']);
+  const location = useLocation();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems(prev => 
@@ -93,42 +84,68 @@ const Sidebar = () => {
     );
   };
 
+  const isActiveRoute = (href?: string) => {
+    if (!href) return false;
+    return location.pathname === href;
+  };
+
   const renderSidebarItem = (item: SidebarItem, level = 0) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems.includes(item.id);
+    const isActive = isActiveRoute(item.href);
+    
+    const content = (
+      <>
+        <item.icon className={cn('h-4 w-4 mr-3', level > 0 && 'h-3 w-3')} />
+        <span className="flex-1 truncate">{item.label}</span>
+        
+        {item.badge && (
+          <span className={cn(
+            'ml-2 px-2 py-0.5 text-xs rounded-full',
+            typeof item.badge === 'number' ? 'bg-primary text-primary-foreground' : 'bg-warning text-warning-foreground'
+          )}>
+            {item.badge}
+          </span>
+        )}
+        
+        {hasChildren && (
+          <ChevronRight 
+            className={cn(
+              'h-4 w-4 ml-2 transition-transform',
+              isExpanded && 'rotate-90'
+            )}
+          />
+        )}
+      </>
+    );
     
     return (
       <div key={item.id}>
-        <Button
-          variant={item.active ? 'secondary' : 'ghost'}
-          className={cn(
-            'w-full justify-start text-left h-10 px-3 mb-1',
-            level > 0 && 'ml-4 text-sm',
-            item.active && 'bg-primary/10 text-primary border-primary/20'
-          )}
-          onClick={() => hasChildren && toggleExpanded(item.id)}
-        >
-          <item.icon className={cn('h-4 w-4 mr-3', level > 0 && 'h-3 w-3')} />
-          <span className="flex-1 truncate">{item.label}</span>
-          
-          {item.badge && (
-            <span className={cn(
-              'ml-2 px-2 py-0.5 text-xs rounded-full',
-              typeof item.badge === 'number' ? 'bg-primary text-primary-foreground' : 'bg-warning text-warning-foreground'
-            )}>
-              {item.badge}
-            </span>
-          )}
-          
-          {hasChildren && (
-            <ChevronRight 
-              className={cn(
-                'h-4 w-4 ml-2 transition-transform',
-                isExpanded && 'rotate-90'
-              )}
-            />
-          )}
-        </Button>
+        {item.href ? (
+          <NavLink
+            to={item.href}
+            className={({ isActive: navIsActive }) => cn(
+              'w-full justify-start text-left h-10 px-3 mb-1 rounded-md transition-colors flex items-center',
+              level > 0 && 'ml-4 text-sm',
+              (navIsActive || isActive) 
+                ? 'bg-primary/10 text-primary border border-primary/20' 
+                : 'hover:bg-accent hover:text-accent-foreground'
+            )}
+          >
+            {content}
+          </NavLink>
+        ) : (
+          <Button
+            variant="ghost"
+            className={cn(
+              'w-full justify-start text-left h-10 px-3 mb-1',
+              level > 0 && 'ml-4 text-sm'
+            )}
+            onClick={() => hasChildren && toggleExpanded(item.id)}
+          >
+            {content}
+          </Button>
+        )}
         
         {hasChildren && isExpanded && (
           <div className="ml-2">
