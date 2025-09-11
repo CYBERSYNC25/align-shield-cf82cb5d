@@ -11,26 +11,49 @@ import {
   CheckCircle,
   Database
 } from 'lucide-react';
+import { useAudits } from '@/hooks/useAudits';
 
 const AuditStats = () => {
-  const stats = [
+  const { stats, audits, loading } = useAudits();
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="bg-surface-elevated border-card-border animate-pulse">
+            <CardContent className="p-6">
+              <div className="h-20 bg-muted/20 rounded"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  const formatFileSize = (bytes: number) => {
+    const gb = bytes / (1024 * 1024 * 1024);
+    const mb = bytes / (1024 * 1024);
+    return gb >= 1 ? `${gb.toFixed(2)} GB` : `${mb.toFixed(0)} MB`;
+  };
+
+  const statsData = [
     {
       title: 'Evidências Coletadas',
-      value: '2,847',
+      value: stats.totalEvidence.toLocaleString(),
       change: '+127 hoje',
       icon: Database,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      subtitle: '1.2GB de dados seguros'
+      subtitle: `${formatFileSize(stats.totalSize)} de dados seguros`
     },
     {
-      title: 'Readiness SOC 2',
-      value: '89%',
-      progress: 89,
+      title: 'Auditorias Ativas',
+      value: stats.activeAudits.toString(),
+      progress: stats.activeAudits > 0 ? 89 : 0,
       icon: Shield,
       color: 'text-success',
       bgColor: 'bg-success/10',
-      subtitle: '57/64 controles OK'
+      subtitle: `${stats.completedAudits} concluídas`
     },
     {
       title: 'Sessões de Auditores',
@@ -54,7 +77,7 @@ const AuditStats = () => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
+      {statsData.map((stat, index) => (
         <Card key={index} className="bg-surface-elevated border-card-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">

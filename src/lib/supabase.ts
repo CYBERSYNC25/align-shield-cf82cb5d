@@ -99,47 +99,103 @@ export type Database = {
           user_id?: string
         }
       }
-      incidents: {
+      audits: {
         Row: {
           id: string
           title: string
           description: string
-          severity: 'low' | 'medium' | 'high' | 'critical'
-          status: 'open' | 'investigating' | 'resolved' | 'closed'
-          affected_systems: string[]
-          reported_by: string
-          assigned_to: string
+          framework: string
+          status: 'planning' | 'in_progress' | 'review' | 'completed'
+          auditor_name: string
+          auditor_email: string
+          start_date: string
+          end_date: string
+          evidence_count: number
+          findings_count: number
           created_at: string
           updated_at: string
-          resolved_at: string | null
           user_id: string
         }
         Insert: {
           id?: string
           title: string
           description: string
-          severity: 'low' | 'medium' | 'high' | 'critical'
-          status: 'open' | 'investigating' | 'resolved' | 'closed'
-          affected_systems: string[]
-          reported_by: string
-          assigned_to: string
+          framework: string
+          status: 'planning' | 'in_progress' | 'review' | 'completed'
+          auditor_name: string
+          auditor_email: string
+          start_date: string
+          end_date: string
+          evidence_count: number
+          findings_count: number
           created_at?: string
           updated_at?: string
-          resolved_at?: string | null
           user_id: string
         }
         Update: {
           id?: string
           title?: string
           description?: string
-          severity?: 'low' | 'medium' | 'high' | 'critical'
-          status?: 'open' | 'investigating' | 'resolved' | 'closed'
-          affected_systems?: string[]
-          reported_by?: string
-          assigned_to?: string
+          framework?: string
+          status?: 'planning' | 'in_progress' | 'review' | 'completed'
+          auditor_name?: string
+          auditor_email?: string
+          start_date?: string
+          end_date?: string
+          evidence_count?: number
+          findings_count?: number
           created_at?: string
           updated_at?: string
-          resolved_at?: string | null
+          user_id?: string
+        }
+      }
+      evidence: {
+        Row: {
+          id: string
+          title: string
+          source: string
+          file_type: string
+          file_size: number
+          file_path: string
+          integrity_hash: string
+          collection_date: string
+          controls_mapped: string[]
+          framework: string
+          status: 'collected' | 'verified' | 'archived'
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          title: string
+          source: string
+          file_type: string
+          file_size: number
+          file_path: string
+          integrity_hash: string
+          collection_date: string
+          controls_mapped: string[]
+          framework: string
+          status: 'collected' | 'verified' | 'archived'
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          title?: string
+          source?: string
+          file_type?: string
+          file_size?: number
+          file_path?: string
+          integrity_hash?: string
+          collection_date?: string
+          controls_mapped?: string[]
+          framework?: string
+          status?: 'collected' | 'verified' | 'archived'
+          created_at?: string
+          updated_at?: string
           user_id?: string
         }
       }
