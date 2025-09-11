@@ -11,6 +11,7 @@ import AccessReviews from "./pages/AccessReviews";
 import RiskManagement from "./pages/RiskManagement";
 import AuditPortal from "./pages/AuditPortal";
 import IncidentsManagement from "./pages/IncidentsManagement";
+import ReportsExports from "./pages/ReportsExports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/risks" element={<RiskManagement />} />
           <Route path="/audit" element={<AuditPortal />} />
           <Route path="/incidents" element={<IncidentsManagement />} />
+          <Route path="/reports" element={<ReportsExports />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

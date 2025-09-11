@@ -77,6 +77,12 @@ const sidebarItems: SidebarItem[] = [
     href: '/audit'
   },
   {
+    id: 'reports',
+    label: 'Relatórios & Exportações',
+    icon: BarChart3,
+    href: '/reports'
+  },
+  {
     id: 'settings',
     label: 'Configurações',
     icon: Settings
