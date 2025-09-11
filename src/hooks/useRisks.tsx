@@ -223,7 +223,13 @@ export const useRisks = () => {
     try {
       setLoading(true);
       
-      if (!supabase) {
+      // Verificar se Supabase está configurado verificando se a URL não é placeholder
+      const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
+        import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
+        import.meta.env.VITE_SUPABASE_ANON_KEY && 
+        import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder-key';
+      
+      if (!isSupabaseConfigured) {
         // Modo mock quando Supabase não está configurado
         setRisks(mockRisks);
         setVendors(mockVendors);
