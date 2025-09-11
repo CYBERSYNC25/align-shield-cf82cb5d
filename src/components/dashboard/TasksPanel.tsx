@@ -16,7 +16,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
-import type { Database } from '@/lib/supabase';
+import type { Database } from '@/integrations/supabase/types';
 
 type Task = Database['public']['Tables']['tasks']['Row'];
 
@@ -39,9 +39,9 @@ const TaskItem: React.FC<{ task: Task; onStatusUpdate: (id: string, status: Task
   const status = statusConfig[task.status];
   
   const getIcon = () => {
-    if (task.framework?.toLowerCase().includes('soc')) return Shield;
-    if (task.framework?.toLowerCase().includes('iso')) return Shield;
-    if (task.framework?.toLowerCase().includes('lgpd')) return FileText;
+    if (task.category?.toLowerCase().includes('soc')) return Shield;
+    if (task.category?.toLowerCase().includes('iso')) return Shield;
+    if (task.category?.toLowerCase().includes('lgpd')) return FileText;
     return AlertTriangle;
   };
   
@@ -96,9 +96,9 @@ const TaskItem: React.FC<{ task: Task; onStatusUpdate: (id: string, status: Task
                 <Clock className="h-3 w-3" />
                 <span>{format(new Date(task.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
               </div>
-              {task.framework && (
+              {task.category && (
                 <Badge variant="secondary" className="text-xs">
-                  {task.framework}
+                  {task.category}
                 </Badge>
               )}
             </div>

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import type { Database } from '@/lib/supabase';
+import type { Database } from '@/integrations/supabase/types';
 
 type Audit = Database['public']['Tables']['audits']['Row'];
 type AuditInsert = Database['public']['Tables']['audits']['Insert'];

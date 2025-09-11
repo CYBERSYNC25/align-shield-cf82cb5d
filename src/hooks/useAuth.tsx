@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 
 interface AuthContextType {
@@ -21,24 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast()
 
   useEffect(() => {
-    // Se não há configuração real do Supabase, usar mock user
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      const mockUser = {
-        id: 'mock-user-id',
-        email: 'usuario@exemplo.com',
-        user_metadata: {},
-        app_metadata: {},
-        aud: 'authenticated',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      } as any;
-      
-      setUser(mockUser);
-      setSession({ user: mockUser, access_token: 'mock-token' } as any);
-      setLoading(false);
-      return;
-    }
-
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -57,15 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    // Se não há configuração real do Supabase, simular login
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      toast({
-        title: "Login simulado",
-        description: "Configure o Supabase para autenticação real"
-      });
-      return { error: null };
-    }
-
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     
     if (error) {
@@ -85,19 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signUp = async (email: string, password: string, metadata?: any) => {
-    // Se não há configuração real do Supabase, simular cadastro
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      toast({
-        title: "Cadastro simulado",
-        description: "Configure o Supabase para autenticação real"
-      });
-      return { error: null };
-    }
-
+    const redirectUrl = `${window.location.origin}/`;
+    
     const { error } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
+        emailRedirectTo: redirectUrl,
         data: metadata
       }
     })
@@ -119,17 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    if (!import.meta.env.VITE_SUPABASE_URL) {
-      // Reset mock user
-      setUser(null);
-      setSession(null);
-      toast({
-        title: "Logout realizado",
-        description: "Até mais!"
-      });
-      return;
-    }
-
     await supabase.auth.signOut()
     toast({
       title: "Logout realizado",

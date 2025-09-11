@@ -93,7 +93,7 @@ const CreateTaskModal = ({ trigger }: CreateTaskModalProps) => {
         title: formData.title,
         description: formData.description,
         priority: formData.priority,
-        framework: formData.framework || 'Geral',
+        category: formData.framework || 'Geral',
         assigned_to: formData.assigned_to || 'Não atribuído',
         due_date: date.toISOString(),
         status: 'pending'

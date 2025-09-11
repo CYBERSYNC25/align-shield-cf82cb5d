@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import AuthModal from '@/components/auth/AuthModal';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -20,8 +19,8 @@ const Header = () => {
   const { user, signOut } = useAuth();
 
   const getUserInitials = () => {
-    if (user?.user_metadata?.full_name) {
-      return user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
+    if (user?.user_metadata?.display_name) {
+      return user.user_metadata.display_name.split(' ').map((n: string) => n[0]).join('').toUpperCase();
     }
     if (user?.email) {
       return user.email.substring(0, 2).toUpperCase();
@@ -30,11 +29,11 @@ const Header = () => {
   };
 
   const getUserName = () => {
-    return user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Usuário';
+    return user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Usuário';
   };
 
   const getUserCompany = () => {
-    return user?.user_metadata?.company || 'Empresa';
+    return user?.user_metadata?.organization || 'Empresa';
   };
 
   return (
@@ -153,14 +152,10 @@ const Header = () => {
           </DropdownMenuContent>
         </DropdownMenu>
         ) : (
-          <AuthModal 
-            trigger={
-              <Button className="hover-scale">
-                <User className="h-4 w-4 mr-2" />
-                Entrar
-              </Button>
-            }
-          />
+          <Button className="hover-scale" onClick={() => window.location.href = '/auth'}>
+            <User className="h-4 w-4 mr-2" />
+            Entrar
+          </Button>
         )}
       </div>
     </header>

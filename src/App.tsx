@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import Auth from "./pages/Auth";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import ControlsFrameworks from "./pages/ControlsFrameworks";
 import IntegrationsHub from "./pages/IntegrationsHub";
@@ -26,16 +28,57 @@ const App = () => (
           <Toaster />
           <Sonner />
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/controls" element={<ControlsFrameworks />} />
-          <Route path="/integrations" element={<IntegrationsHub />} />
-          <Route path="/policies" element={<PoliciesTraining />} />
-          <Route path="/access-reviews" element={<AccessReviews />} />
-          <Route path="/risks" element={<RiskManagement />} />
-          <Route path="/audit" element={<AuditPortal />} />
-          <Route path="/incidents" element={<IncidentsManagement />} />
-          <Route path="/reports" element={<ReportsExports />} />
-          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/controls" element={
+            <ProtectedRoute>
+              <ControlsFrameworks />
+            </ProtectedRoute>
+          } />
+          <Route path="/integrations" element={
+            <ProtectedRoute>
+              <IntegrationsHub />
+            </ProtectedRoute>
+          } />
+          <Route path="/policies" element={
+            <ProtectedRoute>
+              <PoliciesTraining />
+            </ProtectedRoute>
+          } />
+          <Route path="/access-reviews" element={
+            <ProtectedRoute>
+              <AccessReviews />
+            </ProtectedRoute>
+          } />
+          <Route path="/risks" element={
+            <ProtectedRoute>
+              <RiskManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/audit" element={
+            <ProtectedRoute>
+              <AuditPortal />
+            </ProtectedRoute>
+          } />
+          <Route path="/incidents" element={
+            <ProtectedRoute>
+              <IncidentsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/reports" element={
+            <ProtectedRoute>
+              <ReportsExports />
+            </ProtectedRoute>
+          } />
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              <Analytics />
+            </ProtectedRoute>
+          } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
