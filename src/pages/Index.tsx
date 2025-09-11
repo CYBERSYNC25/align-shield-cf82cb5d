@@ -3,6 +3,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import ComplianceScoreCard from '@/components/dashboard/ComplianceScoreCard';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import TasksPanel from '@/components/dashboard/TasksPanel';
+import ConnectionStatus from '@/components/dashboard/ConnectionStatus';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -155,6 +156,9 @@ const Index = () => {
             </div>
             
             <div className="space-y-6">
+              {/* Connection Status */}
+              <ConnectionStatus />
+              
               {/* Quick Actions */}
               <div className="bg-surface-elevated/80 backdrop-blur-sm rounded-xl border border-card-border/60 p-6 space-y-4 shadow-card hover-lift">
                 <div className="flex items-center space-x-2">
