@@ -2,166 +2,130 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  Shield, 
-  Users, 
-  Clock, 
+  Server, 
+  Cloud, 
+  Building2, 
+  Shield,
   AlertTriangle,
   CheckCircle,
-  ArrowRight,
-  Database
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  MoreVertical
 } from 'lucide-react';
+import { useAccess } from '@/hooks/useAccess';
 
 const SystemsInventory = () => {
-  const systems = [
-    {
-      name: 'AWS Production',
-      type: 'Cloud Infrastructure',
-      logo: '☁️',
-      totalUsers: 89,
-      activeUsers: 67,
-      inactiveUsers: 22,
-      adminUsers: 12,
-      lastSync: '2 min atrás',
-      riskScore: 'medium',
-      nextReview: '28/11/2024',
-      policies: 156,
-      roles: 23,
-      permissions: 445
-    },
-    {
-      name: 'Okta Identity',
-      type: 'Identity Provider',
-      logo: '🔐',
-      totalUsers: 234,
-      activeUsers: 198,
-      inactiveUsers: 36,
-      adminUsers: 8,
-      lastSync: '5 min atrás',
-      riskScore: 'low',
-      nextReview: '05/12/2024',
-      policies: 89,
-      roles: 15,
-      permissions: 234
-    },
-    {
-      name: 'GitHub Enterprise',
-      type: 'Development Platform',
-      logo: '🐙',
-      totalUsers: 52,
-      activeUsers: 48,
-      inactiveUsers: 4,
-      adminUsers: 6,
-      lastSync: '1 min atrás',
-      riskScore: 'high',
-      nextReview: '20/11/2024',
-      policies: 67,
-      roles: 8,
-      permissions: 156
-    },
-    {
-      name: 'Microsoft 365',
-      type: 'Productivity Suite',
-      logo: '📧',
-      totalUsers: 278,
-      activeUsers: 245,
-      inactiveUsers: 33,
-      adminUsers: 15,
-      lastSync: '10 min atrás',
-      riskScore: 'medium',
-      nextReview: '15/12/2024',
-      policies: 123,
-      roles: 28,
-      permissions: 567
-    }
-  ];
+  const { systems, loading } = useAccess();
 
-  const getRiskBadge = (risk: string) => {
-    const config = {
-      low: { label: 'Baixo', className: 'bg-success/10 text-success border-success/20' },
-      medium: { label: 'Médio', className: 'bg-warning/10 text-warning border-warning/20' },
-      high: { label: 'Alto', className: 'bg-destructive/10 text-destructive border-destructive/20' }
-    };
-    
-    const conf = config[risk as keyof typeof config];
-    return <Badge variant="outline" className={conf.className}>{conf.label}</Badge>;
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'cloud': return <Cloud className="h-4 w-4" />;
+      case 'saas': return <Server className="h-4 w-4" />;
+      case 'on-premise': return <Building2 className="h-4 w-4" />;
+      default: return <Server className="h-4 w-4" />;
+    }
   };
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-foreground">
-          Inventário de Sistemas
-        </h3>
-        <Badge variant="outline" className="gap-1">
-          <Database className="h-3 w-3" />
-          {systems.length} sistemas
-        </Badge>
-      </div>
+  const getRiskBadge = (riskLevel: string) => {
+    switch (riskLevel) {
+      case 'critical': 
+        return <Badge variant="destructive" className="text-xs">Crítico</Badge>;
+      case 'high': 
+        return <Badge variant="destructive" className="text-xs bg-warning text-warning-foreground">Alto</Badge>;
+      case 'medium': 
+        return <Badge variant="secondary" className="text-xs">Médio</Badge>;
+      case 'low': 
+        return <Badge variant="outline" className="text-xs">Baixo</Badge>;
+      default: 
+        return <Badge variant="secondary" className="text-xs">Médio</Badge>;
+    }
+  };
 
-      <div className="space-y-3">
-        {systems.map((system, index) => (
-          <Card key={index} className="bg-surface-elevated border-card-border">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="text-lg">{system.logo}</div>
-                  <div>
-                    <h4 className="font-semibold text-foreground">{system.name}</h4>
-                    <p className="text-xs text-muted-foreground">{system.type}</p>
+  const getComplianceIcon = (status: string) => {
+    switch (status) {
+      case 'compliant': 
+        return <CheckCircle className="h-4 w-4 text-success" />;
+      case 'non-compliant': 
+        return <AlertTriangle className="h-4 w-4 text-destructive" />;
+      default: 
+        return <Shield className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getIntegrationIcon = (status: string) => {
+    switch (status) {
+      case 'connected': 
+        return <Wifi className="h-4 w-4 text-success" />;
+      case 'error': 
+        return <AlertTriangle className="h-4 w-4 text-destructive" />;
+      default: 
+        return <WifiOff className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="bg-surface-elevated border-card-border">
+        <CardHeader>
+          <div className="h-6 bg-muted rounded w-48 animate-pulse"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {[...Array(5)].map((_, index) => (
+              <div key={index} className="h-16 bg-muted rounded animate-pulse"></div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-surface-elevated border-card-border">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold text-foreground">
+          Inventário de Sistemas
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {systems.map((system) => (
+            <div key={system.id} className="flex items-center justify-between p-4 border border-card-border rounded-lg bg-surface hover:bg-surface-elevated transition-colors">
+              <div className="flex items-center space-x-4">
+                <div className="p-2 rounded-lg bg-muted">
+                  {getTypeIcon(system.type)}
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-medium text-foreground">{system.name}</h4>
+                  <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <span>{system.users_count} usuários</span>
+                    <span>Última revisão: {new Date(system.last_review || '').toLocaleDateString() || 'Nunca'}</span>
                   </div>
                 </div>
-                
-                <div className="flex items-center gap-2">
-                  {getRiskBadge(system.riskScore)}
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <ArrowRight className="h-3 w-3" />
-                    Revisar
-                  </Button>
-                </div>
               </div>
-
-              <div className="grid grid-cols-4 gap-4 mb-3">
-                <div className="text-center">
-                  <div className="text-lg font-bold text-foreground">{system.totalUsers}</div>
-                  <div className="text-xs text-muted-foreground">Total</div>
+              
+              <div className="flex items-center space-x-3">
+                {getRiskBadge(system.risk_level)}
+                <div className="flex items-center space-x-2">
+                  {getComplianceIcon(system.compliance_status)}
+                  {getIntegrationIcon(system.integration_status)}
                 </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-success">{system.activeUsers}</div>
-                  <div className="text-xs text-muted-foreground">Ativos</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-warning">{system.inactiveUsers}</div>
-                  <div className="text-xs text-muted-foreground">Inativos</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-info">{system.adminUsers}</div>
-                  <div className="text-xs text-muted-foreground">Admins</div>
-                </div>
+                <Button variant="ghost" size="sm">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
               </div>
-
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-4">
-                  <span>📋 {system.policies} políticas</span>
-                  <span>👥 {system.roles} roles</span>
-                  <span>🔑 {system.permissions} permissões</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {system.lastSync}
-                </div>
-              </div>
-
-              <div className="mt-2 pt-2 border-t border-border">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">Próxima revisão:</span>
-                  <span className="font-medium">{system.nextReview}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+            </div>
+          ))}
+          
+          {systems.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Nenhum sistema encontrado</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

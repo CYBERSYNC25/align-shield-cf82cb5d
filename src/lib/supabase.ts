@@ -807,4 +807,62 @@ CREATE POLICY "Users can update vendors" ON vendors FOR UPDATE USING (auth.role(
 CREATE POLICY "Users can view risk_assessments" ON risk_assessments FOR SELECT USING (auth.role() = 'authenticated');
 CREATE POLICY "Users can insert risk_assessments" ON risk_assessments FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Users can update risk_assessments" ON risk_assessments FOR UPDATE USING (auth.role() = 'authenticated');
+
+-- Access Management Tables (Added for Access Reviews module)
+CREATE TABLE IF NOT EXISTS access_campaigns (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  status VARCHAR NOT NULL CHECK (status IN ('draft', 'active', 'completed')) DEFAULT 'draft',
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  systems TEXT[] DEFAULT ARRAY[]::TEXT[],
+  reviewers TEXT[] DEFAULT ARRAY[]::TEXT[],
+  progress INTEGER DEFAULT 0 CHECK (progress >= 0 AND progress <= 100),
+  total_users INTEGER DEFAULT 0,
+  certified_users INTEGER DEFAULT 0,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS system_inventory (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name VARCHAR NOT NULL UNIQUE,
+  type VARCHAR NOT NULL CHECK (type IN ('saas', 'on-premise', 'cloud')),
+  users_count INTEGER DEFAULT 0,
+  last_review DATE,
+  risk_level VARCHAR NOT NULL CHECK (risk_level IN ('low', 'medium', 'high', 'critical')) DEFAULT 'medium',
+  compliance_status VARCHAR NOT NULL CHECK (compliance_status IN ('compliant', 'non-compliant', 'unknown')) DEFAULT 'unknown',
+  integration_status VARCHAR NOT NULL CHECK (integration_status IN ('connected', 'disconnected', 'error')) DEFAULT 'disconnected',
+  metadata JSONB DEFAULT '{}',
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS access_anomalies (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id VARCHAR NOT NULL,
+  user_name VARCHAR NOT NULL,
+  system_name VARCHAR NOT NULL,
+  anomaly_type VARCHAR NOT NULL CHECK (anomaly_type IN ('excessive_privileges', 'unused_access', 'suspicious_activity', 'policy_violation')),
+  severity VARCHAR NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')) DEFAULT 'medium',
+  description TEXT NOT NULL,
+  detected_at TIMESTAMP WITH TIME ZONE NOT NULL,
+  status VARCHAR NOT NULL CHECK (status IN ('open', 'investigating', 'resolved', 'false_positive')) DEFAULT 'open',
+  assigned_to VARCHAR,
+  resolution_notes TEXT,
+  created_by UUID REFERENCES auth.users(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for Access Management
+CREATE INDEX IF NOT EXISTS idx_access_campaigns_status ON access_campaigns(status);
+CREATE INDEX IF NOT EXISTS idx_access_campaigns_dates ON access_campaigns(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_system_inventory_type ON system_inventory(type);
+CREATE INDEX IF NOT EXISTS idx_system_inventory_risk_level ON system_inventory(risk_level);
+CREATE INDEX IF NOT EXISTS idx_access_anomalies_status ON access_anomalies(status);
+CREATE INDEX IF NOT EXISTS idx_access_anomalies_severity ON access_anomalies(severity);
+CREATE INDEX IF NOT EXISTS idx_access_anomalies_detected_at ON access_anomalies(detected_at);
 */

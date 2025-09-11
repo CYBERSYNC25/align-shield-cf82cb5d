@@ -10,47 +10,86 @@ import {
   TrendingUp,
   Building
 } from 'lucide-react';
+import { useAccess } from '@/hooks/useAccess';
 
 const AccessReviewsStats = () => {
+  const { campaigns, systems, anomalies, loading } = useAccess();
+
+  const activeCampaigns = campaigns.filter(c => c.status === 'active');
+  const completedThisMonth = campaigns.filter(c => 
+    c.status === 'completed' && 
+    new Date(c.updated_at).getMonth() === new Date().getMonth()
+  );
+  
+  const totalUsers = campaigns.reduce((acc, c) => acc + c.total_users, 0);
+  const certifiedUsers = campaigns.reduce((acc, c) => acc + c.certified_users, 0);
+  const certificationRate = totalUsers > 0 ? ((certifiedUsers / totalUsers) * 100).toFixed(1) : '0';
+  
+  const criticalAnomalies = anomalies.filter(a => a.severity === 'critical' && a.status !== 'resolved');
+  const mediumAnomalies = anomalies.filter(a => a.severity === 'medium' && a.status !== 'resolved');
+  
+  const connectedSystems = systems.filter(s => s.integration_status === 'connected');
+  const totalSystemUsers = systems.reduce((acc, s) => acc + s.users_count, 0);
+
   const stats = [
     {
       title: 'Campanhas Ativas',
-      value: '8',
-      total: '12',
+      value: activeCampaigns.length.toString(),
+      total: campaigns.length.toString(),
       icon: Shield,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
-      progress: 67,
-      subtitle: '4 concluídas este mês'
+      progress: campaigns.length > 0 ? Math.round((activeCampaigns.length / campaigns.length) * 100) : 0,
+      subtitle: `${completedThisMonth.length} concluídas este mês`
     },
     {
       title: 'Taxa de Certificação',
-      value: '91.4%',
+      value: `${certificationRate}%`,
       change: '+4.2%',
       icon: CheckCircle,
       color: 'text-success',
       bgColor: 'bg-success/10',
-      subtitle: '1,247/1,364 acessos certificados'
+      subtitle: `${certifiedUsers}/${totalUsers} acessos certificados`
     },
     {
       title: 'Anomalias Detectadas',
-      value: '23',
-      status: 'critical',
+      value: (criticalAnomalies.length + mediumAnomalies.length).toString(),
+      status: criticalAnomalies.length > 0 ? 'critical' : 'normal',
       icon: AlertTriangle,
       color: 'text-warning',
       bgColor: 'bg-warning/10',
-      subtitle: '12 críticas, 11 médias'
+      subtitle: `${criticalAnomalies.length} críticas, ${mediumAnomalies.length} médias`
     },
     {
       title: 'Sistemas Integrados',
-      value: '15',
+      value: connectedSystems.length.toString(),
       change: '+2',
       icon: Building,
       color: 'text-info',
       bgColor: 'bg-info/10',
-      subtitle: '3,847 usuários únicos'
+      subtitle: `${totalSystemUsers.toLocaleString()} usuários únicos`
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+        {[...Array(4)].map((_, index) => (
+          <Card key={index} className="bg-surface-elevated border-card-border animate-pulse">
+            <CardHeader className="space-y-0 pb-2">
+              <div className="h-4 bg-muted rounded w-24"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="h-8 bg-muted rounded w-16"></div>
+                <div className="h-3 bg-muted rounded w-32"></div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
