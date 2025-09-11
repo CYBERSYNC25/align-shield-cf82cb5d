@@ -8,38 +8,44 @@ import {
   ChevronRight,
   Shield,
   FileText,
-  Database
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTasks } from '@/hooks/useTasks';
+import { useAuth } from '@/hooks/useAuth';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import CreateTaskModal from '@/components/tasks/CreateTaskModal';
+import type { Database } from '@/lib/supabase';
 
-interface Task {
-  id: string;
-  title: string;
-  description: string;
-  priority: 'high' | 'medium' | 'low';
-  category: 'security' | 'compliance' | 'policy' | 'integration';
-  assignee: string;
-  dueDate: string;
-  framework?: string;
-}
+type Task = Database['public']['Tables']['tasks']['Row'];
 
 const priorityConfig = {
+  critical: { color: 'danger', label: 'Crítica' },
   high: { color: 'danger', label: 'Alta' },
   medium: { color: 'warning', label: 'Média' },
   low: { color: 'info', label: 'Baixa' }
 };
 
-const categoryConfig = {
-  security: { icon: Shield, color: 'danger', label: 'Segurança' },
-  compliance: { icon: AlertTriangle, color: 'warning', label: 'Conformidade' },
-  policy: { icon: FileText, color: 'info', label: 'Política' },
-  integration: { icon: Database, color: 'success', label: 'Integração' }
+const statusConfig = {
+  pending: { color: 'warning', label: 'Pendente' },
+  in_progress: { color: 'info', label: 'Em Progresso' },
+  completed: { color: 'success', label: 'Concluída' },
+  overdue: { color: 'danger', label: 'Atrasada' }
 };
 
-const TaskItem: React.FC<{ task: Task }> = ({ task }) => {
+const TaskItem: React.FC<{ task: Task; onStatusUpdate: (id: string, status: Task['status']) => void }> = ({ task, onStatusUpdate }) => {
   const priority = priorityConfig[task.priority];
-  const category = categoryConfig[task.category];
-  const CategoryIcon = category.icon;
+  const status = statusConfig[task.status];
+  
+  const getIcon = () => {
+    if (task.framework?.toLowerCase().includes('soc')) return Shield;
+    if (task.framework?.toLowerCase().includes('iso')) return Shield;
+    if (task.framework?.toLowerCase().includes('lgpd')) return FileText;
+    return AlertTriangle;
+  };
+  
+  const CategoryIcon = getIcon();
 
   return (
     <div className="group border border-card-border rounded-lg p-4 hover:shadow-card transition-all duration-200 bg-surface-elevated">
@@ -47,9 +53,9 @@ const TaskItem: React.FC<{ task: Task }> = ({ task }) => {
         <div className="flex items-start space-x-3 flex-1">
           <div className={cn(
             'p-2 rounded-lg flex-shrink-0',
-            `bg-${category.color}/10`
+            `bg-${priority.color}/10`
           )}>
-            <CategoryIcon className={cn('h-4 w-4', `text-${category.color}`)} />
+            <CategoryIcon className={cn('h-4 w-4', `text-${priority.color}`)} />
           </div>
           
           <div className="flex-1 min-w-0">
@@ -66,6 +72,15 @@ const TaskItem: React.FC<{ task: Task }> = ({ task }) => {
               >
                 {priority.label}
               </Badge>
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  'text-xs',
+                  `border-${status.color} text-${status.color}`
+                )}
+              >
+                {status.label}
+              </Badge>
             </div>
             
             <p className="text-sm text-muted-foreground mb-2 line-clamp-2">
@@ -75,11 +90,11 @@ const TaskItem: React.FC<{ task: Task }> = ({ task }) => {
             <div className="flex items-center space-x-4 text-xs text-muted-foreground">
               <div className="flex items-center space-x-1">
                 <User className="h-3 w-3" />
-                <span>{task.assignee}</span>
+                <span>{task.assigned_to}</span>
               </div>
               <div className="flex items-center space-x-1">
                 <Clock className="h-3 w-3" />
-                <span>{task.dueDate}</span>
+                <span>{format(new Date(task.due_date), "dd/MM/yyyy", { locale: ptBR })}</span>
               </div>
               {task.framework && (
                 <Badge variant="secondary" className="text-xs">
@@ -90,70 +105,44 @@ const TaskItem: React.FC<{ task: Task }> = ({ task }) => {
           </div>
         </div>
         
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="opacity-0 group-hover:opacity-100 transition-opacity"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => {
+              const nextStatus: Task['status'] = 
+                task.status === 'pending' ? 'in_progress' :
+                task.status === 'in_progress' ? 'completed' : 'pending';
+              onStatusUpdate(task.id, nextStatus);
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+          >
+            {task.status === 'pending' ? 'Iniciar' : 
+             task.status === 'in_progress' ? 'Concluir' : 'Reabrir'}
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
 };
 
 const TasksPanel = () => {
-  const tasks: Task[] = [
-    {
-      id: '1',
-      title: 'Configurar MFA obrigatório no AWS',
-      description: 'Controle IAM.8 do SOC 2 detectou 15 usuários sem MFA ativado',
-      priority: 'high',
-      category: 'security',
-      assignee: 'Carlos Santos',
-      dueDate: 'Hoje',
-      framework: 'SOC 2'
-    },
-    {
-      id: '2',
-      title: 'Revisar acessos privilegiados Azure AD',
-      description: 'Revisão trimestral de acessos administrativos vence em 3 dias',
-      priority: 'high',
-      category: 'compliance',
-      assignee: 'Ana Silva',
-      dueDate: '3 dias',
-      framework: 'ISO 27001'
-    },
-    {
-      id: '3',
-      title: 'Atualizar política de classificação de dados',
-      description: 'Nova versão da política LGPD precisa ser publicada e atestada',
-      priority: 'medium',
-      category: 'policy',
-      assignee: 'Roberto Lima',
-      dueDate: '1 semana',
-      framework: 'LGPD'
-    },
-    {
-      id: '4',
-      title: 'Integrar CrowdStrike EDR',
-      description: 'Configurar coleta automática de evidências de endpoint',
-      priority: 'medium',
-      category: 'integration',
-      assignee: 'Marcus Tech',
-      dueDate: '2 semanas'
-    },
-    {
-      id: '5',
-      title: 'Corrigir backup encryption S3',
-      description: 'Buckets de backup detectados sem criptografia em repouso',
-      priority: 'high',
-      category: 'security',
-      assignee: 'DevOps Team',
-      dueDate: 'Amanhã',
-      framework: 'SOC 2'
-    }
-  ];
+  const { tasks, loading, updateTask } = useTasks();
+  const { user } = useAuth();
+
+  const handleStatusUpdate = async (id: string, status: Task['status']) => {
+    await updateTask(id, { status });
+  };
+
+  // Show recent tasks (limit to 5)
+  const recentTasks = tasks.slice(0, 5);
 
   return (
     <Card className="border-card-border shadow-card">
@@ -163,22 +152,44 @@ const TasksPanel = () => {
             <AlertTriangle className="h-5 w-5 text-warning" />
             <span>Tarefas Prioritárias</span>
           </CardTitle>
-          <Button variant="outline" size="sm">
-            Ver todas
-          </Button>
+          <div className="flex items-center space-x-2">
+            <CreateTaskModal />
+            <Button variant="outline" size="sm">
+              Ver todas
+            </Button>
+          </div>
         </div>
       </CardHeader>
       
       <CardContent className="space-y-3">
-        {tasks.map(task => (
-          <TaskItem key={task.id} task={task} />
-        ))}
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Carregando tarefas...</span>
+          </div>
+        ) : !user ? (
+          <div className="text-center py-8">
+            <p className="text-sm text-muted-foreground">Faça login para ver suas tarefas</p>
+          </div>
+        ) : recentTasks.length === 0 ? (
+          <div className="text-center py-8">
+            <AlertTriangle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhuma tarefa encontrada</p>
+            <p className="text-xs text-muted-foreground mt-1">Crie uma nova tarefa para começar</p>
+          </div>
+        ) : (
+          recentTasks.map(task => (
+            <TaskItem key={task.id} task={task} onStatusUpdate={handleStatusUpdate} />
+          ))
+        )}
         
-        <div className="pt-3 text-center">
-          <Button variant="ghost" className="w-full text-primary">
-            Carregar mais tarefas
-          </Button>
-        </div>
+        {!loading && user && tasks.length > 5 && (
+          <div className="pt-3 text-center">
+            <Button variant="ghost" className="w-full text-primary">
+              Ver todas as {tasks.length} tarefas
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
