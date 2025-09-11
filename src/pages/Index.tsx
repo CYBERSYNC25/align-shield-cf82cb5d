@@ -199,6 +199,28 @@ const Index = () => {
               {/* Recent Activity */}
               <div className="bg-surface-elevated/80 backdrop-blur-sm rounded-xl border border-card-border/60 p-6 space-y-4 shadow-card hover-lift">
                 <div className="flex items-center space-x-2">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Activity className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Ações Rápidas</h3>
+                </div>
+                <div className="space-y-3">
+                  {quickActions.map((action, index) => (
+                    <Button
+                      key={index}
+                      variant="ghost"
+                      className="w-full justify-start p-3 h-auto text-left hover:bg-muted/80 hover-scale rounded-lg"
+                    >
+                      <action.icon className={`h-4 w-4 mr-3 text-${action.color}`} />
+                      <span className="text-sm font-medium">{action.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Activity */}
+              <div className="bg-surface-elevated/80 backdrop-blur-sm rounded-xl border border-card-border/60 p-6 space-y-4 shadow-card hover-lift">
+                <div className="flex items-center space-x-2">
                   <div className="p-2 bg-info/10 rounded-lg">
                     <Clock className="h-5 w-5 text-info" />
                   </div>

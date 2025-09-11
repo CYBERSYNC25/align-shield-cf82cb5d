@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
-import { AuthModal } from '@/components/auth/AuthModal';
+import AuthModal from '@/components/auth/AuthModal';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -18,7 +18,6 @@ import complianceSyncLogo from '@/assets/compliance-sync-logo.png';
 
 const Header = () => {
   const { user, signOut } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const getUserInitials = () => {
     if (user?.user_metadata?.full_name) {
@@ -154,14 +153,16 @@ const Header = () => {
           </DropdownMenuContent>
         </DropdownMenu>
         ) : (
-          <Button onClick={() => setShowAuthModal(true)} className="hover-scale">
-            <User className="h-4 w-4 mr-2" />
-            Entrar
-          </Button>
+          <AuthModal 
+            trigger={
+              <Button className="hover-scale">
+                <User className="h-4 w-4 mr-2" />
+                Entrar
+              </Button>
+            }
+          />
         )}
       </div>
-      
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </header>
   );
 };

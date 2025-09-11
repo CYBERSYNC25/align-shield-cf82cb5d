@@ -9,7 +9,8 @@ import {
   Database, 
   Settings,
   ChevronRight,
-  Home
+  Home,
+  TrendingUp
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -75,6 +76,13 @@ const sidebarItems: SidebarItem[] = [
     label: 'Auditorias Contínuas',
     icon: Shield,
     href: '/audit'
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics & Insights',
+    icon: TrendingUp,
+    href: '/analytics',
+    badge: 'Novo'
   },
   {
     id: 'reports',
