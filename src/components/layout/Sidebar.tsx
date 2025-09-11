@@ -48,6 +48,7 @@ const sidebarItems: SidebarItem[] = [
     id: 'policies',
     label: 'Políticas & Treinamentos',
     icon: FileText,
+    href: '/policies',
     badge: 'Novo'
   },
   {

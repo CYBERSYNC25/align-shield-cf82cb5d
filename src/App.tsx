@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import ControlsFrameworks from "./pages/ControlsFrameworks";
 import IntegrationsHub from "./pages/IntegrationsHub";
+import PoliciesTraining from "./pages/PoliciesTraining";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/controls" element={<ControlsFrameworks />} />
           <Route path="/integrations" element={<IntegrationsHub />} />
+          <Route path="/policies" element={<PoliciesTraining />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
