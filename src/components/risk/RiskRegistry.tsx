@@ -1,0 +1,246 @@
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  Plus, 
+  AlertTriangle, 
+  Shield, 
+  Eye,
+  Calendar,
+  User,
+  TrendingUp,
+  TrendingDown
+} from 'lucide-react';
+
+const RiskRegistry = () => {
+  const risks = [
+    {
+      id: 'RISK-001',
+      title: 'Falha de Backup Crítico',
+      category: 'Operacional',
+      probability: 'medium',
+      impact: 'high',
+      riskScore: 12,
+      level: 'high',
+      owner: 'Carlos Silva',
+      ownerRole: 'Infrastructure Lead',
+      status: 'active',
+      lastReview: '15/11/2024',
+      nextReview: '15/02/2025',
+      controls: ['Backup Automatizado', 'Monitoramento 24/7', 'Testes Regulares'],
+      trend: 'stable',
+      description: 'Risco de perda de dados por falha no sistema de backup principal'
+    },
+    {
+      id: 'RISK-002',
+      title: 'Vazamento de Dados Pessoais',
+      category: 'Segurança',
+      probability: 'low',
+      impact: 'critical',
+      riskScore: 15,
+      level: 'critical',
+      owner: 'Ana Rodrigues',
+      ownerRole: 'DPO',
+      status: 'active',
+      lastReview: '10/11/2024',
+      nextReview: '10/01/2025',
+      controls: ['Criptografia End-to-End', 'DLP', 'Treinamento LGPD'],
+      trend: 'decreasing',
+      description: 'Exposição não autorizada de dados pessoais de clientes'
+    },
+    {
+      id: 'RISK-003',
+      title: 'Indisponibilidade de Fornecedor Crítico',
+      category: 'Terceiros',
+      probability: 'medium',
+      impact: 'medium',
+      riskScore: 9,
+      level: 'medium',
+      owner: 'Roberto Lima',
+      ownerRole: 'Procurement Manager',
+      status: 'mitigated',
+      lastReview: '08/11/2024',
+      nextReview: '08/05/2025',
+      controls: ['Fornecedores Alternativos', 'SLA Rigoroso', 'Monitoramento'],
+      trend: 'stable',
+      description: 'Interrupção de serviços essenciais por falha de fornecedor principal'
+    },
+    {
+      id: 'RISK-004',
+      title: 'Ataque de Ransomware',
+      category: 'Cibersegurança',
+      probability: 'high',
+      impact: 'critical',
+      riskScore: 20,
+      level: 'critical',
+      owner: 'Maria Santos',
+      ownerRole: 'CISO',
+      status: 'active',
+      lastReview: '12/11/2024',
+      nextReview: '12/12/2024',
+      controls: ['EDR', 'Backup Offline', 'Treinamento Phishing'],
+      trend: 'increasing',
+      description: 'Criptografia maliciosa de sistemas críticos por ransomware'
+    },
+    {
+      id: 'RISK-005',
+      title: 'Não Conformidade Regulatória',
+      category: 'Compliance',
+      probability: 'medium',
+      impact: 'high',
+      riskScore: 12,
+      level: 'high',
+      owner: 'Fernanda Costa',
+      ownerRole: 'Compliance Officer',
+      status: 'active',
+      lastReview: '20/11/2024',
+      nextReview: '20/02/2025',
+      controls: ['Monitoramento Contínuo', 'Auditoria Interna', 'Gap Analysis'],
+      trend: 'stable',
+      description: 'Penalidades por não atendimento a requisitos LGPD/SOC2'
+    }
+  ];
+
+  const getRiskLevelBadge = (level: string) => {
+    const config = {
+      critical: { label: 'Crítico', className: 'bg-destructive text-destructive-foreground' },
+      high: { label: 'Alto', className: 'bg-warning text-warning-foreground' },
+      medium: { label: 'Médio', className: 'bg-info text-info-foreground' },
+      low: { label: 'Baixo', className: 'bg-success text-success-foreground' }
+    };
+    
+    const conf = config[level as keyof typeof config];
+    return <Badge variant="secondary" className={conf.className}>{conf.label}</Badge>;
+  };
+
+  const getStatusBadge = (status: string) => {
+    const config = {
+      active: { label: 'Ativo', className: 'bg-warning/10 text-warning border-warning/20' },
+      mitigated: { label: 'Mitigado', className: 'bg-success/10 text-success border-success/20' },
+      accepted: { label: 'Aceito', className: 'bg-info/10 text-info border-info/20' },
+      transferred: { label: 'Transferido', className: 'bg-muted/10 text-muted-foreground border-muted/20' }
+    };
+    
+    const conf = config[status as keyof typeof config];
+    return <Badge variant="outline" className={conf.className}>{conf.label}</Badge>;
+  };
+
+  const getTrendIcon = (trend: string) => {
+    if (trend === 'increasing') return <TrendingUp className="h-3 w-3 text-destructive" />;
+    if (trend === 'decreasing') return <TrendingDown className="h-3 w-3 text-success" />;
+    return <div className="h-3 w-3 bg-muted-foreground rounded-full" />;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-foreground">
+          Registro de Riscos
+        </h2>
+        <Button className="gap-2">
+          <Plus className="h-4 w-4" />
+          Novo Risco
+        </Button>
+      </div>
+
+      <div className="space-y-4 max-h-[500px] overflow-y-auto">
+        {risks.map((risk, index) => (
+          <Card key={index} className="bg-surface-elevated border-card-border">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="text-xs font-mono">
+                      {risk.id}
+                    </Badge>
+                    {getRiskLevelBadge(risk.level)}
+                    {getStatusBadge(risk.status)}
+                  </div>
+                  <CardTitle className="text-base font-semibold mb-1">
+                    {risk.title}
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {risk.description}
+                  </p>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  {getTrendIcon(risk.trend)}
+                  <Button variant="outline" size="sm">
+                    <Eye className="h-4 w-4 mr-2" />
+                    Detalhes
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              {/* Risk Score & Matrix */}
+              <div className="flex items-center justify-between p-3 bg-muted/10 rounded-lg">
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Categoria:</span>
+                    <div className="font-medium">{risk.category}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Probabilidade:</span>
+                    <div className="font-medium capitalize">{risk.probability}</div>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Impacto:</span>
+                    <div className="font-medium capitalize">{risk.impact}</div>
+                  </div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-foreground">{risk.riskScore}</div>
+                  <div className="text-xs text-muted-foreground">Score</div>
+                </div>
+              </div>
+
+              {/* Owner */}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs">
+                    {risk.owner.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{risk.owner}</p>
+                  <p className="text-xs text-muted-foreground">{risk.ownerRole}</p>
+                </div>
+              </div>
+
+              {/* Controls */}
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">CONTROLES MITIGADORES</p>
+                <div className="flex flex-wrap gap-1">
+                  {risk.controls.map((control, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      <Shield className="h-3 w-3 mr-1" />
+                      {control}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Última revisão: {risk.lastReview}
+                </div>
+                <div>
+                  Próxima revisão: {risk.nextReview}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default RiskRegistry;

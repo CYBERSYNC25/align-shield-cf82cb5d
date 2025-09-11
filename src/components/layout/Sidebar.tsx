@@ -61,7 +61,8 @@ const sidebarItems: SidebarItem[] = [
   {
     id: 'risks',
     label: 'Riscos & Fornecedores',
-    icon: AlertCircle
+    icon: AlertCircle,
+    href: '/risks'
   },
   {
     id: 'incidents',
