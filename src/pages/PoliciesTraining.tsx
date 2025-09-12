@@ -4,6 +4,7 @@ import PoliciesLibrary from '@/components/policies/PoliciesLibrary';
 import TrainingPrograms from '@/components/policies/TrainingPrograms';
 import AttestationTracking from '@/components/policies/AttestationTracking';
 import PoliciesStats from '@/components/policies/PoliciesStats';
+import CreatePolicyModal from '@/components/policies/CreatePolicyModal';
 
 const PoliciesTraining = () => {
   return (
@@ -15,13 +16,16 @@ const PoliciesTraining = () => {
         
         <main className="flex-1 p-6 space-y-6 overflow-auto">
           {/* Page Header */}
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-foreground">
-              Políticas & Treinamentos
-            </h1>
-            <p className="text-muted-foreground">
-              Gestão de políticas organizacionais, treinamentos obrigatórios e coleta de atestos
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-foreground">
+                Políticas & Treinamentos
+              </h1>
+              <p className="text-muted-foreground">
+                Gestão de políticas organizacionais, treinamentos obrigatórios e coleta de atestos
+              </p>
+            </div>
+            <CreatePolicyModal />
           </div>
 
           {/* Stats Overview */}

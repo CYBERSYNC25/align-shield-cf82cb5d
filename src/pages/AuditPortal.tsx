@@ -4,6 +4,7 @@ import AuditStats from '@/components/audit/AuditStats';
 import EvidenceLocker from '@/components/audit/EvidenceLocker';
 import FrameworkChecklists from '@/components/audit/FrameworkChecklists';
 import AuditorAccess from '@/components/audit/AuditorAccess';
+import CreateAuditModal from '@/components/audit/CreateAuditModal';
 
 const AuditPortal = () => {
   return (
@@ -15,13 +16,16 @@ const AuditPortal = () => {
         
         <main className="flex-1 p-6 space-y-6 overflow-auto">
           {/* Page Header */}
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-foreground">
-              Auditorias Contínuas
-            </h1>
-            <p className="text-muted-foreground">
-              Cofre de evidências, checklists de conformidade e portal para auditores externos
-            </p>
+          <div className="flex items-center justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold text-foreground">
+                Auditorias Contínuas
+              </h1>
+              <p className="text-muted-foreground">
+                Cofre de evidências, checklists de conformidade e portal para auditores externos
+              </p>
+            </div>
+            <CreateAuditModal />
           </div>
 
           {/* Stats Overview */}

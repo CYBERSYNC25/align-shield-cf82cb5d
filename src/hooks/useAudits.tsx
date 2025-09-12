@@ -116,15 +116,6 @@ export function useAudits() {
     if (!user) return null;
 
     try {
-      await createAudit({
-        name: auditData.name,
-        framework: auditData.framework,
-        auditor: auditData.auditor || 'Não atribuído',
-        start_date: auditData.start_date,
-        end_date: auditData.end_date,
-        status: 'planning'
-      });
-
       const { data, error } = await supabase
         .from('audits')
         .insert({

@@ -1,30 +1,28 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Plus, Shield } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAudits } from '@/hooks/useAudits';
-import type { Database } from '@/lib/supabase';
+import { FileSearch, Plus } from 'lucide-react';
 
-type AuditInsert = Database['public']['Tables']['audits']['Insert'];
+interface CreateAuditModalProps {
+  onSuccess?: () => void;
+}
 
-export default function CreateAuditModal() {
+const CreateAuditModal = ({ onSuccess }: CreateAuditModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { createAudit } = useAudits();
-  
+
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
+    name: '',
     framework: '',
-    status: 'planning' as AuditInsert['status'],
-    auditor_name: '',
-    auditor_email: '',
+    auditor: '',
     start_date: '',
-    end_date: ''
+    end_date: '',
+    status: 'planning' as 'planning' | 'in_progress' | 'review' | 'completed'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,27 +30,24 @@ export default function CreateAuditModal() {
     setLoading(true);
 
     try {
-      const audit = await createAudit({
-        name: formData.title,
-        framework: formData.framework,
-        auditor: formData.auditor_name,
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        status: formData.status
-      });
+      const auditData = {
+        ...formData,
+        progress: 0
+      };
 
-      if (audit) {
+      const result = await createAudit(auditData);
+      
+      if (result) {
         setOpen(false);
         setFormData({
-          title: '',
-          description: '',
+          name: '',
           framework: '',
-          status: 'planning',
-          auditor_name: '',
-          auditor_email: '',
+          auditor: '',
           start_date: '',
-          end_date: ''
+          end_date: '',
+          status: 'planning'
         });
+        onSuccess?.();
       }
     } catch (error) {
       console.error('Erro ao criar auditoria:', error);
@@ -70,92 +65,55 @@ export default function CreateAuditModal() {
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Nova Auditoria
+            <FileSearch className="h-5 w-5" />
+            Criar Nova Auditoria
           </DialogTitle>
         </DialogHeader>
-        
+
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Título</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Ex: Auditoria SOC 2 Type II - Q1 2025"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Descrição do escopo e objetivos da auditoria"
-              required
-            />
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="framework">Framework</Label>
-              <Select value={formData.framework} onValueChange={(value) => setFormData(prev => ({ ...prev, framework: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="SOC 2">SOC 2</SelectItem>
-                  <SelectItem value="ISO 27001">ISO 27001</SelectItem>
-                  <SelectItem value="LGPD">LGPD</SelectItem>
-                  <SelectItem value="GDPR">GDPR</SelectItem>
-                  <SelectItem value="PCI DSS">PCI DSS</SelectItem>
-                  <SelectItem value="HIPAA">HIPAA</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as AuditInsert['status'] }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planning">Planejamento</SelectItem>
-                  <SelectItem value="in_progress">Em Progresso</SelectItem>
-                  <SelectItem value="review">Revisão</SelectItem>
-                  <SelectItem value="completed">Concluída</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="auditor_name">Nome do Auditor</Label>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="name">Nome da Auditoria *</Label>
               <Input
-                id="auditor_name"
-                value={formData.auditor_name}
-                onChange={(e) => setFormData(prev => ({ ...prev, auditor_name: e.target.value }))}
-                placeholder="Nome completo"
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Ex: Auditoria SOC 2 - Q4 2024"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="auditor_email">Email do Auditor</Label>
+              <Label htmlFor="framework">Framework *</Label>
+              <Select 
+                value={formData.framework} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, framework: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o framework" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SOC 2">SOC 2</SelectItem>
+                  <SelectItem value="ISO 27001">ISO 27001</SelectItem>
+                  <SelectItem value="PCI DSS">PCI DSS</SelectItem>
+                  <SelectItem value="HIPAA">HIPAA</SelectItem>
+                  <SelectItem value="GDPR">GDPR</SelectItem>
+                  <SelectItem value="NIST">NIST</SelectItem>
+                  <SelectItem value="Custom">Personalizado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="auditor">Auditor Responsável</Label>
               <Input
-                id="auditor_email"
-                type="email"
-                value={formData.auditor_email}
-                onChange={(e) => setFormData(prev => ({ ...prev, auditor_email: e.target.value }))}
-                placeholder="email@auditor.com"
-                required
+                id="auditor"
+                value={formData.auditor}
+                onChange={(e) => setFormData(prev => ({ ...prev, auditor: e.target.value }))}
+                placeholder="Nome do auditor"
               />
             </div>
           </div>
@@ -168,24 +126,46 @@ export default function CreateAuditModal() {
                 type="date"
                 value={formData.start_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, start_date: e.target.value }))}
-                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end_date">Data de Término</Label>
+              <Label htmlFor="end_date">Data de Conclusão</Label>
               <Input
                 id="end_date"
                 type="date"
                 value={formData.end_date}
                 onChange={(e) => setFormData(prev => ({ ...prev, end_date: e.target.value }))}
-                required
               />
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+          <div className="space-y-2">
+            <Label htmlFor="status">Status Inicial</Label>
+            <Select 
+              value={formData.status} 
+              onValueChange={(value: 'planning' | 'in_progress' | 'review' | 'completed') => 
+                setFormData(prev => ({ ...prev, status: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="planning">Planejamento</SelectItem>
+                <SelectItem value="in_progress">Em Andamento</SelectItem>
+                <SelectItem value="review">Em Revisão</SelectItem>
+                <SelectItem value="completed">Concluída</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+            >
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
@@ -196,4 +176,6 @@ export default function CreateAuditModal() {
       </DialogContent>
     </Dialog>
   );
-}
+};
+
+export default CreateAuditModal;

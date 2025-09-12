@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import ViewAssessmentModal from './ViewAssessmentModal';
 import NewAssessmentModal from './NewAssessmentModal';
 import UseTemplateModal from './UseTemplateModal';
+import CreateRiskModal from './CreateRiskModal';
 import { 
   Plus, 
   FileText, 
@@ -198,10 +199,13 @@ const RiskAssessments = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Avaliações de Risco
         </h2>
-        <Button className="gap-2" onClick={() => setNewAssessmentModalOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Nova Avaliação
-        </Button>
+        <div className="flex gap-2">
+          <CreateRiskModal />
+          <Button className="gap-2" onClick={() => setNewAssessmentModalOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Nova Avaliação
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="active" className="w-full">
