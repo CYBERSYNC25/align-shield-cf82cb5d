@@ -267,7 +267,7 @@ export const useIncidents = () => {
         .order('created_at', { ascending: false });
 
       if (incidentsError) {
-        console.error('Erro ao buscar incidentes:', incidentsError);
+        console.warn('Dados de incidentes não disponíveis:', incidentsError);
         setIncidents(mockIncidents);
       } else {
         setIncidents(incidentsData || []);

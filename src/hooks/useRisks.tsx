@@ -265,7 +265,7 @@ export const useRisks = () => {
         .order('created_at', { ascending: false });
 
       if (risksError) {
-        console.error('Erro ao buscar riscos:', risksError);
+        console.warn('Dados de riscos não disponíveis:', risksError);
         setRisks(mockRisks);
       } else {
         setRisks(risksData || []);

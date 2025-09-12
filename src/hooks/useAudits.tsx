@@ -103,7 +103,7 @@ export function useAudits() {
       setAudits(auditsResponse.data || []);
       setEvidence(evidenceResponse.data || []);
     } catch (error) {
-      console.error('Erro ao buscar auditorias:', error);
+      console.warn('Dados de auditoria não disponíveis:', error);
       // Use dados mocados se falhar
       setAudits(getMockAudits());
       setEvidence(getMockEvidence());
