@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Bell, Search, Settings, User, ChevronDown, Shield, LogOut } from 'lucide-react';
+import { Search, Settings, User, ChevronDown, Shield, LogOut } from 'lucide-react';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -81,12 +82,7 @@ const Header = () => {
       {/* Actions & Profile */}
       <div className="flex items-center space-x-3 flex-1 justify-end">
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative hover-scale">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 h-4 w-4 bg-danger rounded-full flex items-center justify-center animate-pulse">
-            <span className="text-[10px] text-danger-foreground font-bold">3</span>
-          </span>
-        </Button>
+        <NotificationCenter />
 
         {/* Settings */}
         <Button variant="ghost" size="icon" className="hover-scale">

@@ -19,6 +19,7 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import FileManagement from "./pages/FileManagement";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +90,11 @@ const App = () => (
           <Route path="/files" element={
             <ProtectedRoute>
               <FileManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <Notifications />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
