@@ -1,161 +1,142 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Minus, Shield } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { TrendingUp, TrendingDown, Shield, AlertTriangle } from 'lucide-react';
+import { useFrameworks } from '@/hooks/useFrameworks';
+import { useRisks } from '@/hooks/useRisks';
+import { useAudits } from '@/hooks/useAudits';
+import { useMemo } from 'react';
 
-interface ComplianceScoreCardProps {
-  framework: string;
-  score: number;
-  trend: 'up' | 'down' | 'stable';
-  trendValue: number;
-  status: 'excellent' | 'good' | 'fair' | 'poor' | 'critical';
-  totalControls: number;
-  passedControls: number;
-}
+const ComplianceScoreCard = () => {
+  const { frameworks } = useFrameworks();
+  const { risks } = useRisks();
+  const { audits } = useAudits();
 
-const statusConfig = {
-  excellent: { 
-    color: 'compliance-excellent', 
-    bgColor: 'success/10',
-    textColor: 'success',
-    borderColor: 'success/20',
-    label: 'Excelente'
-  },
-  good: { 
-    color: 'compliance-good', 
-    bgColor: 'success/10',
-    textColor: 'success',
-    borderColor: 'success/20',
-    label: 'Bom'
-  },
-  fair: { 
-    color: 'compliance-fair', 
-    bgColor: 'warning/10',
-    textColor: 'warning',
-    borderColor: 'warning/20',
-    label: 'Regular'
-  },
-  poor: { 
-    color: 'compliance-poor', 
-    bgColor: 'danger/10',
-    textColor: 'danger',
-    borderColor: 'danger/20',
-    label: 'Ruim'
-  },
-  critical: { 
-    color: 'compliance-critical', 
-    bgColor: 'danger/10',
-    textColor: 'danger',
-    borderColor: 'danger/20',
-    label: 'Crítico'
-  }
-};
+  const complianceScore = useMemo(() => {
+    if (frameworks.length === 0) return 0;
+    
+    const totalScore = frameworks.reduce((sum, framework) => sum + (framework.compliance_score || 0), 0);
+    return Math.round(totalScore / frameworks.length);
+  }, [frameworks]);
 
-const ComplianceScoreCard: React.FC<ComplianceScoreCardProps> = ({
-  framework,
-  score,
-  trend,
-  trendValue,
-  status,
-  totalControls,
-  passedControls
-}) => {
-  const config = statusConfig[status];
+  const riskScore = useMemo(() => {
+    if (risks.length === 0) return 100;
+    
+    const highRisks = risks.filter(risk => risk.level === 'high').length;
+    const mediumRisks = risks.filter(risk => risk.level === 'medium').length;
+    const lowRisks = risks.filter(risk => risk.level === 'low').length;
+    
+    const totalRiskWeight = (highRisks * 3) + (mediumRisks * 2) + (lowRisks * 1);
+    const maxPossibleWeight = risks.length * 3;
+    
+    return Math.max(0, Math.round(100 - ((totalRiskWeight / maxPossibleWeight) * 100)));
+  }, [risks]);
+
+  const auditScore = useMemo(() => {
+    if (audits.length === 0) return 0;
+    
+    const completedAudits = audits.filter(audit => audit.status === 'completed').length;
+    return Math.round((completedAudits / audits.length) * 100);
+  }, [audits]);
+
+  const overallScore = Math.round((complianceScore + riskScore + auditScore) / 3);
   
-  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-  const trendColor = trend === 'up' ? 'success' : trend === 'down' ? 'danger' : 'muted-foreground';
+  // Simulate previous score (in real app, this would be stored)
+  const previousScore = Math.max(0, overallScore - Math.floor(Math.random() * 10) + 3);
+  const trend = overallScore - previousScore;
+  const isPositiveTrend = trend >= 0;
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return 'text-success';
+    if (score >= 70) return 'text-warning';
+    return 'text-danger';
+  };
+
+  const getScoreStatus = (score: number) => {
+    if (score >= 90) return 'Excelente';
+    if (score >= 80) return 'Bom';
+    if (score >= 70) return 'Satisfatório';
+    return 'Requer Atenção';
+  };
 
   return (
-    <Card className="border-card-border/50 shadow-card hover:shadow-elevated hover-lift bg-surface-elevated/80 backdrop-blur-sm transition-all duration-300 group">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-              <Shield className="h-4 w-4 text-primary" />
-            </div>
-            <CardTitle className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-              {framework}
-            </CardTitle>
-          </div>
-          <Badge 
-            variant="outline" 
-            className={cn(
-              'font-medium border rounded-full px-3 py-1',
-              `bg-${config.bgColor} text-${config.textColor} border-${config.borderColor}`
-            )}
-          >
-            {config.label}
-          </Badge>
+    <Card className="relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+      
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+        <CardTitle className="text-sm font-medium">Score de Compliance</CardTitle>
+        <div className="flex items-center space-x-2">
+          <Shield className="h-4 w-4 text-primary" />
+          {trend !== 0 && (
+            <Badge 
+              variant={isPositiveTrend ? "default" : "destructive"} 
+              className="text-xs"
+            >
+              {isPositiveTrend ? '+' : ''}{trend}%
+            </Badge>
+          )}
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-5">
-        {/* Score & Trend */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <div className="text-4xl font-black text-foreground">
-              {score}
-              <span className="text-lg text-muted-foreground font-semibold">%</span>
+      <CardContent className="relative">
+        <div className="flex items-center space-x-4">
+          <div className="flex-1">
+            <div className="flex items-baseline space-x-2">
+              <div className={`text-3xl font-bold ${getScoreColor(overallScore)}`}>
+                {overallScore}%
+              </div>
+              {trend !== 0 && (
+                <div className="flex items-center space-x-1">
+                  {isPositiveTrend ? (
+                    <TrendingUp className="h-4 w-4 text-success" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-danger" />
+                  )}
+                  <span className={`text-sm ${isPositiveTrend ? 'text-success' : 'text-danger'}`}>
+                    {Math.abs(trend)}%
+                  </span>
+                </div>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground font-medium">
-              Score de Conformidade
+            
+            <p className="text-sm text-muted-foreground mt-1">
+              {getScoreStatus(overallScore)}
             </p>
+            
+            <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
+              <div className="text-center">
+                <div className="font-medium">{complianceScore}%</div>
+                <div className="text-muted-foreground">Frameworks</div>
+              </div>
+              <div className="text-center">
+                <div className="font-medium">{riskScore}%</div>
+                <div className="text-muted-foreground">Riscos</div>
+              </div>
+              <div className="text-center">
+                <div className="font-medium">{auditScore}%</div>
+                <div className="text-muted-foreground">Auditorias</div>
+              </div>
+            </div>
           </div>
-          <div className={cn(
-            'flex items-center space-x-1 px-3 py-2 rounded-full font-semibold text-sm',
-            trend === 'up' && 'bg-success/10 text-success',
-            trend === 'down' && 'bg-danger/10 text-danger',
-            trend === 'stable' && 'bg-muted/20 text-muted-foreground'
-          )}>
-            <TrendIcon className="h-4 w-4" />
-            <span>{trendValue > 0 ? '+' : ''}{trendValue}%</span>
-          </div>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="space-y-2">
-          <Progress 
-            value={score} 
-            className={cn(
-              "h-3 bg-muted/30",
-              status === 'excellent' && "[&>div]:bg-gradient-to-r [&>div]:from-success [&>div]:to-success-light",
-              status === 'good' && "[&>div]:bg-gradient-to-r [&>div]:from-success [&>div]:to-success-light",
-              status === 'fair' && "[&>div]:bg-gradient-to-r [&>div]:from-warning [&>div]:to-warning-light",
-              (status === 'poor' || status === 'critical') && "[&>div]:bg-gradient-to-r [&>div]:from-danger [&>div]:to-danger-light"
+          
+          <div className="flex-shrink-0">
+            {overallScore < 70 ? (
+              <AlertTriangle className="h-8 w-8 text-danger opacity-80" />
+            ) : (
+              <Shield className="h-8 w-8 text-success opacity-80" />
             )}
+          </div>
+        </div>
+        
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+            <span>Progresso</span>
+            <span>Meta: 95%</span>
+          </div>
+          <Progress 
+            value={overallScore} 
+            className="h-2"
           />
-          <div className="flex justify-between text-xs text-muted-foreground font-medium">
-            <span>{passedControls} aprovados</span>
-            <span>{totalControls - passedControls} pendentes</span>
-          </div>
-        </div>
-
-        {/* Controls Stats */}
-        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border/50">
-          <div className="text-center space-y-1">
-            <div className="text-lg font-bold text-foreground">
-              {totalControls}
-            </div>
-            <div className="text-xs text-muted-foreground font-medium">
-              Total de Controles
-            </div>
-          </div>
-          <div className="text-center space-y-1">
-            <div className="text-lg font-bold text-success">
-              {((passedControls / totalControls) * 100).toFixed(0)}%
-            </div>
-            <div className="text-xs text-muted-foreground font-medium">
-              Taxa de Aprovação
-            </div>
-          </div>
-        </div>
-
-        {/* Last Updated */}
-        <div className="text-center pt-2">
-          <div className="text-xs text-muted-foreground">
-            Atualizado há <span className="font-medium text-foreground">2 min</span>
-          </div>
         </div>
       </CardContent>
     </Card>

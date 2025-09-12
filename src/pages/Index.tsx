@@ -1,11 +1,13 @@
-import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
+import Header from '@/components/layout/Header';
 import ComplianceScoreCard from '@/components/dashboard/ComplianceScoreCard';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import TasksPanel from '@/components/dashboard/TasksPanel';
 import ConnectionStatus from '@/components/dashboard/ConnectionStatus';
-import EvidenceUploader from '@/components/audit/EvidenceUploader';
+import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
+import ComplianceChart from '@/components/dashboard/ComplianceChart';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
+import EvidenceUploadModal from '@/components/audit/EvidenceUploadModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -127,30 +129,31 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Metrics Overview */}
-          <div className="animate-fade-in">
-            <MetricsGrid />
+      {/* Main Content */}
+      <div className="flex-1 space-y-6">
+        {/* Metrics Overview */}
+        <MetricsGrid />
+
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Compliance Score (spans 2 columns) */}
+          <div className="xl:col-span-2">
+            <ComplianceScoreCard />
           </div>
 
-          {/* Compliance Framework Scores */}
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-foreground">
-                Score por Framework
-              </h2>
-              <Button variant="outline" className="hover-scale">
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Ver Relatório Completo
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-              {complianceData.map((data, index) => (
-                <div key={index} className="animate-scale-in" style={{ animationDelay: `${index * 0.1}s` }}>
-                  <ComplianceScoreCard {...data} />
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Connection Status */}
+          <ConnectionStatus />
+        </div>
+
+        {/* Charts Section */}
+        <ComplianceChart />
+
+        {/* Secondary Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TasksPanel />
+          <AnalyticsDashboard />
+        </div>
+      </div>
 
           {/* Tasks and Widgets */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
@@ -173,7 +176,7 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">
                   Faça upload de documentos e evidências para compliance
                 </p>
-                <EvidenceUploader />
+                <EvidenceUploadModal />
               </div>
               
               {/* Quick Actions */}

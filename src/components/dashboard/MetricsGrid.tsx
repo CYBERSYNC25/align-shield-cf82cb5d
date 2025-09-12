@@ -1,154 +1,144 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { 
   Shield, 
   AlertTriangle, 
   CheckCircle, 
   Clock, 
-  Users, 
-  Database,
-  TrendingUp,
-  FileText
+  FileText, 
+  Users,
+  Target,
+  TrendingUp 
 } from 'lucide-react';
-
-interface MetricCardProps {
-  title: string;
-  value: string | number;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  trend?: {
-    value: number;
-    isPositive: boolean;
-  };
-  status: 'success' | 'warning' | 'danger' | 'info';
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ 
-  title, 
-  value, 
-  description, 
-  icon: Icon, 
-  trend, 
-  status 
-}) => {
-  const statusConfig = {
-    success: { bgColor: 'bg-success/10', iconColor: 'text-success', borderColor: 'border-success/20' },
-    warning: { bgColor: 'bg-warning/10', iconColor: 'text-warning', borderColor: 'border-warning/20' },
-    danger: { bgColor: 'bg-danger/10', iconColor: 'text-danger', borderColor: 'border-danger/20' },
-    info: { bgColor: 'bg-info/10', iconColor: 'text-info', borderColor: 'border-info/20' }
-  };
-
-  const config = statusConfig[status];
-
-  return (
-    <Card className={`border-card-border shadow-card hover:shadow-elevated transition-all duration-300 ${config.borderColor}`}>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-muted-foreground">
-            {title}
-          </CardTitle>
-          <div className={`p-2 rounded-lg ${config.bgColor}`}>
-            <Icon className={`h-4 w-4 ${config.iconColor}`} />
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-2">
-        <div className="flex items-end justify-between">
-          <div className="text-2xl font-bold text-foreground">
-            {value}
-          </div>
-          {trend && (
-            <div className={`flex items-center space-x-1 text-sm ${
-              trend.isPositive ? 'text-success' : 'text-danger'
-            }`}>
-              <TrendingUp className={`h-3 w-3 ${
-                !trend.isPositive ? 'rotate-180' : ''
-              }`} />
-              <span>{trend.value}%</span>
-            </div>
-          )}
-        </div>
-        
-        <p className="text-sm text-muted-foreground">
-          {description}
-        </p>
-      </CardContent>
-    </Card>
-  );
-};
+import { useFrameworks } from '@/hooks/useFrameworks';
+import { useRisks } from '@/hooks/useRisks';
+import { useAudits } from '@/hooks/useAudits';
+import { useTasks } from '@/hooks/useTasks';
+import { usePolicies } from '@/hooks/usePolicies';
+import { useMemo } from 'react';
 
 const MetricsGrid = () => {
-  const metrics = [
-    {
-      title: 'Score Geral de Conformidade',
-      value: '87%',
-      description: 'Média ponderada entre todos os frameworks',
-      icon: Shield,
-      status: 'success' as const,
-      trend: { value: 5, isPositive: true }
-    },
-    {
-      title: 'Alertas Críticos Abertos',
-      value: 3,
-      description: 'Requerem ação imediata',
-      icon: AlertTriangle,
-      status: 'danger' as const,
-      trend: { value: 2, isPositive: false }
-    },
-    {
-      title: 'Controles Conformes',
-      value: 142,
-      description: 'De 163 controles mapeados',
-      icon: CheckCircle,
-      status: 'success' as const,
-      trend: { value: 8, isPositive: true }
-    },
-    {
-      title: 'Tarefas Pendentes',
-      value: 12,
-      description: 'SLA médio: 2.3 dias',
-      icon: Clock,
-      status: 'warning' as const
-    },
-    {
-      title: 'Usuários Ativos',
-      value: '1,247',
-      description: 'Com acesso aos sistemas monitorados',
-      icon: Users,
-      status: 'info' as const,
-      trend: { value: 3, isPositive: true }
-    },
-    {
-      title: 'Integrações Ativas',
-      value: 12,
-      description: 'Coletando evidências automaticamente',
-      icon: Database,
-      status: 'success' as const
-    },
-    {
-      title: 'Políticas Publicadas',
-      value: 23,
-      description: '96% dos usuários atestaram',
-      icon: FileText,
-      status: 'success' as const
-    },
-    {
-      title: 'Incidentes Este Mês',
-      value: 2,
-      description: 'Tempo médio resolução: 4.2h',
-      icon: AlertTriangle,
-      status: 'warning' as const,
-      trend: { value: 1, isPositive: false }
-    }
-  ];
+  const { frameworks } = useFrameworks();
+  const { risks } = useRisks();
+  const { audits } = useAudits();
+  const { tasks } = useTasks();
+  const { policies } = usePolicies();
+
+  const metricsData = useMemo(() => {
+    // Calculate active controls from frameworks
+    const totalControls = frameworks.reduce((sum, framework) => sum + (framework.total_controls || 0), 0);
+    
+    // Calculate completed audits
+    const completedAudits = audits.filter(audit => audit.status === 'completed').length;
+    const auditProgress = audits.length > 0 ? Math.round((completedAudits / audits.length) * 100) : 0;
+    
+    // Calculate pending tasks
+    const pendingTasks = tasks.filter(task => task.status === 'pending').length;
+    const taskProgress = tasks.length > 0 ? Math.round(((tasks.length - pendingTasks) / tasks.length) * 100) : 0;
+    
+    // Calculate active policies
+    const activePolicies = policies.filter(policy => policy.status === 'active').length;
+    const policyProgress = policies.length > 0 ? Math.round((activePolicies / policies.length) * 100) : 0;
+    
+    // Risk distribution
+    const highRisks = risks.filter(risk => risk.level === 'high').length;
+    const riskProgress = risks.length > 0 ? Math.max(0, 100 - Math.round((highRisks / risks.length) * 100)) : 100;
+
+    return [
+      {
+        title: "Controles Ativos",
+        value: totalControls.toString(),
+        change: "+12%",
+        icon: Shield,
+        color: "text-success",
+        bgColor: "bg-success/10",
+        progress: Math.min(100, Math.round((totalControls / 200) * 100)) // Assuming 200 is target
+      },
+      {
+        title: "Riscos Identificados", 
+        value: risks.length.toString(),
+        change: highRisks > 0 ? "+8%" : "-5%",
+        icon: AlertTriangle,
+        color: highRisks > 0 ? "text-danger" : "text-warning",
+        bgColor: highRisks > 0 ? "bg-danger/10" : "bg-warning/10",
+        progress: riskProgress
+      },
+      {
+        title: "Auditorias Concluídas",
+        value: completedAudits.toString(),
+        change: "+25%", 
+        icon: CheckCircle,
+        color: "text-success",
+        bgColor: "bg-success/10",
+        progress: auditProgress
+      },
+      {
+        title: "Tarefas Pendentes",
+        value: pendingTasks.toString(),
+        change: pendingTasks > 10 ? "+5%" : "-12%",
+        icon: Clock,
+        color: pendingTasks > 10 ? "text-danger" : "text-success",
+        bgColor: pendingTasks > 10 ? "bg-danger/10" : "bg-success/10", 
+        progress: taskProgress
+      },
+      {
+        title: "Políticas Ativas",
+        value: activePolicies.toString(),
+        change: "+3%",
+        icon: FileText,
+        color: "text-primary",
+        bgColor: "bg-primary/10",
+        progress: policyProgress
+      },
+      {
+        title: "Taxa de Compliance",
+        value: frameworks.length > 0 ? 
+          Math.round(frameworks.reduce((sum, f) => sum + (f.compliance_score || 0), 0) / frameworks.length) + "%" : 
+          "0%",
+        change: "+15%",
+        icon: Target,
+        color: "text-success",
+        bgColor: "bg-success/10",
+        progress: frameworks.length > 0 ? 
+          Math.round(frameworks.reduce((sum, f) => sum + (f.compliance_score || 0), 0) / frameworks.length) : 0
+      }
+    ];
+  }, [frameworks, risks, audits, tasks, policies]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {metrics.map((metric, index) => (
-        <MetricCard
-          key={index}
-          {...metric}
-        />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {metricsData.map((metric, index) => (
+        <Card key={index} className="relative overflow-hidden hover-glow transition-all duration-200">
+          <div className={`absolute inset-0 ${metric.bgColor} opacity-50`} />
+          
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
+            <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
+            <metric.icon className={`h-4 w-4 ${metric.color}`} />
+          </CardHeader>
+          
+          <CardContent className="relative">
+            <div className="flex items-center justify-between">
+              <div className={`text-2xl font-bold ${metric.color}`}>
+                {metric.value}
+              </div>
+              <Badge 
+                variant={metric.change.startsWith('+') ? "default" : "destructive"}
+                className="text-xs"
+              >
+                {metric.change}
+              </Badge>
+            </div>
+            
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                <span>Progresso</span>
+                <span>{metric.progress}%</span>
+              </div>
+              <Progress value={metric.progress} className="h-1" />
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
