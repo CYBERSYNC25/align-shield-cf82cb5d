@@ -56,6 +56,68 @@ export type Database = {
         }
         Relationships: []
       }
+      controls: {
+        Row: {
+          category: string
+          code: string
+          created_at: string
+          description: string | null
+          evidence_count: number | null
+          findings: string[] | null
+          framework_id: string | null
+          id: string
+          last_verified: string | null
+          next_review: string | null
+          owner: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          code: string
+          created_at?: string
+          description?: string | null
+          evidence_count?: number | null
+          findings?: string[] | null
+          framework_id?: string | null
+          id?: string
+          last_verified?: string | null
+          next_review?: string | null
+          owner?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          evidence_count?: number | null
+          findings?: string[] | null
+          framework_id?: string | null
+          id?: string
+          last_verified?: string | null
+          next_review?: string | null
+          owner?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "controls_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "frameworks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evidence: {
         Row: {
           audit_id: string | null
@@ -105,31 +167,40 @@ export type Database = {
       }
       frameworks: {
         Row: {
+          compliance_score: number | null
           created_at: string
           description: string | null
           id: string
           name: string
+          passed_controls: number | null
           status: string
+          total_controls: number | null
           updated_at: string
           user_id: string
           version: string | null
         }
         Insert: {
+          compliance_score?: number | null
           created_at?: string
           description?: string | null
           id?: string
           name: string
+          passed_controls?: number | null
           status?: string
+          total_controls?: number | null
           updated_at?: string
           user_id: string
           version?: string | null
         }
         Update: {
+          compliance_score?: number | null
           created_at?: string
           description?: string | null
           id?: string
           name?: string
+          passed_controls?: number | null
           status?: string
+          total_controls?: number | null
           updated_at?: string
           user_id?: string
           version?: string | null
@@ -184,6 +255,63 @@ export type Database = {
         }
         Relationships: []
       }
+      policies: {
+        Row: {
+          approver: string | null
+          category: string
+          created_at: string
+          description: string | null
+          effective_date: string | null
+          file_url: string | null
+          id: string
+          name: string
+          next_review: string | null
+          owner: string | null
+          review_date: string | null
+          status: string
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+          version: string
+        }
+        Insert: {
+          approver?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          effective_date?: string | null
+          file_url?: string | null
+          id?: string
+          name: string
+          next_review?: string | null
+          owner?: string | null
+          review_date?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+          version?: string
+        }
+        Update: {
+          approver?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          effective_date?: string | null
+          file_url?: string | null
+          id?: string
+          name?: string
+          next_review?: string | null
+          owner?: string | null
+          review_date?: string | null
+          status?: string
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -212,6 +340,131 @@ export type Database = {
           id?: string
           organization?: string | null
           role?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      risk_assessments: {
+        Row: {
+          completed_questions: number | null
+          contact_email: string | null
+          contact_person: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          progress: number | null
+          risk_flags: number | null
+          sent_date: string | null
+          status: string
+          template: string
+          total_questions: number | null
+          updated_at: string
+          user_id: string
+          vendor_id: string | null
+        }
+        Insert: {
+          completed_questions?: number | null
+          contact_email?: string | null
+          contact_person?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          progress?: number | null
+          risk_flags?: number | null
+          sent_date?: string | null
+          status?: string
+          template: string
+          total_questions?: number | null
+          updated_at?: string
+          user_id: string
+          vendor_id?: string | null
+        }
+        Update: {
+          completed_questions?: number | null
+          contact_email?: string | null
+          contact_person?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          progress?: number | null
+          risk_flags?: number | null
+          sent_date?: string | null
+          status?: string
+          template?: string
+          total_questions?: number | null
+          updated_at?: string
+          user_id?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_assessments_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risks: {
+        Row: {
+          category: string
+          controls: string[] | null
+          created_at: string
+          description: string | null
+          id: string
+          impact: string
+          last_review: string | null
+          level: string
+          next_review: string | null
+          owner: string
+          owner_role: string | null
+          probability: string
+          risk_score: number | null
+          status: string
+          title: string
+          trend: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          controls?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact: string
+          last_review?: string | null
+          level: string
+          next_review?: string | null
+          owner: string
+          owner_role?: string | null
+          probability: string
+          risk_score?: number | null
+          status?: string
+          title: string
+          trend?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          controls?: string[] | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact?: string
+          last_review?: string | null
+          level?: string
+          next_review?: string | null
+          owner?: string
+          owner_role?: string | null
+          probability?: string
+          risk_score?: number | null
+          status?: string
+          title?: string
+          trend?: string
           updated_at?: string
           user_id?: string
         }
@@ -254,6 +507,60 @@ export type Database = {
           priority?: string
           status?: string
           title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          category: string
+          certifications: string[] | null
+          compliance_score: number | null
+          contract_value: string | null
+          created_at: string
+          criticality: string
+          id: string
+          last_assessment: string | null
+          name: string
+          next_assessment: string | null
+          pending_actions: number | null
+          risk_level: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          certifications?: string[] | null
+          compliance_score?: number | null
+          contract_value?: string | null
+          created_at?: string
+          criticality: string
+          id?: string
+          last_assessment?: string | null
+          name: string
+          next_assessment?: string | null
+          pending_actions?: number | null
+          risk_level: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          certifications?: string[] | null
+          compliance_score?: number | null
+          contract_value?: string | null
+          created_at?: string
+          criticality?: string
+          id?: string
+          last_assessment?: string | null
+          name?: string
+          next_assessment?: string | null
+          pending_actions?: number | null
+          risk_level?: string
+          status?: string
           updated_at?: string
           user_id?: string
         }

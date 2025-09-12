@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRisks } from '@/hooks/useRisks';
 import VendorTable from './VendorTable';
+import CreateVendorModal from './CreateVendorModal';
 import { 
   Plus, 
   Table,
@@ -35,10 +36,7 @@ const VendorManagement = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Gestão de Fornecedores
         </h2>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Fornecedor
-        </Button>
+        <CreateVendorModal />
       </div>
 
       <Tabs defaultValue="table" className="w-full">

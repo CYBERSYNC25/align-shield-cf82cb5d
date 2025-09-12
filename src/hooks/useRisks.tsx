@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Risk {
@@ -87,6 +88,7 @@ export const useRisks = () => {
     assessmentsDue: 0
   });
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   const { toast } = useToast();
 
   // Mock data - substitua por dados reais do Supabase quando configurado
@@ -474,6 +476,103 @@ export const useRisks = () => {
     }
   };
 
+  // Funções CRUD para gerenciar dados reais
+  const createVendor = async (vendorData: Omit<Vendor, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .insert([{
+          ...vendorData,
+          user_id: user?.id
+        }])
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Fornecedor criado",
+        description: "Fornecedor cadastrado com sucesso"
+      });
+      
+      // Atualizar lista local
+      if (data) setVendors(prev => [data[0], ...prev]);
+      return { data, error: null };
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao criar fornecedor",
+        variant: "destructive"
+      });
+      return { data: null, error };
+    }
+  };
+
+  const createRisk = async (riskData: Omit<Risk, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('risks')
+        .insert([{
+          ...riskData,
+          user_id: user?.id
+        }])
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Risco criado",
+        description: "Risco cadastrado com sucesso"
+      });
+      
+      // Atualizar lista local
+      if (data) setRisks(prev => [data[0], ...prev]);
+      return { data, error: null };
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao criar risco",
+        variant: "destructive"
+      });
+      return { data: null, error };
+    }
+  };
+
+  const createAssessment = async (assessmentData: Omit<RiskAssessment, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('risk_assessments')
+        .insert([{
+          ...assessmentData,
+          user_id: user?.id
+        }])
+        .select('*, vendors(name)');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Avaliação criada",
+        description: "Avaliação de risco iniciada com sucesso"
+      });
+      
+      // Mapear e atualizar lista local
+      if (data) {
+        const mappedData = data.map(assessment => ({
+          ...assessment,
+          vendor: assessment.vendors?.name || 'Fornecedor não encontrado'
+        }));
+        setAssessments(prev => [...mappedData, ...prev]);
+      }
+      return { data, error: null };
+    } catch (error) {
+      toast({
+        title: "Erro", 
+        description: "Falha ao criar avaliação",
+        variant: "destructive"
+      });
+      return { data: null, error };
+    }
+  };
+
   useEffect(() => {
     fetchRisks();
   }, []);
@@ -487,6 +586,9 @@ export const useRisks = () => {
     updateRiskStatus,
     updateVendorCompliance,
     sendAssessment,
-    refetch: fetchRisks
+    refetch: fetchRisks,
+    createVendor,
+    createRisk,
+    createAssessment
   };
 };
