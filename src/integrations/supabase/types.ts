@@ -255,6 +255,60 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          action_label: string | null
+          action_url: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          message: string
+          metadata: Json | null
+          priority: string
+          read: boolean
+          related_id: string | null
+          related_table: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_label?: string | null
+          action_url?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message: string
+          metadata?: Json | null
+          priority?: string
+          read?: boolean
+          related_id?: string | null
+          related_table?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_label?: string | null
+          action_url?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          message?: string
+          metadata?: Json | null
+          priority?: string
+          read?: boolean
+          related_id?: string | null
+          related_table?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           approver: string | null
@@ -571,7 +625,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_notification: {
+        Args: {
+          p_action_label?: string
+          p_action_url?: string
+          p_expires_at?: string
+          p_message: string
+          p_metadata?: Json
+          p_priority?: string
+          p_related_id?: string
+          p_related_table?: string
+          p_title: string
+          p_type?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
