@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { usePolicies } from '@/hooks/usePolicies';
 import { FileText, Plus } from 'lucide-react';
 
 interface CreatePolicyModalProps {
@@ -15,6 +16,7 @@ interface CreatePolicyModalProps {
 const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { createPolicy } = usePolicies();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,11 +38,9 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
     setLoading(true);
 
     try {
-      // TODO: Implementar createPolicy no hook
-      console.log('Criando política:', formData);
+      const result = await createPolicy(formData);
       
-      // Simular sucesso por enquanto
-      setTimeout(() => {
+      if (result) {
         setOpen(false);
         setFormData({
           name: '',
@@ -57,10 +57,10 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
           file_url: ''
         });
         onSuccess?.();
-        setLoading(false);
-      }, 1000);
+      }
     } catch (error) {
       console.error('Erro ao criar política:', error);
+    } finally {
       setLoading(false);
     }
   };

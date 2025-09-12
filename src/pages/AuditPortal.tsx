@@ -5,6 +5,7 @@ import EvidenceLocker from '@/components/audit/EvidenceLocker';
 import FrameworkChecklists from '@/components/audit/FrameworkChecklists';
 import AuditorAccess from '@/components/audit/AuditorAccess';
 import CreateAuditModal from '@/components/audit/CreateAuditModal';
+import EvidenceUploadModal from '@/components/audit/EvidenceUploadModal';
 
 const AuditPortal = () => {
   return (
@@ -25,7 +26,10 @@ const AuditPortal = () => {
                 Cofre de evidências, checklists de conformidade e portal para auditores externos
               </p>
             </div>
-            <CreateAuditModal />
+            <div className="flex gap-3">
+              <EvidenceUploadModal />
+              <CreateAuditModal />
+            </div>
           </div>
 
           {/* Stats Overview */}

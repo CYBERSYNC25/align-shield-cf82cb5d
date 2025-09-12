@@ -5,6 +5,7 @@ import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import TasksPanel from '@/components/dashboard/TasksPanel';
 import ConnectionStatus from '@/components/dashboard/ConnectionStatus';
 import EvidenceUploader from '@/components/audit/EvidenceUploader';
+import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -112,7 +113,8 @@ const Index = () => {
                   Visão geral da postura de segurança e conformidade da organização
                 </p>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
+                <CreateTaskModal />
                 <Badge variant="outline" className="status-success">
                   <TrendingUp className="h-3 w-3 mr-1" />
                   Postura Melhorada

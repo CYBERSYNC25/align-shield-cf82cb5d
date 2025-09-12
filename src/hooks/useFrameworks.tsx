@@ -313,11 +313,32 @@ export function useFrameworks() {
     };
   };
 
+  // Create control
+  const createControl = async (controlData: Omit<FrameworkControl, 'id' | 'user_id'>) => {
+    if (!user) return null;
+
+    const newControl: FrameworkControl = {
+      id: crypto.randomUUID(),
+      ...controlData,
+      user_id: user.id
+    };
+    
+    setControls(prev => [newControl, ...prev]);
+    
+    toast({
+      title: "Controle criado",
+      description: `Controle "${newControl.title}" criado com sucesso`
+    });
+
+    return newControl;
+  };
+
   return {
     frameworks,
     controls,
     loading,
     createFramework,
+    createControl,
     updateFramework,
     updateControlStatus,
     getFrameworkStats,
