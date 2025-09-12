@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePolicies } from '@/hooks/usePolicies';
 import { FileText, Plus } from 'lucide-react';
+import FileUploader from '@/components/common/FileUploader';
 
 interface CreatePolicyModalProps {
   onSuccess?: () => void;
@@ -218,12 +219,17 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="file_url">URL do Documento</Label>
-              <Input
-                id="file_url"
-                value={formData.file_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, file_url: e.target.value }))}
-                placeholder="Link para o documento da política"
+              <Label>Documento da Política</Label>
+              <FileUploader
+                bucket="documents"
+                folder="policies"
+                onUploadComplete={(urls) => setFormData(prev => ({ ...prev, file_url: urls[0] }))}
+                multiple={false}
+                accept={{
+                  'application/pdf': ['.pdf'],
+                  'application/msword': ['.doc'],
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+                }}
               />
             </div>
 

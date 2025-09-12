@@ -7,6 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { useAudits } from '@/hooks/useAudits';
 import { Upload, FileText, Plus } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
+import FileUploader from '@/components/common/FileUploader';
 
 interface EvidenceUploadModalProps {
   onSuccess?: () => void;
@@ -15,8 +18,10 @@ interface EvidenceUploadModalProps {
 const EvidenceUploadModal = ({ onSuccess }: EvidenceUploadModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const { createEvidence, audits } = useAudits();
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,32 +31,34 @@ const EvidenceUploadModal = ({ onSuccess }: EvidenceUploadModalProps) => {
     uploaded_by: ''
   });
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      setFormData(prev => ({
-        ...prev,
-        name: file.name,
-        type: file.type.includes('pdf') ? 'PDF' : 
-              file.type.includes('excel') || file.type.includes('sheet') ? 'Excel' :
-              file.type.includes('word') ? 'Word' :
-              file.type.includes('image') ? 'Image' : 'Document'
-      }));
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: "Erro",
+        description: "Usuário não autenticado",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (uploadedFiles.length === 0) {
+      toast({
+        title: "Erro",
+        description: "Selecione pelo menos um arquivo",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Em um sistema real, você faria upload do arquivo aqui
-      const file_url = selectedFile ? `/evidence/${selectedFile.name}` : null;
-      
       const evidenceData = {
         ...formData,
-        file_url
+        file_url: uploadedFiles[0], // Primary file
+        uploaded_by: formData.uploaded_by || user.user_metadata?.display_name || user.email
       };
 
       const result = await createEvidence(evidenceData);
@@ -65,11 +72,21 @@ const EvidenceUploadModal = ({ onSuccess }: EvidenceUploadModalProps) => {
           status: 'pending',
           uploaded_by: ''
         });
-        setSelectedFile(null);
+        setUploadedFiles([]);
         onSuccess?.();
+        
+        toast({
+          title: "Evidência enviada",
+          description: "A evidência foi carregada com sucesso"
+        });
       }
     } catch (error) {
       console.error('Erro ao fazer upload de evidência:', error);
+      toast({
+        title: "Erro no upload",
+        description: "Falha ao enviar evidência",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -94,19 +111,21 @@ const EvidenceUploadModal = ({ onSuccess }: EvidenceUploadModalProps) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="file">Arquivo *</Label>
-            <Input
-              id="file"
-              type="file"
-              onChange={handleFileSelect}
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.json,.csv"
-              required
+            <Label>Arquivo da Evidência *</Label>
+            <FileUploader
+              bucket="evidence"
+              folder="audit-evidence"
+              onUploadComplete={(urls) => {
+                setUploadedFiles(urls);
+                // Auto-fill name if not already set
+                if (!formData.name && urls.length > 0) {
+                  const fileName = urls[0].split('/').pop()?.split('.')[0] || 'Nova Evidência';
+                  setFormData(prev => ({ ...prev, name: fileName }));
+                }
+              }}
+              multiple={false}
+              maxSize={10 * 1024 * 1024} // 10MB
             />
-            {selectedFile && (
-              <p className="text-sm text-muted-foreground">
-                Arquivo selecionado: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </p>
-            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -203,7 +222,7 @@ const EvidenceUploadModal = ({ onSuccess }: EvidenceUploadModalProps) => {
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading || !selectedFile}>
+            <Button type="submit" disabled={loading || uploadedFiles.length === 0}>
               {loading ? 'Enviando...' : 'Enviar Evidência'}
             </Button>
           </div>

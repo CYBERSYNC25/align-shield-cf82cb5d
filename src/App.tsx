@@ -18,6 +18,7 @@ import ReportsExports from "./pages/ReportsExports";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
+import FileManagement from "./pages/FileManagement";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,11 @@ const App = () => (
           <Route path="/settings" element={
             <ProtectedRoute>
               <Settings />
+            </ProtectedRoute>
+          } />
+          <Route path="/files" element={
+            <ProtectedRoute>
+              <FileManagement />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
