@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, CheckCircle2, AlertTriangle, XCircle, Eye } from 'lucide-react';
+import AdvancedFiltersModal from './AdvancedFiltersModal';
+import ControlDetailsModal from './ControlDetailsModal';
 
 const controlsData = [
   {
@@ -152,10 +154,12 @@ const ControlsMatrix = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Matriz de Controles
         </h2>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Filter className="w-4 h-4" />
-          Filtros Avançados
-        </Button>
+        <AdvancedFiltersModal>
+          <Button variant="outline" size="sm" className="gap-2">
+            <Filter className="w-4 h-4" />
+            Filtros Avançados
+          </Button>
+        </AdvancedFiltersModal>
       </div>
 
       {/* Filters */}
@@ -246,10 +250,12 @@ const ControlsMatrix = () => {
                       {control.description}
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <Eye className="w-4 h-4" />
-                    Detalhes
-                  </Button>
+                  <ControlDetailsModal control={control}>
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <Eye className="w-4 h-4" />
+                      Detalhes
+                    </Button>
+                  </ControlDetailsModal>
                 </div>
               </CardHeader>
 
