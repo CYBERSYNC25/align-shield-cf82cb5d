@@ -20,6 +20,7 @@ import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import FileManagement from "./pages/FileManagement";
 import Notifications from "./pages/Notifications";
+import Tasks from "./pages/Tasks";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,11 @@ const App = () => (
           <Route path="/notifications" element={
             <ProtectedRoute>
               <Notifications />
+            </ProtectedRoute>
+          } />
+          <Route path="/tasks" element={
+            <ProtectedRoute>
+              <Tasks />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

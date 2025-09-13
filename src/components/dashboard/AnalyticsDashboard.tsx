@@ -131,11 +131,11 @@ const AnalyticsDashboard = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => window.location.href = '/reports'}>
             <BarChart3 className="h-4 w-4" />
             Exportar Relatório
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => window.location.href = '/analytics'}>
             <PieChart className="h-4 w-4" />
             Dashboard Executivo
           </Button>
@@ -143,7 +143,7 @@ const AnalyticsDashboard = () => {
       </div>
 
       {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {complianceMetrics.map((metric, index) => (
           <Card key={index} className="hover:shadow-lg transition-shadow">
             <CardHeader className="pb-3">
@@ -285,15 +285,71 @@ const AnalyticsDashboard = () => {
                 </div>
               </div>
               
-              <div className="h-64 flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/30">
-                <div className="text-center">
-                  <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-lg font-medium text-muted-foreground">
-                    Gráficos Interativos
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Visualizações avançadas em desenvolvimento
-                  </p>
+              {/* Gráfico de Metas de Compliance */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-foreground">Progresso das Metas Mensais</h4>
+                
+                {/* Barra de Progresso Principal */}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-foreground">Meta Geral de Compliance</span>
+                    <span className="text-sm font-bold text-primary">87% / 90%</span>
+                  </div>
+                  <Progress value={87} className="h-3" />
+                  <p className="text-xs text-muted-foreground">Faltam 3% para atingir a meta mensal</p>
+                </div>
+
+                {/* Sub-metas por Framework */}
+                <div className="space-y-3 pt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-foreground">SOC 2</span>
+                        <span className="text-xs text-success">89%</span>
+                      </div>
+                      <Progress value={89} className="h-2" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-foreground">ISO 27001</span>
+                        <span className="text-xs text-success">92%</span>
+                      </div>
+                      <Progress value={92} className="h-2" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-foreground">LGPD</span>
+                        <span className="text-xs text-warning">76%</span>
+                      </div>
+                      <Progress value={76} className="h-2" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs font-medium text-foreground">GDPR</span>
+                        <span className="text-xs text-success">83%</span>
+                      </div>
+                      <Progress value={83} className="h-2" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timeline Visual */}
+                <div className="mt-6 p-4 bg-surface-elevated rounded-lg border border-card-border">
+                  <h5 className="text-sm font-medium text-foreground mb-3">Cronograma de Auditoria</h5>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-success"></div>
+                      <span className="text-xs text-foreground">SOC 2 - Concluída (15/Jan)</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-primary animate-pulse"></div>
+                      <span className="text-xs text-foreground">ISO 27001 - Em Progresso (30/Jan)</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-muted border-2 border-warning"></div>
+                      <span className="text-xs text-foreground">LGPD - Agendada (15/Fev)</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -304,41 +360,70 @@ const AnalyticsDashboard = () => {
           <CardHeader>
             <CardTitle className="text-lg">Resumo Executivo</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <span className="font-medium text-green-900">Pontos Fortes</span>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="p-5 bg-success/10 rounded-xl border border-success/20">
+                <div className="flex items-center gap-3 mb-3">
+                  <CheckCircle className="h-5 w-5 text-success" />
+                  <span className="font-semibold text-success">Pontos Fortes</span>
+                </div>
+                <ul className="text-sm text-success/90 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-success mt-1">•</span>
+                    <span>ISO 27001 com 92% de conformidade</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-success mt-1">•</span>
+                    <span>PCI DSS quase certificado (94%)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-success mt-1">•</span>
+                    <span>Programa de treinamento ativo</span>
+                  </li>
+                </ul>
               </div>
-              <ul className="text-sm text-green-700 space-y-1">
-                <li>• ISO 27001 com 92% de conformidade</li>
-                <li>• PCI DSS quase certificado</li>
-                <li>• Programa de treinamento ativo</li>
-              </ul>
-            </div>
 
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                <span className="font-medium text-yellow-900">Atenção Necessária</span>
+              <div className="p-5 bg-warning/10 rounded-xl border border-warning/20">
+                <div className="flex items-center gap-3 mb-3">
+                  <AlertTriangle className="h-5 w-5 text-warning" />
+                  <span className="font-semibold text-warning">Atenção Necessária</span>
+                </div>
+                <ul className="text-sm text-warning/90 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-warning mt-1">•</span>
+                    <span>LGPD precisa de melhorias (76%)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-warning mt-1">•</span>
+                    <span>3 controles críticos falhando</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-warning mt-1">•</span>
+                    <span>Revisão de acessos em atraso</span>
+                  </li>
+                </ul>
               </div>
-              <ul className="text-sm text-yellow-700 space-y-1">
-                <li>• LGPD precisa de melhorias</li>
-                <li>• 3 controles críticos falhando</li>
-                <li>• Revisão de acessos em atraso</li>
-              </ul>
-            </div>
 
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2 mb-2">
-                <Target className="h-4 w-4 text-blue-600" />
-                <span className="font-medium text-blue-900">Próximos Passos</span>
+              <div className="p-5 bg-primary/10 rounded-xl border border-primary/20">
+                <div className="flex items-center gap-3 mb-3">
+                  <Target className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-primary">Próximos Passos</span>
+                </div>
+                <ul className="text-sm text-primary/90 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <span>Finalizar auditoria SOC 2 (15 dias)</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <span>Implementar MFA corporativo</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary mt-1">•</span>
+                    <span>Atualizar políticas LGPD</span>
+                  </li>
+                </ul>
               </div>
-              <ul className="text-sm text-blue-700 space-y-1">
-                <li>• Finalizar auditoria SOC 2</li>
-                <li>• Implementar MFA corporativo</li>
-                <li>• Atualizar políticas LGPD</li>
-              </ul>
             </div>
           </CardContent>
         </Card>

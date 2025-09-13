@@ -154,7 +154,7 @@ const TasksPanel = () => {
           </CardTitle>
           <div className="flex items-center space-x-2">
             <CreateTaskModal />
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => window.location.href = '/tasks'}>
               Ver todas
             </Button>
           </div>
@@ -185,7 +185,7 @@ const TasksPanel = () => {
         
         {!loading && user && tasks.length > 5 && (
           <div className="pt-3 text-center">
-            <Button variant="ghost" className="w-full text-primary">
+            <Button variant="ghost" className="w-full text-primary" onClick={() => window.location.href = '/tasks'}>
               Ver todas as {tasks.length} tarefas
             </Button>
           </div>
