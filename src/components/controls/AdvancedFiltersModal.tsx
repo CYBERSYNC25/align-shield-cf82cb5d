@@ -24,7 +24,7 @@ const AdvancedFiltersModal = ({ children }: AdvancedFiltersModalProps) => {
     coverageMax: '',
     evidencesMin: '',
     evidencesMax: '',
-    owner: '',
+    owner: 'all',
     dateFrom: '',
     dateTo: ''
   });
@@ -46,7 +46,7 @@ const AdvancedFiltersModal = ({ children }: AdvancedFiltersModalProps) => {
       coverageMax: '',
       evidencesMin: '',
       evidencesMax: '',
-      owner: '',
+    owner: 'all',
       dateFrom: '',
       dateTo: ''
     });
@@ -233,7 +233,7 @@ const AdvancedFiltersModal = ({ children }: AdvancedFiltersModalProps) => {
                 <SelectValue placeholder="Selecionar responsável" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="DevOps Team">DevOps Team</SelectItem>
                 <SelectItem value="Security Team">Security Team</SelectItem>
                 <SelectItem value="Data Team">Data Team</SelectItem>

@@ -1,11 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Configuração temporária para desenvolvimento
-// IMPORTANTE: Configure suas variáveis de ambiente reais no Supabase
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key'
+// Use as configurações corretas do Supabase
+const supabaseUrl = 'https://ofbyxnpprwwuieabwhdo.supabase.co'
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mYnl4bnBwcnd3dWllYWJ3aGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MDY4NTEsImV4cCI6MjA3MzE4Mjg1MX0.aHH2NWUQZnvV6FALdBIP5SB02YbrE8u12lXI1DtIbiw'
 
-// Cliente Supabase com fallback
+// Cliente Supabase
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
