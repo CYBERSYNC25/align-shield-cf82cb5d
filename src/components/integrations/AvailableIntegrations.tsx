@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ConnectIntegrationModal from './ConnectIntegrationModal';
 import { 
   Plus, 
   Search, 
@@ -16,6 +17,13 @@ import {
 
 const AvailableIntegrations = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleConnectIntegration = (integration: any) => {
+    setSelectedIntegration(integration);
+    setIsModalOpen(true);
+  };
 
   const integrationCategories = [
     {
@@ -263,7 +271,11 @@ const AvailableIntegrations = () => {
         <TabsContent value="popular" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {popularIntegrations.map((integration, index) => (
-              <IntegrationCard key={index} integration={integration} />
+              <IntegrationCard 
+                key={index} 
+                integration={integration} 
+                onConnect={() => handleConnectIntegration(integration)}
+              />
             ))}
           </div>
         </TabsContent>
@@ -272,17 +284,27 @@ const AvailableIntegrations = () => {
           <TabsContent key={category.id} value={category.id} className="mt-6">
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {category.integrations.map((integration, index) => (
-                <IntegrationCard key={index} integration={integration} />
+                <IntegrationCard 
+                  key={index} 
+                  integration={integration} 
+                  onConnect={() => handleConnectIntegration(integration)}
+                />
               ))}
             </div>
           </TabsContent>
         ))}
       </Tabs>
+
+      <ConnectIntegrationModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        integration={selectedIntegration}
+      />
     </div>
   );
 };
 
-const IntegrationCard = ({ integration }: { integration: any }) => {
+const IntegrationCard = ({ integration, onConnect }: { integration: any; onConnect: () => void }) => {
   return (
     <Card className="bg-surface-elevated border-card-border hover:border-primary/20 transition-colors">
       <CardHeader className="pb-3">
@@ -335,7 +357,7 @@ const IntegrationCard = ({ integration }: { integration: any }) => {
           </div>
         </div>
 
-        <Button className="w-full gap-2">
+        <Button className="w-full gap-2" onClick={onConnect}>
           <Plus className="h-4 w-4" />
           Conectar
         </Button>
