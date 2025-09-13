@@ -356,73 +356,112 @@ const AnalyticsDashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Resumo Executivo</CardTitle>
+        <Card className="h-fit">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Resumo Executivo
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="space-y-4">
-              <div className="p-5 bg-success/10 rounded-xl border border-success/20">
-                <div className="flex items-center gap-3 mb-3">
-                  <CheckCircle className="h-5 w-5 text-success" />
-                  <span className="font-semibold text-success">Pontos Fortes</span>
+          <CardContent>
+            <div className="space-y-5">
+              {/* Pontos Fortes */}
+              <div className="relative p-6 bg-gradient-to-br from-success/8 to-success/4 rounded-2xl border border-success/15 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="absolute top-4 right-4">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse"></div>
                 </div>
-                <ul className="text-sm text-success/90 space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-success mt-1">•</span>
-                    <span>ISO 27001 com 92% de conformidade</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-success mt-1">•</span>
-                    <span>PCI DSS quase certificado (94%)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-success mt-1">•</span>
-                    <span>Programa de treinamento ativo</span>
-                  </li>
-                </ul>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-success/15 rounded-lg">
+                    <CheckCircle className="h-6 w-6 text-success" />
+                  </div>
+                  <h4 className="text-base font-bold text-success">Pontos Fortes</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-success mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-success/95 leading-relaxed">
+                      ISO 27001 com 92% de conformidade
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-success mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-success/95 leading-relaxed">
+                      PCI DSS quase certificado (94%)
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-success mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-success/95 leading-relaxed">
+                      Programa de treinamento ativo
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-5 bg-warning/10 rounded-xl border border-warning/20">
-                <div className="flex items-center gap-3 mb-3">
-                  <AlertTriangle className="h-5 w-5 text-warning" />
-                  <span className="font-semibold text-warning">Atenção Necessária</span>
+              {/* Atenção Necessária */}
+              <div className="relative p-6 bg-gradient-to-br from-warning/8 to-warning/4 rounded-2xl border border-warning/15 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="absolute top-4 right-4">
+                  <div className="w-2 h-2 rounded-full bg-warning animate-pulse"></div>
                 </div>
-                <ul className="text-sm text-warning/90 space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-warning mt-1">•</span>
-                    <span>LGPD precisa de melhorias (76%)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-warning mt-1">•</span>
-                    <span>3 controles críticos falhando</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-warning mt-1">•</span>
-                    <span>Revisão de acessos em atraso</span>
-                  </li>
-                </ul>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-warning/15 rounded-lg">
+                    <AlertTriangle className="h-6 w-6 text-warning" />
+                  </div>
+                  <h4 className="text-base font-bold text-warning">Atenção Necessária</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-warning mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-warning/95 leading-relaxed">
+                      LGPD precisa de melhorias (76%)
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-warning mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-warning/95 leading-relaxed">
+                      3 controles críticos falhando
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-warning mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-warning/95 leading-relaxed">
+                      Revisão de acessos em atraso
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="p-5 bg-primary/10 rounded-xl border border-primary/20">
-                <div className="flex items-center gap-3 mb-3">
-                  <Target className="h-5 w-5 text-primary" />
-                  <span className="font-semibold text-primary">Próximos Passos</span>
+              {/* Próximos Passos */}
+              <div className="relative p-6 bg-gradient-to-br from-primary/8 to-primary/4 rounded-2xl border border-primary/15 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="absolute top-4 right-4">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
                 </div>
-                <ul className="text-sm text-primary/90 space-y-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span>
-                    <span>Finalizar auditoria SOC 2 (15 dias)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span>
-                    <span>Implementar MFA corporativo</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span>
-                    <span>Atualizar políticas LGPD</span>
-                  </li>
-                </ul>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-primary/15 rounded-lg">
+                    <Target className="h-6 w-6 text-primary" />
+                  </div>
+                  <h4 className="text-base font-bold text-primary">Próximos Passos</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-primary/95 leading-relaxed">
+                      Finalizar auditoria SOC 2 (15 dias)
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-primary/95 leading-relaxed">
+                      Implementar MFA corporativo
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2 group-hover:scale-125 transition-transform"></div>
+                    <p className="text-sm font-medium text-primary/95 leading-relaxed">
+                      Atualizar políticas LGPD
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
