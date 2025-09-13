@@ -32,7 +32,7 @@ interface ConnectIntegrationModalProps {
     controls: string[];
     evidences: number;
     setupTime: string;
-  };
+  } | null;
 }
 
 const ConnectIntegrationModal = ({ isOpen, onClose, integration }: ConnectIntegrationModalProps) => {
@@ -43,6 +43,11 @@ const ConnectIntegrationModal = ({ isOpen, onClose, integration }: ConnectIntegr
     endpoint: ''
   });
   const { toast } = useToast();
+
+  // Early return if integration is null
+  if (!integration) {
+    return null;
+  }
 
   const handleConnect = async () => {
     if (!credentials.apiKey || !credentials.apiSecret) {
