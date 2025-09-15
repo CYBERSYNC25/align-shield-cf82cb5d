@@ -18,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import CreateTrainingModal from '@/components/policies/CreateTrainingModal';
 
 const TrainingPrograms = () => {
   const trainingPrograms = [
@@ -123,10 +124,7 @@ const TrainingPrograms = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Programas de Treinamento
         </h2>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Treinamento
-        </Button>
+        <CreateTrainingModal />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

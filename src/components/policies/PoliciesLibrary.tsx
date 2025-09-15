@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import CreatePolicyModal from '@/components/policies/CreatePolicyModal';
 
 const PoliciesLibrary = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -159,10 +160,7 @@ const PoliciesLibrary = () => {
               className="pl-9 w-64"
             />
           </div>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Política
-          </Button>
+          <CreatePolicyModal />
         </div>
       </div>
 

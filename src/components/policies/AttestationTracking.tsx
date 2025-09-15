@@ -12,8 +12,18 @@ import {
   FileCheck,
   Download
 } from 'lucide-react';
+import SendRemindersModal from '@/components/policies/SendRemindersModal';
+import { useToast } from '@/hooks/use-toast';
 
 const AttestationTracking = () => {
+  const { toast } = useToast();
+
+  const handleDownloadReport = (campaignTitle: string) => {
+    toast({
+      title: "Relatório em preparação",
+      description: `O relatório de "${campaignTitle}" será enviado por email em breve.`,
+    });
+  };
   const attestationCampaigns = [
     {
       title: 'Política de Segurança da Informação v2.1',
@@ -105,10 +115,7 @@ const AttestationTracking = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Rastreamento de Atestos
         </h2>
-        <Button className="gap-2">
-          <Mail className="h-4 w-4" />
-          Enviar Lembretes
-        </Button>
+        <SendRemindersModal />
       </div>
 
       <div className="space-y-4">
@@ -132,7 +139,11 @@ const AttestationTracking = () => {
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleDownloadReport(campaign.title)}
+                  >
                     <Download className="h-4 w-4 mr-2" />
                     Relatório
                   </Button>
