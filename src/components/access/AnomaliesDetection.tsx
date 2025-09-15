@@ -10,7 +10,9 @@ import {
   MoreVertical,
   UserCheck
 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAccess } from '@/hooks/useAccess';
+import { toast } from 'sonner';
 
 const AnomaliesDetection = () => {
   const { anomalies, loading, resolveAnomaly } = useAccess();
@@ -109,9 +111,24 @@ const AnomaliesDetection = () => {
                   </div>
                 </div>
                 
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      Ver Histórico
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      Atribuir Responsável
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      Adicionar Comentário
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               
               <p className="text-sm text-muted-foreground mb-3">

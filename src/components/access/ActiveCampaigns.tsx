@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,11 +13,14 @@ import {
   MoreVertical,
   Plus
 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAccess } from '@/hooks/useAccess';
 import { toast } from 'sonner';
+import CreateCampaignModal from './CreateCampaignModal';
 
 const ActiveCampaigns = () => {
   const { campaigns, loading, updateCampaign } = useAccess();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const handlePauseCampaign = async (id: string) => {
     try {
@@ -58,7 +62,7 @@ const ActiveCampaigns = () => {
           <CardTitle className="text-xl font-semibold text-foreground">
             Campanhas Ativas
           </CardTitle>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Campanha
           </Button>
@@ -90,9 +94,24 @@ const ActiveCampaigns = () => {
                       {campaign.status === 'active' ? 'Ativa' : 
                        campaign.status === 'completed' ? 'Concluída' : 'Pausada'}
                     </Badge>
-                    <Button variant="ghost" size="sm">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                          Editar Campanha
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                          Duplicar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')} className="text-destructive">
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
@@ -154,7 +173,7 @@ const ActiveCampaigns = () => {
                         </Button>
                       )}
                     </div>
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
                       Ver Detalhes
                     </Button>
                   </div>
@@ -166,7 +185,7 @@ const ActiveCampaigns = () => {
           {campaigns.length === 0 && (
             <div className="text-center py-8">
               <p className="text-muted-foreground">Nenhuma campanha encontrada</p>
-              <Button variant="outline" className="mt-4">
+              <Button variant="outline" className="mt-4" onClick={() => setIsCreateModalOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Criar primeira campanha
               </Button>
@@ -174,6 +193,11 @@ const ActiveCampaigns = () => {
           )}
         </div>
       </CardContent>
+      
+      <CreateCampaignModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+      />
     </Card>
   );
 };
