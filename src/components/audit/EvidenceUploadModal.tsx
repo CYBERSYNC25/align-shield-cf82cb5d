@@ -58,7 +58,8 @@ const EvidenceUploadModal = ({ onSuccess }: EvidenceUploadModalProps) => {
       const evidenceData = {
         ...formData,
         file_url: uploadedFiles[0], // Primary file
-        uploaded_by: formData.uploaded_by || user.user_metadata?.display_name || user.email
+        uploaded_by: formData.uploaded_by || user.user_metadata?.display_name || user.email,
+        audit_id: formData.audit_id === 'none' ? null : formData.audit_id
       };
 
       const result = await createEvidence(evidenceData);
@@ -174,7 +175,7 @@ const EvidenceUploadModal = ({ onSuccess }: EvidenceUploadModalProps) => {
                   <SelectValue placeholder="Selecione a auditoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma auditoria específica</SelectItem>
+                  <SelectItem value="none">Nenhuma auditoria específica</SelectItem>
                   {audits.map(audit => (
                     <SelectItem key={audit.id} value={audit.id}>
                       {audit.name}

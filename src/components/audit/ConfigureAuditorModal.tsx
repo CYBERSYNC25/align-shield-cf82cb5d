@@ -212,7 +212,7 @@ const ConfigureAuditorModal = ({ variant = 'configure', children }: ConfigureAud
                       <SelectValue placeholder="Selecione a auditoria" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Acesso Geral</SelectItem>
+                      <SelectItem value="general">Acesso Geral</SelectItem>
                       {audits.map(audit => (
                         <SelectItem key={audit.id} value={audit.id}>
                           {audit.name}

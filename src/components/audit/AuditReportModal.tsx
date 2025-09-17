@@ -25,8 +25,8 @@ const AuditReportModal = () => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [reportType, setReportType] = useState('');
-  const [selectedFramework, setSelectedFramework] = useState('');
-  const [selectedAudit, setSelectedAudit] = useState('');
+  const [selectedFramework, setSelectedFramework] = useState('all');
+  const [selectedAudit, setSelectedAudit] = useState('all');
   const [includeEvidence, setIncludeEvidence] = useState(true);
   const [includeStats, setIncludeStats] = useState(true);
   const [includeChecklists, setIncludeChecklists] = useState(true);
@@ -78,17 +78,22 @@ const AuditReportModal = () => {
       // Simulate report generation
       await new Promise(resolve => setTimeout(resolve, 3000));
       
+      const reportTypeName = reportTypes.find(t => t.value === reportType)?.label || 'Relatório';
+      const auditFilter = selectedAudit === 'all' ? 'todas as auditorias' : audits.find(a => a.id === selectedAudit)?.name || 'auditoria selecionada';
+      const frameworkFilter = selectedFramework === 'all' ? 'todos os frameworks' : selectedFramework.toUpperCase();
+      
       toast({
         title: "Relatório Gerado",
-        description: "O relatório foi gerado com sucesso e está sendo baixado.",
+        description: `${reportTypeName} para ${auditFilter} (${frameworkFilter}) foi gerado com sucesso e está sendo baixado.`,
       });
 
       // Simulate file download
+      const filename = `${reportTypeName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.pdf`;
       const blob = new Blob(['Relatório de auditoria gerado...'], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `relatorio-auditoria-${Date.now()}.pdf`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -238,7 +243,7 @@ const AuditReportModal = () => {
                   <SelectValue placeholder="Todas as auditorias" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas as auditorias</SelectItem>
+                  <SelectItem value="all">Todas as auditorias</SelectItem>
                   {audits.map(audit => (
                     <SelectItem key={audit.id} value={audit.id}>
                       {audit.name}
@@ -255,7 +260,7 @@ const AuditReportModal = () => {
                   <SelectValue placeholder="Todos os frameworks" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os frameworks</SelectItem>
+                  <SelectItem value="all">Todos os frameworks</SelectItem>
                   <SelectItem value="iso27001">ISO 27001</SelectItem>
                   <SelectItem value="sox">SOX</SelectItem>
                   <SelectItem value="lgpd">LGPD</SelectItem>
