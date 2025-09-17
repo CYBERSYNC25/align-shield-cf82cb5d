@@ -39,19 +39,50 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
   const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   
+  console.log('=== ControlEvidenceModal Debug ===');
+  console.log('Control:', control);
+  console.log('Evidence array:', evidence);
+  console.log('Evidence length:', evidence?.length);
+  console.log('Open:', open);
+  
   // Verificações de segurança extras
-  if (!control) return null;
-  if (!evidence || !Array.isArray(evidence)) return null;
+  if (!control) {
+    console.log('Control is null, returning null');
+    return null;
+  }
+  
+  if (!evidence || !Array.isArray(evidence)) {
+    console.log('Evidence is not valid array:', evidence);
+    return null;
+  }
 
   // Filtrar evidências relacionadas ao controle com verificação robusta de null/undefined
   const controlEvidences = evidence.filter(ev => {
+    console.log('Filtering evidence item:', ev);
+    
     // Verificação completa de todas as propriedades necessárias
-    if (!ev || !ev.name || !ev.type || !control || !control.code || !control.title) {
+    if (!ev) {
+      console.log('Evidence item is null/undefined');
+      return false;
+    }
+    
+    if (!ev.name || typeof ev.name !== 'string') {
+      console.log('Evidence name is invalid:', ev.name);
+      return false;
+    }
+    
+    if (!ev.type || typeof ev.type !== 'string') {
+      console.log('Evidence type is invalid:', ev.type);
+      return false;
+    }
+    
+    if (!control || !control.code || !control.title) {
+      console.log('Control data is invalid:', control);
       return false;
     }
     
     try {
-      return (
+      const result = (
         ev.name.toLowerCase().includes(control.code.toLowerCase()) ||
         ev.type.toLowerCase().includes(control.title.toLowerCase()) ||
         (control.code === 'AC-1' && ev.name.toLowerCase().includes('access')) ||
@@ -59,11 +90,15 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
         (control.code === 'AC-6' && ev.name.toLowerCase().includes('removal')) ||
         (control.code === 'SI-4' && ev.name.toLowerCase().includes('monitoring'))
       );
+      console.log('Filter result for evidence:', ev.name, result);
+      return result;
     } catch (error) {
-      console.error('Erro ao filtrar evidências:', error);
+      console.error('Erro ao filtrar evidências:', error, 'Evidence:', ev);
       return false;
     }
-  }) || [];
+  });
+  
+  console.log('Filtered controlEvidences:', controlEvidences);
 
   const getStatusBadge = (status: string | null | undefined) => {
     const config = {
@@ -191,64 +226,74 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 gap-4">
-                  {controlEvidences.map((evidence) => (
-                    <Card key={evidence.id} className="bg-surface-elevated border-card-border">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start space-x-3 flex-1">
-                            <div className="text-2xl">{getFileIcon(evidence?.type)}</div>
-                            <div className="space-y-2 flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-medium text-foreground truncate">
-                                  {evidence?.name || 'Evidência sem nome'}
-                                </h4>
-                                {getStatusBadge(evidence?.status)}
-                              </div>
-                              
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <FileText className="h-3 w-3" />
-                                  <span>{evidence?.type || 'Tipo desconhecido'}</span>
+                  {controlEvidences.map((evidence) => {
+                    console.log('Rendering evidence item:', evidence);
+                    
+                    // Verificação extra antes de renderizar
+                    if (!evidence || !evidence.id) {
+                      console.error('Invalid evidence item in render:', evidence);
+                      return null;
+                    }
+                    
+                    return (
+                      <Card key={evidence.id} className="bg-surface-elevated border-card-border">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start space-x-3 flex-1">
+                              <div className="text-2xl">{getFileIcon(evidence?.type)}</div>
+                              <div className="space-y-2 flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="font-medium text-foreground truncate">
+                                    {evidence?.name || 'Evidência sem nome'}
+                                  </h4>
+                                  {getStatusBadge(evidence?.status)}
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  <span>{evidence?.uploaded_by || 'Usuário desconhecido'}</span>
+                                
+                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-1">
+                                    <FileText className="h-3 w-3" />
+                                    <span>{evidence?.type || 'Tipo desconhecido'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <User className="h-3 w-3" />
+                                    <span>{evidence?.uploaded_by || 'Usuário desconhecido'}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    <span>{evidence?.created_at ? new Date(evidence.created_at).toLocaleDateString('pt-BR') : 'Data desconhecida'}</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>{evidence?.created_at ? new Date(evidence.created_at).toLocaleDateString('pt-BR') : 'Data desconhecida'}</span>
-                                </div>
-                              </div>
 
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
-                                <Hash className="h-3 w-3" />
-                                <span>SHA-256: abc123...def456</span>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground font-mono">
+                                  <Hash className="h-3 w-3" />
+                                  <span>SHA-256: abc123...def456</span>
+                                </div>
                               </div>
                             </div>
+                            
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleViewEvidence(evidence)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDownload(evidence)}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleViewEvidence(evidence)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDownload(evidence)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </div>

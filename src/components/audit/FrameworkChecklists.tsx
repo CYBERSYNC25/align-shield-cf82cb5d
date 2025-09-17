@@ -32,10 +32,17 @@ const FrameworkChecklists = () => {
 
   // Remover logs de debug
   const handleViewEvidences = (control: any) => {
+    console.log('=== handleViewEvidences Debug ===');
+    console.log('Control passed to handleViewEvidences:', control);
+    console.log('Control type:', typeof control);
+    console.log('Control keys:', control ? Object.keys(control) : 'null');
+    
     if (!control) {
       console.error('Control is null or undefined');
       return;
     }
+    
+    console.log('Setting selected control and opening modal');
     setSelectedControl(control);
     setControlModalOpen(true);
   };
@@ -164,34 +171,40 @@ const FrameworkChecklists = () => {
                     <p className="text-sm text-muted-foreground">Nenhum controle configurado para este framework</p>
                   </div>
                 ) : (
-                  frameworkControls.map((control) => (
-                    <Card key={control.id} className="bg-surface-elevated border-card-border">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant="outline" className="text-xs font-mono">
-                                {control.code}
-                              </Badge>
-                              {getStatusBadge(control.status)}
+                  frameworkControls.map((control) => {
+                    console.log('Rendering control item:', control);
+                    
+                    return (
+                      <Card key={control.id} className="bg-surface-elevated border-card-border">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline" className="text-xs font-mono">
+                                  {control.code}
+                                </Badge>
+                                {getStatusBadge(control.status)}
+                              </div>
+                              <h4 className="font-semibold text-foreground mb-1">
+                                {control.title}
+                              </h4>
+                              <p className="text-sm text-muted-foreground">
+                                {control.description}
+                              </p>
                             </div>
-                            <h4 className="font-semibold text-foreground mb-1">
-                              {control.title}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {control.description}
-                            </p>
+                            
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                console.log('Button clicked for control:', control);
+                                handleViewEvidences(control);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Evidências
+                            </Button>
                           </div>
-                          
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => handleViewEvidences(control)}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Evidências
-                          </Button>
-                        </div>
 
                         {/* Owner & Evidence Count */}
                         <div className="flex items-center justify-between mb-3">
@@ -247,9 +260,10 @@ const FrameworkChecklists = () => {
                             </Button>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 )}
               </div>
             </TabsContent>
