@@ -21,13 +21,25 @@ export const useFileUpload = () => {
     folder?: string
   ): Promise<{ url: string | null; error: string | null }> => {
     if (!user) {
+      console.error('User not authenticated for file upload');
       return { url: null, error: 'Usuário não autenticado' };
     }
+
+    console.log('Starting file upload:', {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type,
+      bucket,
+      folder,
+      userId: user.id
+    });
 
     const fileId = `${Date.now()}-${file.name}`;
     const filePath = folder 
       ? `${user.id}/${folder}/${fileId}`
       : `${user.id}/${fileId}`;
+
+    console.log('File path:', filePath);
 
     // Initialize upload state
     setUploads(prev => ({
@@ -36,6 +48,7 @@ export const useFileUpload = () => {
     }));
 
     try {
+      console.log('Uploading to Supabase storage...');
       // Upload file to Supabase Storage
       const { data, error } = await supabase.storage
         .from(bucket)
@@ -44,7 +57,10 @@ export const useFileUpload = () => {
           upsert: false
         });
 
+      console.log('Supabase upload response:', { data, error });
+
       if (error) {
+        console.error('Supabase storage error:', error);
         throw error;
       }
 
@@ -52,6 +68,8 @@ export const useFileUpload = () => {
       const { data: { publicUrl } } = supabase.storage
         .from(bucket)
         .getPublicUrl(filePath);
+
+      console.log('Generated public URL:', publicUrl);
 
       // Update upload state with success
       setUploads(prev => ({
@@ -68,6 +86,7 @@ export const useFileUpload = () => {
 
     } catch (error: any) {
       const errorMessage = error.message || 'Erro no upload';
+      console.error('Upload failed:', error);
       
       // Update upload state with error
       setUploads(prev => ({

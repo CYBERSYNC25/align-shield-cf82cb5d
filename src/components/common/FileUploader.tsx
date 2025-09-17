@@ -48,8 +48,13 @@ const FileUploader = ({
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (disabled) return;
 
+    console.log('Files dropped:', acceptedFiles);
+
     const uploadPromises = acceptedFiles.map(async (file) => {
+      console.log('Uploading file:', file.name, 'to bucket:', bucket, 'folder:', folder);
       const result = await uploadFile(file, bucket, folder);
+      console.log('Upload result for', file.name, ':', result);
+      
       if (result.url) {
         const fileData = { name: file.name, url: result.url, type: file.type };
         setUploadedFiles(prev => [...prev, fileData]);
@@ -60,6 +65,9 @@ const FileUploader = ({
 
     const urls = await Promise.all(uploadPromises);
     const validUrls = urls.filter(Boolean) as string[];
+    
+    console.log('All upload results:', urls);
+    console.log('Valid URLs:', validUrls);
     
     if (validUrls.length > 0 && onUploadComplete) {
       onUploadComplete(validUrls);

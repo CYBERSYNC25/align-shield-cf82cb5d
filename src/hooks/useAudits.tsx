@@ -169,6 +169,9 @@ export function useAudits() {
     if (!user) return null;
 
     try {
+      console.log('Creating evidence with data:', evidenceData);
+      console.log('User ID:', user.id);
+
       const { data, error } = await supabase
         .from('evidence')
         .insert({
@@ -178,7 +181,10 @@ export function useAudits() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error creating evidence:', error);
+        throw error;
+      }
 
       if (data) {
         setEvidence(prev => [data, ...prev]);

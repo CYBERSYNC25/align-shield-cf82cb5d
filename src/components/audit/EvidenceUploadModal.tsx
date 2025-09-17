@@ -55,12 +55,27 @@ const EvidenceUploadModal = ({ onSuccess }: EvidenceUploadModalProps) => {
     setLoading(true);
 
     try {
+      console.log('Form data:', formData);
+      console.log('Uploaded files:', uploadedFiles);
+      console.log('User:', user);
+
+      if (!formData.name || !formData.type) {
+        toast({
+          title: "Erro",
+          description: "Preencha todos os campos obrigatórios",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const evidenceData = {
         ...formData,
         file_url: uploadedFiles[0], // Primary file
-        uploaded_by: formData.uploaded_by || user.user_metadata?.display_name || user.email,
-        audit_id: formData.audit_id === 'none' ? null : formData.audit_id
+        uploaded_by: formData.uploaded_by || user.user_metadata?.display_name || user.email || 'Usuário Anônimo',
+        audit_id: formData.audit_id === 'none' || !formData.audit_id ? null : formData.audit_id
       };
+
+      console.log('Evidence data to submit:', evidenceData);
 
       const result = await createEvidence(evidenceData);
       
