@@ -80,6 +80,49 @@ const UseTemplateModal = ({ isOpen, onClose, templateName }: UseTemplateModalPro
         'Como é realizada a avaliação de impacto à proteção de dados (AIPD)?',
         'A organização possui um Encarregado de Proteção de Dados (DPO)?'
       ]
+    },
+    'Financial Services Risk': {
+      category: 'Compliance',
+      questions: 28,
+      avgTime: '20 min',
+      frameworks: ['PCI DSS', 'SOX'],
+      description: 'Avaliação para fornecedores de serviços financeiros',
+      sections: [
+        { name: 'Controles Financeiros', questions: 8 },
+        { name: 'Segurança de Transações', questions: 6 },
+        { name: 'Compliance Regulatório', questions: 5 },
+        { name: 'Auditoria e Monitoramento', questions: 4 },
+        { name: 'Gestão de Fraudes', questions: 3 },
+        { name: 'Relatórios e Documentação', questions: 2 }
+      ],
+      sampleQuestions: [
+        'A empresa possui certificação PCI DSS válida?',
+        'Como são protegidas as transações financeiras?',
+        'Existe conformidade com regulamentações financeiras locais?',
+        'Como são realizadas auditorias internas de controles financeiros?',
+        'Qual é o processo de detecção e prevenção de fraudes?'
+      ]
+    },
+    'General Vendor Onboarding': {
+      category: 'General',
+      questions: 18,
+      avgTime: '15 min',
+      frameworks: ['ISO 9001'],
+      description: 'Questionário padrão para onboarding de novos fornecedores',
+      sections: [
+        { name: 'Informações Corporativas', questions: 5 },
+        { name: 'Capacidade Operacional', questions: 4 },
+        { name: 'Qualidade e Processos', questions: 3 },
+        { name: 'Sustentabilidade', questions: 3 },
+        { name: 'Referências e Certificações', questions: 3 }
+      ],
+      sampleQuestions: [
+        'Há quanto tempo a empresa está estabelecida no mercado?',
+        'Qual a capacidade de produção/prestação de serviços?',
+        'A empresa possui certificação ISO 9001 ou similar?',
+        'Como são implementadas práticas de sustentabilidade?',
+        'Pode fornecer referências de clientes atuais?'
+      ]
     }
   };
 
