@@ -112,28 +112,54 @@ const EvidenceLocker = () => {
             <CreateAuditModal />
           </div>
         ) : (
-          evidence.map((item) => (
-            <Card key={item.id} className="bg-surface-elevated border-card-border">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="text-lg">
-                      {item.type.includes('JSON') ? '☁️' :
-                       item.type.includes('PDF') ? '📋' :
-                       item.type.includes('CSV') ? '📊' :
-                       item.type.includes('XML') ? '🔧' : '📄'}
+          evidence.map((item) => {
+            // Verificação defensiva para evitar erros com objetos null
+            if (!item || typeof item !== 'object') {
+              return null;
+            }
+
+            // Criar objeto seguro com valores padrão
+            const safeItem = {
+              id: item.id || crypto.randomUUID(),
+              name: item.name || 'Evidência sem nome',
+              type: item.type || 'Desconhecido',
+              uploaded_by: item.uploaded_by || 'Sistema',
+              status: item.status || 'pending',
+              created_at: item.created_at || new Date().toISOString()
+            };
+
+            // Função para obter ícone seguro
+            const getTypeIcon = (type: string) => {
+              try {
+                if (type.includes('JSON')) return '☁️';
+                if (type.includes('PDF')) return '📋';
+                if (type.includes('CSV')) return '📊';
+                if (type.includes('XML')) return '🔧';
+                return '📄';
+              } catch {
+                return '📄';
+              }
+            };
+
+            return (
+              <Card key={safeItem.id} className="bg-surface-elevated border-card-border">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="text-lg">
+                        {getTypeIcon(safeItem.type)}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-foreground">{safeItem.name}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {safeItem.type} • Uploaded by {safeItem.uploaded_by}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-foreground">{item.name}</h4>
-                      <p className="text-xs text-muted-foreground">
-                        {item.type} • Uploaded by {item.uploaded_by || 'Sistema'}
-                      </p>
-                    </div>
-                  </div>
                   
                   <Badge variant="secondary" className="bg-success/10 text-success border-success/20">
                     <Shield className="h-3 w-3 mr-1" />
-                    {item.status === 'verified' ? 'Verificado' : item.status === 'collected' ? 'Coletado' : 'Arquivado'}
+                    {safeItem.status === 'verified' ? 'Verificado' : safeItem.status === 'collected' ? 'Coletado' : 'Arquivado'}
                   </Badge>
                 </div>
 
@@ -207,7 +233,8 @@ const EvidenceLocker = () => {
                 </div>
               </CardContent>
             </Card>
-          ))
+            );
+          })
         )}
       </div>
 

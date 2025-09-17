@@ -30,6 +30,10 @@ const SearchEvidenceModal = () => {
   const { evidence } = useAudits();
 
   const filteredEvidence = evidence.filter(item => {
+    // Verificação defensiva para evitar erros com objetos null
+    if (!item || typeof item !== 'object') return false;
+    if (!item.name || !item.type) return false;
+    
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (item.uploaded_by || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -207,27 +211,46 @@ const SearchEvidenceModal = () => {
                   </p>
                 </div>
               ) : (
-                filteredEvidence.map((item) => (
-                  <Card key={item.id} className="bg-surface-elevated border-card-border">
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="text-lg">
-                            {getFileIcon(item.type)}
+                filteredEvidence.map((item) => {
+                  // Verificação defensiva antes de renderizar
+                  if (!item || !item.id) return null;
+                  
+                  // Criar objeto seguro
+                  const safeItem = {
+                    id: item.id,
+                    name: item.name || 'Evidência sem nome',
+                    type: item.type || 'Tipo desconhecido',
+                    uploaded_by: item.uploaded_by || 'Sistema',
+                    created_at: item.created_at || new Date().toISOString()
+                  };
+                  
+                  return (
+                    <Card key={safeItem.id} className="bg-surface-elevated border-card-border">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="text-lg">
+                              {getFileIcon(safeItem.type)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-semibold text-foreground truncate">
+                                {safeItem.name}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {safeItem.type} • Por {safeItem.uploaded_by}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                <Calendar className="h-3 w-3 inline mr-1" />
+                                {(() => {
+                                  try {
+                                    return format(new Date(safeItem.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+                                  } catch {
+                                    return 'Data inválida';
+                                  }
+                                })()}
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-semibold text-foreground truncate">
-                              {item.name}
-                            </h4>
-                            <p className="text-xs text-muted-foreground">
-                              {item.type} • Por {item.uploaded_by || 'Sistema'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              <Calendar className="h-3 w-3 inline mr-1" />
-                              {format(new Date(item.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                            </p>
-                          </div>
-                        </div>
                         
                         <div className="flex items-center gap-2 ml-4">
                           {getStatusBadge(item.status)}

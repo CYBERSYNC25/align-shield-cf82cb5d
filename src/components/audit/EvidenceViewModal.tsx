@@ -36,17 +36,33 @@ interface EvidenceViewModalProps {
 const EvidenceViewModal = ({ evidence, open, onOpenChange }: EvidenceViewModalProps) => {
   const [loading, setLoading] = useState(false);
 
+  // Verificação defensiva - retornar cedo se não há evidência válida
+  if (!evidence || typeof evidence !== 'object') {
+    return null;
+  }
+
+  // Criar objeto seguro com valores padrão
+  const safeEvidence = {
+    id: evidence.id || 'unknown',
+    name: evidence.name || 'Evidência sem nome',
+    type: evidence.type || 'Tipo desconhecido',
+    status: evidence.status || 'pending',
+    uploaded_by: evidence.uploaded_by || 'Sistema',
+    created_at: evidence.created_at || new Date().toISOString(),
+    file_url: evidence.file_url || null
+  };
+
   const handleDownload = async () => {
-    if (!evidence.file_url) return;
+    if (!safeEvidence.file_url) return;
     
     setLoading(true);
     try {
-      const response = await fetch(evidence.file_url);
+      const response = await fetch(safeEvidence.file_url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = evidence.name;
+      a.download = safeEvidence.name;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -74,13 +90,20 @@ const EvidenceViewModal = ({ evidence, open, onOpenChange }: EvidenceViewModalPr
     );
   };
 
-  const getFileIcon = (type: string) => {
-    if (type.includes('PDF')) return '📋';
-    if (type.includes('Excel') || type.includes('CSV')) return '📊';
-    if (type.includes('Word')) return '📄';
-    if (type.includes('Image')) return '🖼️';
-    if (type.includes('JSON')) return '☁️';
-    return '📄';
+  const getFileIcon = (type: string | null | undefined) => {
+    if (!type || typeof type !== 'string') return '📄';
+    
+    try {
+      if (type.includes('PDF')) return '📋';
+      if (type.includes('Excel') || type.includes('CSV')) return '📊';
+      if (type.includes('Word')) return '📄';
+      if (type.includes('Image')) return '🖼️';
+      if (type.includes('JSON')) return '☁️';
+      return '📄';
+    } catch (error) {
+      console.error('Erro em getFileIcon:', error);
+      return '📄';
+    }
   };
 
   return (
@@ -113,18 +136,18 @@ const EvidenceViewModal = ({ evidence, open, onOpenChange }: EvidenceViewModalPr
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="text-2xl">
-                    {getFileIcon(evidence.type)}
+                    {getFileIcon(safeEvidence.type)}
                   </div>
                   <div>
                     <h3 className="font-semibold text-foreground text-lg">
-                      {evidence.name}
+                      {safeEvidence.name}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {evidence.type}
+                      {safeEvidence.type}
                     </p>
                   </div>
                 </div>
-                {getStatusBadge(evidence.status)}
+                {getStatusBadge(safeEvidence.status)}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
