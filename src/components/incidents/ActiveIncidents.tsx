@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useIncidents } from '@/hooks/useIncidents';
 import { useToast } from '@/hooks/use-toast';
+import ReportIncidentModal from './ReportIncidentModal';
 import { 
   Plus, 
   AlertTriangle, 
@@ -18,6 +20,7 @@ import {
 const ActiveIncidents = () => {
   const { incidents, loading, updateIncidentStatus, escalateIncident } = useIncidents();
   const { toast } = useToast();
+  const [showReportModal, setShowReportModal] = useState(false);
 
   if (loading) {
     return (
@@ -119,10 +122,7 @@ const ActiveIncidents = () => {
         </h2>
         <Button 
           className="gap-2"
-          onClick={() => toast({
-            title: "Reportar Incidente",
-            description: "Abrindo formulário para reportar novo incidente...",
-          })}
+          onClick={() => setShowReportModal(true)}
         >
           <Plus className="h-4 w-4" />
           Reportar Incidente
@@ -243,6 +243,11 @@ const ActiveIncidents = () => {
           </Card>
         ))}
       </div>
+
+      <ReportIncidentModal 
+        open={showReportModal} 
+        onOpenChange={setShowReportModal} 
+      />
     </div>
   );
 };

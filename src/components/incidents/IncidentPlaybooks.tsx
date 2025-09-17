@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useIncidents } from '@/hooks/useIncidents';
 import { useToast } from '@/hooks/use-toast';
+import CreatePlaybookModal from './CreatePlaybookModal';
+import ViewPlaybookModal from './ViewPlaybookModal';
 import { 
   Plus, 
   BookOpen, 
@@ -18,6 +21,9 @@ import {
 const IncidentPlaybooks = () => {
   const { playbooks, loading, executePlaybook } = useIncidents();
   const { toast } = useToast();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [selectedPlaybook, setSelectedPlaybook] = useState<any>(null);
 
   if (loading) {
     return (
@@ -103,10 +109,7 @@ const IncidentPlaybooks = () => {
         </h2>
         <Button 
           className="gap-2"
-          onClick={() => toast({
-            title: "Criar Playbook",
-            description: "Abrindo formulário para criar novo playbook...",
-          })}
+          onClick={() => setShowCreateModal(true)}
         >
           <Plus className="h-4 w-4" />
           Novo Playbook
@@ -204,7 +207,10 @@ const IncidentPlaybooks = () => {
                     variant="outline" 
                     size="sm" 
                     className="text-xs h-6"
-                    onClick={() => handleViewPlaybook(playbook.name)}
+                    onClick={() => {
+                      setSelectedPlaybook(playbook);
+                      setShowViewModal(true);
+                    }}
                   >
                     <BookOpen className="h-3 w-3 mr-1" />
                     Visualizar
@@ -226,6 +232,17 @@ const IncidentPlaybooks = () => {
           </Card>
         ))}
       </div>
+
+      <CreatePlaybookModal 
+        open={showCreateModal} 
+        onOpenChange={setShowCreateModal} 
+      />
+
+      <ViewPlaybookModal 
+        open={showViewModal} 
+        onOpenChange={setShowViewModal} 
+        playbook={selectedPlaybook}
+      />
     </div>
   );
 };

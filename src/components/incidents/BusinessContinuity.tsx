@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useIncidents } from '@/hooks/useIncidents';
 import { useToast } from '@/hooks/use-toast';
+import BCPReportModal from './BCPReportModal';
+import TestDetailsModal from './TestDetailsModal';
 import { 
   Shield, 
   Calendar, 
@@ -18,6 +21,9 @@ import {
 const BusinessContinuity = () => {
   const { bcpPlans, loading, runBcpTest } = useIncidents();
   const { toast } = useToast();
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [selectedTest, setSelectedTest] = useState<any>(null);
 
   if (loading) {
     return (
@@ -90,7 +96,7 @@ const BusinessContinuity = () => {
         <Button 
           variant="outline" 
           size="sm"
-          onClick={handleGenerateReport}
+          onClick={() => setShowReportModal(true)}
         >
           <FileText className="h-4 w-4 mr-2" />
           Relatório BCP
@@ -240,10 +246,10 @@ const BusinessContinuity = () => {
                     variant="outline" 
                     size="sm" 
                     className="text-xs"
-                    onClick={() => toast({
-                      title: "Detalhes do Teste",
-                      description: `Abrindo detalhes do teste: ${test.plan}`,
-                    })}
+                    onClick={() => {
+                      setSelectedTest(test);
+                      setShowTestModal(true);
+                    }}
                   >
                     Detalhes
                   </Button>
@@ -253,6 +259,17 @@ const BusinessContinuity = () => {
           </CardContent>
         </Card>
       </div>
+
+      <BCPReportModal 
+        open={showReportModal} 
+        onOpenChange={setShowReportModal} 
+      />
+
+      <TestDetailsModal 
+        open={showTestModal} 
+        onOpenChange={setShowTestModal} 
+        test={selectedTest}
+      />
     </div>
   );
 };
