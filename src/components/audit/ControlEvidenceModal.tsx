@@ -39,18 +39,30 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
   const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   
+  // Verificações de segurança extras
   if (!control) return null;
+  if (!evidence || !Array.isArray(evidence)) return null;
 
-  // Filtrar evidências relacionadas ao controle com verificação de null/undefined
-  const controlEvidences = evidence?.filter(ev => {
-    return ev && ev.name && ev.type && (
-      ev.name.toLowerCase().includes(control.code.toLowerCase()) ||
-      ev.type.toLowerCase().includes(control.title.toLowerCase()) ||
-      (control.code === 'AC-1' && ev.name.toLowerCase().includes('access')) ||
-      (control.code === 'AC-2' && ev.name.toLowerCase().includes('authorization')) ||
-      (control.code === 'AC-6' && ev.name.toLowerCase().includes('removal')) ||
-      (control.code === 'SI-4' && ev.name.toLowerCase().includes('monitoring'))
-    );
+  // Filtrar evidências relacionadas ao controle com verificação robusta de null/undefined
+  const controlEvidences = evidence.filter(ev => {
+    // Verificação completa de todas as propriedades necessárias
+    if (!ev || !ev.name || !ev.type || !control || !control.code || !control.title) {
+      return false;
+    }
+    
+    try {
+      return (
+        ev.name.toLowerCase().includes(control.code.toLowerCase()) ||
+        ev.type.toLowerCase().includes(control.title.toLowerCase()) ||
+        (control.code === 'AC-1' && ev.name.toLowerCase().includes('access')) ||
+        (control.code === 'AC-2' && ev.name.toLowerCase().includes('authorization')) ||
+        (control.code === 'AC-6' && ev.name.toLowerCase().includes('removal')) ||
+        (control.code === 'SI-4' && ev.name.toLowerCase().includes('monitoring'))
+      );
+    } catch (error) {
+      console.error('Erro ao filtrar evidências:', error);
+      return false;
+    }
   }) || [];
 
   const getStatusBadge = (status: string | null | undefined) => {
@@ -81,21 +93,36 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
   };
 
   const handleViewEvidence = (evidence: any) => {
+    // Verificar se a evidência é válida antes de continuar
+    if (!evidence || !evidence.id) {
+      console.error('Evidência inválida:', evidence);
+      return;
+    }
     setSelectedEvidence(evidence);
     setViewModalOpen(true);
   };
 
   const handleDownload = async (evidence: any) => {
-    // Simular download
-    const blob = new Blob(['Conteúdo da evidência...'], { type: 'application/octet-stream' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = evidence.name;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    // Verificar se a evidência é válida antes de continuar
+    if (!evidence || !evidence.name) {
+      console.error('Evidência inválida para download:', evidence);
+      return;
+    }
+    
+    try {
+      // Simular download
+      const blob = new Blob(['Conteúdo da evidência...'], { type: 'application/octet-stream' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = evidence.name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Erro no download:', error);
+    }
   };
 
   return (
