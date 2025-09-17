@@ -24,6 +24,10 @@ import {
 import ComplianceChart from '@/components/dashboard/ComplianceChart';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import RealTimeMetrics from '@/components/dashboard/RealTimeMetrics';
+import FrameworkDetails from '@/components/analytics/FrameworkDetails';
+import RiskMatrix from '@/components/analytics/RiskMatrix';
+import RiskEvolution from '@/components/analytics/RiskEvolution';
+import PerformanceKPIs from '@/components/analytics/PerformanceKPIs';
 
 const Analytics = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
@@ -207,62 +211,19 @@ const Analytics = () => {
 
             <TabsContent value="compliance" className="space-y-6">
               <ComplianceChart />
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>Detalhamento de Frameworks</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Análise detalhada por framework em desenvolvimento</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <FrameworkDetails />
             </TabsContent>
 
             <TabsContent value="risks" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Matriz de Riscos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <PieChart className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Matriz impacto vs probabilidade</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Evolução dos Riscos</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-center py-8 text-muted-foreground">
-                      <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Histórico de mitigação</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                <RiskMatrix />
+                <RiskEvolution />
               </div>
             </TabsContent>
 
             <TabsContent value="performance" className="space-y-6">
               <RealTimeMetrics />
-              
-              <Card>
-                <CardHeader>
-                  <CardTitle>KPIs de Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Indicadores de performance em desenvolvimento</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <PerformanceKPIs />
             </TabsContent>
           </Tabs>
         </main>
