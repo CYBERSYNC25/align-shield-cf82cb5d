@@ -4,6 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useReports } from '@/hooks/useReports';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import EditScheduleModal from './EditScheduleModal';
+import ManageRecipientsModal from './ManageRecipientsModal';
+import CreateReportModal from './CreateReportModal';
 import { 
   Plus, 
   Calendar, 
@@ -20,6 +24,10 @@ import {
 const ScheduledReports = () => {
   const { scheduledReports, loading, toggleScheduledReport } = useReports();
   const { toast } = useToast();
+  const [editScheduleOpen, setEditScheduleOpen] = useState(false);
+  const [recipientsOpen, setRecipientsOpen] = useState(false);
+  const [createReportOpen, setCreateReportOpen] = useState(false);
+  const [selectedReportName, setSelectedReportName] = useState('');
 
   if (loading) {
     return (
@@ -59,10 +67,13 @@ const ScheduledReports = () => {
   };
 
   const handleEditSchedule = (reportName: string) => {
-    toast({
-      title: "Editar Agendamento",
-      description: `Abrindo editor para "${reportName}"...`,
-    });
+    setSelectedReportName(reportName);
+    setEditScheduleOpen(true);
+  };
+
+  const handleManageRecipients = (reportName: string) => {
+    setSelectedReportName(reportName);
+    setRecipientsOpen(true);
   };
 
   const handleRunNow = (reportName: string) => {
@@ -108,7 +119,7 @@ const ScheduledReports = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Relatórios Agendados
         </h2>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setCreateReportOpen(true)}>
           <Plus className="h-4 w-4" />
           Novo Agendamento
         </Button>
@@ -236,7 +247,12 @@ const ScheduledReports = () => {
                   <Calendar className="h-4 w-4 mr-2" />
                   Editar Agenda
                 </Button>
-                <Button variant="outline" size="sm" className="flex-1">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex-1"
+                  onClick={() => handleManageRecipients(report.name)}
+                >
                   <Users className="h-4 w-4 mr-2" />
                   Destinatários
                 </Button>
@@ -245,6 +261,24 @@ const ScheduledReports = () => {
           </Card>
         ))}
       </div>
+
+      {/* Modals */}
+      <EditScheduleModal
+        isOpen={editScheduleOpen}
+        onClose={() => setEditScheduleOpen(false)}
+        reportName={selectedReportName}
+      />
+      
+      <ManageRecipientsModal
+        isOpen={recipientsOpen}
+        onClose={() => setRecipientsOpen(false)}
+        reportName={selectedReportName}
+      />
+
+      <CreateReportModal
+        isOpen={createReportOpen}
+        onClose={() => setCreateReportOpen(false)}
+      />
     </div>
   );
 };

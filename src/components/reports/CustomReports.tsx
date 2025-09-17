@@ -2,6 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import CreateReportModal from './CreateReportModal';
+import ReportPreviewModal from './ReportPreviewModal';
 import { 
   Plus, 
   Settings, 
@@ -14,6 +18,10 @@ import {
 } from 'lucide-react';
 
 const CustomReports = () => {
+  const { toast } = useToast();
+  const [createReportOpen, setCreateReportOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedReport, setSelectedReport] = useState<any>(null);
   const customReports = [
     {
       name: 'Weekly Security Metrics',
@@ -91,13 +99,56 @@ const CustomReports = () => {
     return <Badge variant="outline" className={conf.className}>{conf.label}</Badge>;
   };
 
+  const handleViewReport = (report: any) => {
+    const mockReport = {
+      name: report.name,
+      description: report.description,
+      framework: 'Multi-Framework',
+      pages: 24,
+      size: '3.2 MB',
+      sections: ['Executive Summary', 'Metrics Overview', 'Detailed Analysis', 'Recommendations'],
+      audience: 'Executive Team',
+      readiness: 95
+    };
+    setSelectedReport(mockReport);
+    setPreviewOpen(true);
+  };
+
+  const handleEditReport = (reportName: string) => {
+    toast({
+      title: "Editar Relatório",
+      description: `Abrindo editor para "${reportName}"...`,
+    });
+  };
+
+  const handleDeleteReport = (reportName: string) => {
+    toast({
+      title: "Relatório Removido",
+      description: `"${reportName}" foi removido da lista.`,
+    });
+  };
+
+  const handleConfigureReport = (reportName: string) => {
+    toast({
+      title: "Configurar Relatório",
+      description: `Abrindo configurações para "${reportName}"...`,
+    });
+  };
+
+  const handleGenerateNow = (reportName: string) => {
+    toast({
+      title: "Gerando Relatório",
+      description: `"${reportName}" está sendo gerado...`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-foreground">
           Relatórios Personalizados
         </h2>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => setCreateReportOpen(true)}>
           <Plus className="h-4 w-4" />
           Criar Relatório
         </Button>
@@ -138,13 +189,25 @@ const CustomReports = () => {
                     </div>
                     
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleViewReport(report)}
+                      >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleEditReport(report.name)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleDeleteReport(report.name)}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -195,11 +258,18 @@ const CustomReports = () => {
                       Gerado {report.lastGenerated}
                     </span>
                     <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleConfigureReport(report.name)}
+                      >
                         <Settings className="h-4 w-4 mr-2" />
                         Configurar
                       </Button>
-                      <Button size="sm">
+                      <Button 
+                        size="sm"
+                        onClick={() => handleGenerateNow(report.name)}
+                      >
                         <Download className="h-4 w-4 mr-2" />
                         Gerar Agora
                       </Button>
@@ -274,7 +344,7 @@ const CustomReports = () => {
               </div>
 
               <div className="flex gap-2 pt-4">
-                <Button className="gap-2">
+                <Button className="gap-2" onClick={() => setCreateReportOpen(true)}>
                   <Plus className="h-4 w-4" />
                   Criar Relatório
                 </Button>
@@ -287,6 +357,18 @@ const CustomReports = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Modals */}
+      <CreateReportModal
+        isOpen={createReportOpen}
+        onClose={() => setCreateReportOpen(false)}
+      />
+      
+      <ReportPreviewModal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        report={selectedReport}
+      />
     </div>
   );
 };

@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useReports } from '@/hooks/useReports';
 import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import ReportPreviewModal from './ReportPreviewModal';
+import ShareReportModal from './ShareReportModal';
 import { 
   FileText, 
   Download, 
@@ -20,6 +23,10 @@ import {
 const ReadyReports = () => {
   const { reports, loading, generateReport } = useReports();
   const { toast } = useToast();
+  const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareReportName, setShareReportName] = useState('');
 
   if (loading) {
     return (
@@ -80,18 +87,14 @@ const ReadyReports = () => {
     await generateReport(reportId);
   };
 
-  const handlePreview = (reportName: string) => {
-    toast({
-      title: "Prévia do Relatório",
-      description: `Abrindo prévia de "${reportName}"...`,
-    });
+  const handlePreview = (report: any) => {
+    setSelectedReport(report);
+    setPreviewOpen(true);
   };
 
   const handleShare = (reportName: string) => {
-    toast({
-      title: "Link Compartilhado",
-      description: `Link seguro gerado para "${reportName}".`,
-    });
+    setShareReportName(reportName);
+    setShareOpen(true);
   };
 
   const getStatusBadge = (status: string, readiness: number) => {
@@ -211,7 +214,7 @@ const ReadyReports = () => {
                     variant="outline" 
                     size="sm" 
                     className="gap-1"
-                    onClick={() => handlePreview(report.name)}
+                    onClick={() => handlePreview(report)}
                   >
                     <Eye className="h-4 w-4" />
                     Prévia
@@ -236,6 +239,19 @@ const ReadyReports = () => {
           );
         })}
       </div>
+
+      {/* Modals */}
+      <ReportPreviewModal
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        report={selectedReport}
+      />
+      
+      <ShareReportModal
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+        reportName={shareReportName}
+      />
     </div>
   );
 };
