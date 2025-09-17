@@ -53,7 +53,7 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
     )
   ) || [];
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string | null | undefined) => {
     const config = {
       verified: { label: 'Verificado', className: 'bg-success/10 text-success border-success/20' },
       pending_review: { label: 'Pendente', className: 'bg-warning/10 text-warning border-warning/20' },
@@ -61,7 +61,7 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
       archived: { label: 'Arquivado', className: 'bg-muted/10 text-muted-foreground border-muted/20' }
     };
     
-    const conf = config[status as keyof typeof config] || config.pending_review;
+    const conf = config[(status || 'pending_review') as keyof typeof config] || config.pending_review;
     
     return (
       <Badge variant="outline" className={conf.className}>
@@ -70,7 +70,8 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
     );
   };
 
-  const getFileIcon = (type: string) => {
+  const getFileIcon = (type: string | null | undefined) => {
+    if (!type) return '📄';
     if (type.includes('PDF')) return '📄';
     if (type.includes('Excel')) return '📊';
     if (type.includes('Word')) return '📝';
@@ -168,27 +169,27 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex items-start space-x-3 flex-1">
-                            <div className="text-2xl">{getFileIcon(evidence.type)}</div>
+                            <div className="text-2xl">{getFileIcon(evidence?.type)}</div>
                             <div className="space-y-2 flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <h4 className="font-medium text-foreground truncate">
-                                  {evidence.name}
+                                  {evidence?.name || 'Evidência sem nome'}
                                 </h4>
-                                {getStatusBadge(evidence.status)}
+                                {getStatusBadge(evidence?.status)}
                               </div>
                               
                               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                   <FileText className="h-3 w-3" />
-                                  <span>{evidence.type}</span>
+                                  <span>{evidence?.type || 'Tipo desconhecido'}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <User className="h-3 w-3" />
-                                  <span>{evidence.uploaded_by}</span>
+                                  <span>{evidence?.uploaded_by || 'Usuário desconhecido'}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Calendar className="h-3 w-3" />
-                                  <span>{new Date(evidence.created_at).toLocaleDateString('pt-BR')}</span>
+                                  <span>{evidence?.created_at ? new Date(evidence.created_at).toLocaleDateString('pt-BR') : 'Data desconhecida'}</span>
                                 </div>
                               </div>
 
