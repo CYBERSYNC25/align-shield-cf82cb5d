@@ -35,22 +35,14 @@ interface ControlEvidenceModalProps {
 }
 
 const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceModalProps) => {
-  console.log('ControlEvidenceModal rendered with control:', control, 'open:', open);
-  
   const { evidence } = useAudits();
   const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   
-  console.log('Evidence from useAudits:', evidence);
-  
-  if (!control) {
-    console.log('Control is null, returning null');
-    return null;
-  }
+  if (!control) return null;
 
   // Filtrar evidências relacionadas ao controle com verificação de null/undefined
   const controlEvidences = evidence?.filter(ev => {
-    console.log('Filtering evidence:', ev);
     return ev && ev.name && ev.type && (
       ev.name.toLowerCase().includes(control.code.toLowerCase()) ||
       ev.type.toLowerCase().includes(control.title.toLowerCase()) ||
@@ -60,8 +52,6 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
       (control.code === 'SI-4' && ev.name.toLowerCase().includes('monitoring'))
     );
   }) || [];
-  
-  console.log('Filtered controlEvidences:', controlEvidences);
 
   const getStatusBadge = (status: string | null | undefined) => {
     const config = {

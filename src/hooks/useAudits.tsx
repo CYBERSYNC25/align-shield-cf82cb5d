@@ -100,8 +100,17 @@ export function useAudits() {
       if (auditsResponse.error) throw auditsResponse.error;
       if (evidenceResponse.error) throw evidenceResponse.error;
 
-      setAudits(auditsResponse.data || []);
-      setEvidence(evidenceResponse.data || []);
+      // Se não há dados, use dados mock para desenvolvimento
+      const auditsData = auditsResponse.data && auditsResponse.data.length > 0 
+        ? auditsResponse.data 
+        : getMockAudits();
+      
+      const evidenceData = evidenceResponse.data && evidenceResponse.data.length > 0 
+        ? evidenceResponse.data 
+        : getMockEvidence();
+
+      setAudits(auditsData);
+      setEvidence(evidenceData);
     } catch (error) {
       console.warn('Dados de auditoria não disponíveis:', error);
       // Use dados mocados se falhar

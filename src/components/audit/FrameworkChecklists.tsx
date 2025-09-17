@@ -30,8 +30,8 @@ const FrameworkChecklists = () => {
   const [selectedControl, setSelectedControl] = useState<any>(null);
   const [controlModalOpen, setControlModalOpen] = useState(false);
 
+  // Remover logs de debug
   const handleViewEvidences = (control: any) => {
-    console.log('handleViewEvidences called with control:', control);
     if (!control) {
       console.error('Control is null or undefined');
       return;
