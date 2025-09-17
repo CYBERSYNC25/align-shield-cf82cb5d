@@ -39,66 +39,47 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
   const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   
-  console.log('=== ControlEvidenceModal Debug ===');
-  console.log('Control:', control);
-  console.log('Evidence array:', evidence);
-  console.log('Evidence length:', evidence?.length);
-  console.log('Open:', open);
+  // Return early se não temos os dados necessários
+  if (!control || !open) return null;
   
-  // Verificações de segurança extras
-  if (!control) {
-    console.log('Control is null, returning null');
-    return null;
-  }
+  // Garantir que evidence é um array válido
+  const safeEvidence = Array.isArray(evidence) ? evidence : [];
   
-  if (!evidence || !Array.isArray(evidence)) {
-    console.log('Evidence is not valid array:', evidence);
-    return null;
-  }
-
-  // Filtrar evidências relacionadas ao controle com verificação robusta de null/undefined
-  const controlEvidences = evidence.filter(ev => {
-    console.log('Filtering evidence item:', ev);
+  // Filtrar evidências com verificação ultra-defensiva
+  const controlEvidences = safeEvidence.filter(ev => {
+    // Verificação básica de existência
+    if (!ev || typeof ev !== 'object') return false;
     
-    // Verificação completa de todas as propriedades necessárias
-    if (!ev) {
-      console.log('Evidence item is null/undefined');
+    // Verificação das propriedades necessárias
+    const hasName = ev.name && typeof ev.name === 'string';
+    const hasType = ev.type && typeof ev.type === 'string';
+    const hasControlCode = control && control.code && typeof control.code === 'string';
+    const hasControlTitle = control && control.title && typeof control.title === 'string';
+    
+    if (!hasName || !hasType || !hasControlCode || !hasControlTitle) {
       return false;
     }
     
-    if (!ev.name || typeof ev.name !== 'string') {
-      console.log('Evidence name is invalid:', ev.name);
-      return false;
-    }
-    
-    if (!ev.type || typeof ev.type !== 'string') {
-      console.log('Evidence type is invalid:', ev.type);
-      return false;
-    }
-    
-    if (!control || !control.code || !control.title) {
-      console.log('Control data is invalid:', control);
-      return false;
-    }
-    
+    // Filtragem segura
     try {
-      const result = (
-        ev.name.toLowerCase().includes(control.code.toLowerCase()) ||
-        ev.type.toLowerCase().includes(control.title.toLowerCase()) ||
-        (control.code === 'AC-1' && ev.name.toLowerCase().includes('access')) ||
-        (control.code === 'AC-2' && ev.name.toLowerCase().includes('authorization')) ||
-        (control.code === 'AC-6' && ev.name.toLowerCase().includes('removal')) ||
-        (control.code === 'SI-4' && ev.name.toLowerCase().includes('monitoring'))
+      const name = ev.name.toLowerCase();
+      const type = ev.type.toLowerCase();
+      const code = control.code.toLowerCase();
+      const title = control.title.toLowerCase();
+      
+      return (
+        name.includes(code) ||
+        type.includes(title) ||
+        (control.code === 'AC-1' && name.includes('access')) ||
+        (control.code === 'AC-2' && name.includes('authorization')) ||
+        (control.code === 'AC-6' && name.includes('removal')) ||
+        (control.code === 'SI-4' && name.includes('monitoring'))
       );
-      console.log('Filter result for evidence:', ev.name, result);
-      return result;
     } catch (error) {
-      console.error('Erro ao filtrar evidências:', error, 'Evidence:', ev);
+      console.error('Erro na filtragem:', error);
       return false;
     }
   });
-  
-  console.log('Filtered controlEvidences:', controlEvidences);
 
   const getStatusBadge = (status: string | null | undefined) => {
     const config = {
@@ -108,7 +89,8 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
       archived: { label: 'Arquivado', className: 'bg-muted/10 text-muted-foreground border-muted/20' }
     };
     
-    const conf = config[(status || 'pending_review') as keyof typeof config] || config.pending_review;
+    const statusKey = (status && typeof status === 'string') ? status : 'pending_review';
+    const conf = config[statusKey as keyof typeof config] || config.pending_review;
     
     return (
       <Badge variant="outline" className={conf.className}>
@@ -118,13 +100,19 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
   };
 
   const getFileIcon = (type: string | null | undefined) => {
-    if (!type) return '📄';
-    if (type.includes('PDF')) return '📄';
-    if (type.includes('Excel')) return '📊';
-    if (type.includes('Word')) return '📝';
-    if (type.includes('Image')) return '🖼️';
-    if (type.includes('JSON')) return '☁️';
-    return '📄';
+    if (!type || typeof type !== 'string') return '📄';
+    
+    try {
+      if (type.includes('PDF')) return '📄';
+      if (type.includes('Excel')) return '📊';
+      if (type.includes('Word')) return '📝';
+      if (type.includes('Image')) return '🖼️';
+      if (type.includes('JSON')) return '☁️';
+      return '📄';
+    } catch (error) {
+      console.error('Erro em getFileIcon:', error);
+      return '📄';
+    }
   };
 
   const handleViewEvidence = (evidence: any) => {
@@ -227,40 +215,55 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
               ) : (
                 <div className="grid grid-cols-1 gap-4">
                   {controlEvidences.map((evidence) => {
-                    console.log('Rendering evidence item:', evidence);
-                    
-                    // Verificação extra antes de renderizar
-                    if (!evidence || !evidence.id) {
-                      console.error('Invalid evidence item in render:', evidence);
+                    // Verificação ultra-defensiva antes de renderizar
+                    if (!evidence || typeof evidence !== 'object' || !evidence.id) {
                       return null;
                     }
                     
+                    // Preparar dados seguros para renderização
+                    const safeEvidence = {
+                      id: evidence.id || 'unknown',
+                      name: evidence.name || 'Evidência sem nome',
+                      type: evidence.type || 'Tipo desconhecido',
+                      status: evidence.status || 'pending_review',
+                      uploaded_by: evidence.uploaded_by || 'Usuário desconhecido',
+                      created_at: evidence.created_at || new Date().toISOString()
+                    };
+                    
                     return (
-                      <Card key={evidence.id} className="bg-surface-elevated border-card-border">
+                      <Card key={safeEvidence.id} className="bg-surface-elevated border-card-border">
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between">
                             <div className="flex items-start space-x-3 flex-1">
-                              <div className="text-2xl">{getFileIcon(evidence?.type)}</div>
+                              <div className="text-2xl">{getFileIcon(safeEvidence.type)}</div>
                               <div className="space-y-2 flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                   <h4 className="font-medium text-foreground truncate">
-                                    {evidence?.name || 'Evidência sem nome'}
+                                    {safeEvidence.name}
                                   </h4>
-                                  {getStatusBadge(evidence?.status)}
+                                  {getStatusBadge(safeEvidence.status)}
                                 </div>
                                 
                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                   <div className="flex items-center gap-1">
                                     <FileText className="h-3 w-3" />
-                                    <span>{evidence?.type || 'Tipo desconhecido'}</span>
+                                    <span>{safeEvidence.type}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <User className="h-3 w-3" />
-                                    <span>{evidence?.uploaded_by || 'Usuário desconhecido'}</span>
+                                    <span>{safeEvidence.uploaded_by}</span>
                                   </div>
                                   <div className="flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
-                                    <span>{evidence?.created_at ? new Date(evidence.created_at).toLocaleDateString('pt-BR') : 'Data desconhecida'}</span>
+                                    <span>
+                                      {(() => {
+                                        try {
+                                          return new Date(safeEvidence.created_at).toLocaleDateString('pt-BR');
+                                        } catch {
+                                          return 'Data inválida';
+                                        }
+                                      })()}
+                                    </span>
                                   </div>
                                 </div>
 
