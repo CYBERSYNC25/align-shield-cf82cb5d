@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
@@ -101,6 +101,9 @@ const EvidenceViewModal = ({ evidence, open, onOpenChange }: EvidenceViewModalPr
               <X className="h-4 w-4" />
             </Button>
           </div>
+          <DialogDescription>
+            Detalhes completos da evidência incluindo metadados e opções de download
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

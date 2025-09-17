@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -190,6 +190,9 @@ const AuditReportModal = () => {
             <FileText className="h-5 w-5" />
             Gerar Relatório de Auditoria
           </DialogTitle>
+          <DialogDescription>
+            Configure e gere relatórios personalizados de auditoria
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">

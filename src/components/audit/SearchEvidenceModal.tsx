@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -111,6 +111,9 @@ const SearchEvidenceModal = () => {
               <Search className="h-5 w-5" />
               Buscar e Filtrar Evidências
             </DialogTitle>
+            <DialogDescription>
+              Encontre evidências específicas usando filtros e pesquisa
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
