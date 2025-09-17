@@ -174,64 +174,18 @@ export const useReports = () => {
     try {
       setLoading(true);
       
-      if (!supabase) {
-        // Modo mock quando Supabase não está configurado
-        setReports(mockReports);
-        setScheduledReports(mockScheduledReports);
-        setStats({
-          totalGenerated: 247,
-          weeklyGrowth: 18,
-          monthlyCount: 89,
-          totalDownloads: 1423,
-          uniqueDownloads: 156,
-          scheduledReports: 12,
-          activeScheduled: 8,
-          sharedLinks: 34,
-          expiringLinks: 3
-        });
-        return;
-      }
-
-      // Buscar relatórios
-      const { data: reportsData, error: reportsError } = await supabase
-        .from('reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (reportsError) {
-        console.error('Erro ao buscar relatórios:', reportsError);
-        // Fallback para dados mock
-        setReports(mockReports);
-      } else {
-        setReports(reportsData || []);
-      }
-
-      // Buscar relatórios agendados
-      const { data: scheduledData, error: scheduledError } = await supabase
-        .from('scheduled_reports')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (scheduledError) {
-        console.error('Erro ao buscar relatórios agendados:', scheduledError);
-        setScheduledReports(mockScheduledReports);
-      } else {
-        setScheduledReports(scheduledData || []);
-      }
-
-      // Calcular estatísticas
-      const totalReports = reportsData?.length || mockReports.length;
-      const activeScheduled = scheduledData?.filter(r => r.status === 'active').length || 2;
-      
+      // Usar sempre dados mock já que as tabelas não existem ainda
+      setReports(mockReports);
+      setScheduledReports(mockScheduledReports);
       setStats({
-        totalGenerated: totalReports * 82, // Simulando múltiplas gerações
+        totalGenerated: 247,
         weeklyGrowth: 18,
-        monthlyCount: Math.floor(totalReports * 2.3),
-        totalDownloads: totalReports * 67,
-        uniqueDownloads: totalReports * 12,
-        scheduledReports: scheduledData?.length || mockScheduledReports.length,
-        activeScheduled,
-        sharedLinks: Math.floor(totalReports * 1.4),
+        monthlyCount: 89,
+        totalDownloads: 1423,
+        uniqueDownloads: 156,
+        scheduledReports: mockScheduledReports.length,
+        activeScheduled: mockScheduledReports.filter(r => r.status === 'active').length,
+        sharedLinks: 34,
         expiringLinks: 3
       });
 
@@ -263,49 +217,29 @@ export const useReports = () => {
         description: "O relatório está sendo gerado e será enviado por email.",
       });
 
-      if (!supabase) {
-        // Simular geração em modo mock
-        setTimeout(() => {
-          toast({
-            title: "Relatório Gerado",
-            description: "O relatório foi gerado com sucesso!",
-          });
-        }, 2000);
-        return;
-      }
+      // Simular geração em modo mock
+      setReports(prev => 
+        prev.map(report => 
+          report.id === reportId 
+            ? { ...report, status: 'generating' as const }
+            : report
+        )
+      );
 
-      // Atualizar status para gerando
-      const { error } = await supabase
-        .from('reports')
-        .update({ 
-          status: 'generating',
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', reportId);
-
-      if (error) {
-        throw error;
-      }
-
-      // Simular processo de geração
-      setTimeout(async () => {
-        const { error: updateError } = await supabase
-          .from('reports')
-          .update({ 
-            status: 'ready',
-            lastGenerated: 'Agora mesmo',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', reportId);
-
-        if (!updateError) {
-          toast({
-            title: "Relatório Gerado",
-            description: "O relatório foi gerado com sucesso!",
-          });
-          fetchReports(); // Recarregar dados
-        }
-      }, 3000);
+      setTimeout(() => {
+        setReports(prev => 
+          prev.map(report => 
+            report.id === reportId 
+              ? { ...report, status: 'ready' as const, lastGenerated: 'Agora mesmo' }
+              : report
+          )
+        );
+        
+        toast({
+          title: "Relatório Gerado",
+          description: "O relatório foi gerado com sucesso!",
+        });
+      }, 2000);
 
     } catch (error) {
       console.error('Erro ao gerar relatório:', error);
@@ -319,40 +253,18 @@ export const useReports = () => {
 
   const toggleScheduledReport = async (reportId: string, newStatus: 'active' | 'paused') => {
     try {
-      if (!supabase) {
-        // Simular toggle em modo mock
-        setScheduledReports(prev => 
-          prev.map(report => 
-            report.id === reportId 
-              ? { ...report, status: newStatus }
-              : report
-          )
-        );
-        toast({
-          title: newStatus === 'active' ? "Relatório Ativado" : "Relatório Pausado",
-          description: `O agendamento foi ${newStatus === 'active' ? 'ativado' : 'pausado'}.`,
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('scheduled_reports')
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', reportId);
-
-      if (error) {
-        throw error;
-      }
-
+      // Simular toggle em modo mock
+      setScheduledReports(prev => 
+        prev.map(report => 
+          report.id === reportId 
+            ? { ...report, status: newStatus }
+            : report
+        )
+      );
       toast({
         title: newStatus === 'active' ? "Relatório Ativado" : "Relatório Pausado",
         description: `O agendamento foi ${newStatus === 'active' ? 'ativado' : 'pausado'}.`,
       });
-
-      fetchReports(); // Recarregar dados
 
     } catch (error) {
       console.error('Erro ao alterar status do relatório:', error);
