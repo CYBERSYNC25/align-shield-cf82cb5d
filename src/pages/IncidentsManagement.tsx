@@ -6,6 +6,8 @@ import BusinessContinuity from '@/components/incidents/BusinessContinuity';
 import IncidentPlaybooks from '@/components/incidents/IncidentPlaybooks';
 
 const IncidentsManagement = () => {
+  console.log('IncidentsManagement component rendered');
+  
   return (
     <div className="min-h-screen bg-background">
       <Header />

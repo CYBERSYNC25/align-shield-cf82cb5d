@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 const ActiveIncidents = () => {
+  console.log('ActiveIncidents component rendered');
   const { incidents, loading, updateIncidentStatus, escalateIncident } = useIncidents();
   const { toast } = useToast();
   const [showReportModal, setShowReportModal] = useState(false);

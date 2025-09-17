@@ -71,6 +71,7 @@ export interface IncidentStats {
 }
 
 export const useIncidents = () => {
+  console.log('useIncidents hook initialized');
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [playbooks, setPlaybooks] = useState<IncidentPlaybook[]>([]);
   const [bcpPlans, setBcpPlans] = useState<BCPPlan[]>([]);
@@ -228,6 +229,7 @@ export const useIncidents = () => {
   ];
 
   const fetchIncidents = async () => {
+    console.log('fetchIncidents called');
     try {
       setLoading(true);
       
@@ -553,6 +555,7 @@ export const useIncidents = () => {
   };
 
   useEffect(() => {
+    console.log('useIncidents useEffect called');
     fetchIncidents();
   }, []);
 

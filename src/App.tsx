@@ -14,6 +14,7 @@ import AccessReviews from "./pages/AccessReviews";
 import RiskManagement from "./pages/RiskManagement";
 import AuditPortal from "./pages/AuditPortal";
 import IncidentsManagement from "./pages/IncidentsManagement";
+import IncidentsTest from "./pages/IncidentsTest";
 import ReportsExports from "./pages/ReportsExports";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
@@ -71,6 +72,11 @@ const App = () => (
           <Route path="/incidents" element={
             <ProtectedRoute>
               <IncidentsManagement />
+            </ProtectedRoute>
+          } />
+          <Route path="/incidents-test" element={
+            <ProtectedRoute>
+              <IncidentsTest />
             </ProtectedRoute>
           } />
           <Route path="/reports" element={
