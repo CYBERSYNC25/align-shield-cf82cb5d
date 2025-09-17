@@ -117,7 +117,13 @@ const ActiveIncidents = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Incidentes Ativos
         </h2>
-        <Button className="gap-2">
+        <Button 
+          className="gap-2"
+          onClick={() => toast({
+            title: "Reportar Incidente",
+            description: "Abrindo formulário para reportar novo incidente...",
+          })}
+        >
           <Plus className="h-4 w-4" />
           Reportar Incidente
         </Button>

@@ -236,7 +236,15 @@ const BusinessContinuity = () => {
                     </div>
                   </div>
                   
-                  <Button variant="outline" size="sm" className="text-xs">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs"
+                    onClick={() => toast({
+                      title: "Detalhes do Teste",
+                      description: `Abrindo detalhes do teste: ${test.plan}`,
+                    })}
+                  >
                     Detalhes
                   </Button>
                 </div>

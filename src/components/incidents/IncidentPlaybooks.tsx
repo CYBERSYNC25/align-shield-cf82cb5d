@@ -101,7 +101,13 @@ const IncidentPlaybooks = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Playbooks de Resposta
         </h2>
-        <Button className="gap-2">
+        <Button 
+          className="gap-2"
+          onClick={() => toast({
+            title: "Criar Playbook",
+            description: "Abrindo formulário para criar novo playbook...",
+          })}
+        >
           <Plus className="h-4 w-4" />
           Novo Playbook
         </Button>
@@ -203,7 +209,15 @@ const IncidentPlaybooks = () => {
                     <BookOpen className="h-3 w-3 mr-1" />
                     Visualizar
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-6">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-xs h-6"
+                    onClick={() => toast({
+                      title: "Editar Playbook",
+                      description: `Abrindo editor para: ${playbook.name}`,
+                    })}
+                  >
                     Editar
                   </Button>
                 </div>
