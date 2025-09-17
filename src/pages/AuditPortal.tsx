@@ -25,6 +25,9 @@ const AuditPortal = () => {
               <p className="text-muted-foreground">
                 Cofre de evidências, checklists de conformidade e portal para auditores externos
               </p>
+              <p className="text-xs text-primary/80 font-medium">
+                💡 Use o botão "Upload de Evidência" ao lado para adicionar novas evidências
+              </p>
             </div>
             <div className="flex gap-3">
               <EvidenceUploadModal />
