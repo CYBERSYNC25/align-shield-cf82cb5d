@@ -17,12 +17,23 @@ import {
 } from 'lucide-react';
 import { useFrameworks } from '@/hooks/useFrameworks';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import AuditReportModal from './AuditReportModal';
+import SearchEvidenceModal from './SearchEvidenceModal';
+import ControlEvidenceModal from './ControlEvidenceModal';
 
 const FrameworkChecklists = () => {
   const { frameworks, controls, loading, updateControlStatus, getFrameworkStats } = useFrameworks();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedFramework, setSelectedFramework] = useState('');
+  const [selectedControl, setSelectedControl] = useState<any>(null);
+  const [controlModalOpen, setControlModalOpen] = useState(false);
+
+  const handleViewEvidences = (control: any) => {
+    setSelectedControl(control);
+    setControlModalOpen(true);
+  };
 
   if (loading) {
     return (
@@ -167,7 +178,11 @@ const FrameworkChecklists = () => {
                             </p>
                           </div>
                           
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleViewEvidences(control)}
+                          >
                             <Eye className="h-4 w-4 mr-2" />
                             Evidências
                           </Button>
@@ -236,6 +251,13 @@ const FrameworkChecklists = () => {
           );
         })}
       </Tabs>
+
+      {/* Control Evidence Modal */}
+      <ControlEvidenceModal
+        control={selectedControl}
+        open={controlModalOpen}
+        onOpenChange={setControlModalOpen}
+      />
     </div>
   );
 };
