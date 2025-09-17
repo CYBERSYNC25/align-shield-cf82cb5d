@@ -107,7 +107,7 @@ const BusinessContinuity = () => {
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-foreground">Planos de Continuidade</h3>
         
-        {bcpPlans.map((plan, index) => (
+        {(bcpPlans || []).map((plan, index) => (
           <Card key={index} className="bg-surface-elevated border-card-border">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -164,7 +164,7 @@ const BusinessContinuity = () => {
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">SISTEMAS CRÍTICOS</p>
                 <div className="flex flex-wrap gap-1">
-                  {plan.criticalSystems.map((system, idx) => (
+                  {(plan.criticalSystems || []).map((system, idx) => (
                     <Badge key={idx} variant="outline" className="text-xs">
                       <Database className="h-3 w-3 mr-1" />
                       {system}

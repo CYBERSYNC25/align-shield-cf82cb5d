@@ -235,6 +235,7 @@ export const useIncidents = () => {
       
       if (!supabase) {
         // Modo mock quando Supabase não está configurado
+        console.log('Using mock data');
         setIncidents(mockIncidents);
         setPlaybooks(mockPlaybooks);
         setBcpPlans(mockBcpPlans);
@@ -328,9 +329,10 @@ export const useIncidents = () => {
     } catch (error) {
       console.error('Erro ao buscar dados de incidentes:', error);
       // Fallback para dados mock em caso de erro
-      setIncidents(mockIncidents);
-      setPlaybooks(mockPlaybooks);
-      setBcpPlans(mockBcpPlans);
+      console.log('Falling back to mock data due to error');
+      setIncidents(mockIncidents || []);
+      setPlaybooks(mockPlaybooks || []);
+      setBcpPlans(mockBcpPlans || []);
       setStats({
         activeIncidents: 3,
         incidentBreakdown: { critical: 1, high: 1, medium: 1, low: 0 },
@@ -560,9 +562,9 @@ export const useIncidents = () => {
   }, []);
 
   return {
-    incidents,
-    playbooks,
-    bcpPlans,
+    incidents: incidents || [],
+    playbooks: playbooks || [],
+    bcpPlans: bcpPlans || [],
     stats,
     loading,
     updateIncidentStatus,

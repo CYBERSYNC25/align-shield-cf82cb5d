@@ -131,7 +131,7 @@ const ActiveIncidents = () => {
       </div>
 
       <div className="space-y-4">
-        {incidents.map((incident, index) => (
+        {(incidents || []).map((incident, index) => (
           <Card key={index} className="bg-surface-elevated border-card-border">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -201,7 +201,7 @@ const ActiveIncidents = () => {
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">SISTEMAS AFETADOS</p>
                 <div className="flex flex-wrap gap-1">
-                  {incident.affectedSystems.map((system, idx) => (
+                  {(incident.affectedSystems || []).map((system, idx) => (
                     <Badge key={idx} variant="outline" className="text-xs">
                       {system}
                     </Badge>

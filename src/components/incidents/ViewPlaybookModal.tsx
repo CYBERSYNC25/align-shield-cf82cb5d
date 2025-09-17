@@ -129,7 +129,7 @@ const ViewPlaybookModal = ({ open, onOpenChange, playbook }: ViewPlaybookModalPr
               <div className="text-xs text-muted-foreground">Tempo Est.</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-foreground">{playbook.roles.length}</div>
+              <div className="text-lg font-bold text-foreground">{(playbook?.roles || []).length}</div>
               <div className="text-xs text-muted-foreground">Roles</div>
             </div>
           </div>
@@ -140,7 +140,7 @@ const ViewPlaybookModal = ({ open, onOpenChange, playbook }: ViewPlaybookModalPr
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-foreground">Roles Necessários</h4>
             <div className="flex flex-wrap gap-1">
-              {playbook.roles.map((role, idx) => (
+              {(playbook.roles || []).map((role, idx) => (
                 <Badge key={idx} variant="outline" className="text-xs">
                   <Users className="h-3 w-3 mr-1" />
                   {role}
@@ -153,7 +153,7 @@ const ViewPlaybookModal = ({ open, onOpenChange, playbook }: ViewPlaybookModalPr
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-foreground">Triggers Comuns</h4>
             <div className="space-y-1">
-              {playbook.triggers.map((trigger, idx) => (
+              {(playbook.triggers || []).map((trigger, idx) => (
                 <div key={idx} className="text-xs text-foreground flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
                   {trigger}

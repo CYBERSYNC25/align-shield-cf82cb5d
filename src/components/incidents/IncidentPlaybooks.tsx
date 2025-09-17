@@ -117,7 +117,7 @@ const IncidentPlaybooks = () => {
       </div>
 
       <div className="space-y-4 max-h-[600px] overflow-y-auto">
-        {playbooks.map((playbook, index) => (
+        {(playbooks || []).map((playbook, index) => (
           <Card key={index} className="bg-surface-elevated border-card-border">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -165,7 +165,7 @@ const IncidentPlaybooks = () => {
                   <div className="text-xs text-muted-foreground">Execuções</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-lg font-bold text-foreground">{playbook.roles.length}</div>
+                  <div className="text-lg font-bold text-foreground">{(playbook.roles || []).length}</div>
                   <div className="text-xs text-muted-foreground">Roles</div>
                 </div>
               </div>
@@ -174,7 +174,7 @@ const IncidentPlaybooks = () => {
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">ROLES NECESSÁRIOS</p>
                 <div className="flex flex-wrap gap-1">
-                  {playbook.roles.map((role, idx) => (
+                  {(playbook.roles || []).map((role, idx) => (
                     <Badge key={idx} variant="outline" className="text-xs">
                       <Users className="h-3 w-3 mr-1" />
                       {role}
@@ -187,7 +187,7 @@ const IncidentPlaybooks = () => {
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">TRIGGERS COMUNS</p>
                 <div className="space-y-1">
-                  {playbook.triggers.map((trigger, idx) => (
+                  {(playbook.triggers || []).map((trigger, idx) => (
                     <div key={idx} className="text-xs text-foreground flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
                       {trigger}
