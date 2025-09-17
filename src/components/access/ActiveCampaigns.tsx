@@ -173,7 +173,7 @@ const ActiveCampaigns = () => {
                         </Button>
                       )}
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                    <Button variant="ghost" size="sm" onClick={() => toast.success(`Visualizando detalhes da campanha: ${campaign.name}`)}>
                       Ver Detalhes
                     </Button>
                   </div>

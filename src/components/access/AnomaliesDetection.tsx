@@ -8,7 +8,10 @@ import {
   Clock,
   Eye,
   MoreVertical,
-  UserCheck
+  UserCheck,
+  History,
+  MessageSquare,
+  UserCog
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAccess } from '@/hooks/useAccess';
@@ -20,8 +23,14 @@ const AnomaliesDetection = () => {
   const handleResolveAnomaly = async (id: string, status: 'resolved' | 'false_positive') => {
     try {
       await resolveAnomaly(id, { status });
+      toast.success(
+        status === 'resolved' 
+          ? 'Anomalia resolvida com sucesso' 
+          : 'Marcada como falso positivo'
+      );
     } catch (error) {
       console.error('Error resolving anomaly:', error);
+      toast.error('Erro ao processar anomalia. Verifique a conectividade com o banco de dados.');
     }
   };
 
@@ -119,12 +128,15 @@ const AnomaliesDetection = () => {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      <History className="h-4 w-4 mr-2" />
                       Ver Histórico
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      <UserCog className="h-4 w-4 mr-2" />
                       Atribuir Responsável
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      <MessageSquare className="h-4 w-4 mr-2" />
                       Adicionar Comentário
                     </DropdownMenuItem>
                   </DropdownMenuContent>

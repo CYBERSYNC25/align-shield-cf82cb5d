@@ -11,8 +11,13 @@ import {
   Wifi,
   WifiOff,
   RefreshCw,
-  MoreVertical
+  MoreVertical,
+  Settings,
+  Eye,
+  UserPlus
 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 import { useAccess } from '@/hooks/useAccess';
 
 const SystemsInventory = () => {
@@ -111,9 +116,31 @@ const SystemsInventory = () => {
                   {getComplianceIcon(system.compliance_status)}
                   {getIntegrationIcon(system.integration_status)}
                 </div>
-                <Button variant="ghost" size="sm">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver Detalhes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Configurar Integração
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Gerenciar Usuários
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Sincronizar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           ))}
