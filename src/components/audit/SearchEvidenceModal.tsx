@@ -275,8 +275,9 @@ const SearchEvidenceModal = () => {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
-                ))
+                   </Card>
+                 )
+                })
               )}
             </div>
 
