@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useRisks } from '@/hooks/useRisks';
 import { useToast } from '@/hooks/use-toast';
+import CreateRiskModal from './CreateRiskModal';
 import { 
   Plus, 
   AlertTriangle, 
@@ -100,10 +101,7 @@ const RiskRegistry = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Registro de Riscos
         </h2>
-        <Button className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo Risco
-        </Button>
+        <CreateRiskModal />
       </div>
 
       <div className="space-y-4 max-h-[500px] overflow-y-auto">

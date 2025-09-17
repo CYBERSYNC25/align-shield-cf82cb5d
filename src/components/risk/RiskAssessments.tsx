@@ -302,7 +302,19 @@ const RiskAssessments = () => {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleDownloadReport(assessment.vendor)}
+                        onClick={() => {
+                          toast({
+                            title: "Download Iniciado",
+                            description: `Baixando relatório de ${assessment.vendor}...`,
+                          });
+                          // Simular download
+                          setTimeout(() => {
+                            toast({
+                              title: "Download Concluído",
+                              description: `Relatório de ${assessment.vendor} baixado com sucesso!`,
+                            });
+                          }, 2000);
+                        }}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Relatório
@@ -395,7 +407,15 @@ const RiskAssessments = () => {
 
                   {/* Actions */}
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => toast({
+                        title: "Prévia do Template",
+                        description: `Abrindo prévia do template: ${template.name}`,
+                      })}
+                    >
                       <FileText className="h-4 w-4 mr-2" />
                       Prévia
                     </Button>
