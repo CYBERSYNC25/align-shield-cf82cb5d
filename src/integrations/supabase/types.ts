@@ -56,6 +56,54 @@ export type Database = {
         }
         Relationships: []
       }
+      bcp_plans: {
+        Row: {
+          contact_person: string | null
+          coverage: number | null
+          created_at: string
+          description: string | null
+          id: string
+          last_tested: string | null
+          name: string
+          next_test: string | null
+          rpo: string | null
+          rto: string | null
+          status: string
+          systems: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          contact_person?: string | null
+          coverage?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_tested?: string | null
+          name: string
+          next_test?: string | null
+          rpo?: string | null
+          rto?: string | null
+          status: string
+          systems?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          contact_person?: string | null
+          coverage?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          last_tested?: string | null
+          name?: string
+          next_test?: string | null
+          rpo?: string | null
+          rto?: string | null
+          status?: string
+          systems?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       controls: {
         Row: {
           category: string
@@ -204,6 +252,54 @@ export type Database = {
           updated_at?: string
           user_id?: string
           version?: string | null
+        }
+        Relationships: []
+      }
+      incident_playbooks: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          estimated_time: string | null
+          id: string
+          last_used: string | null
+          name: string
+          roles: string[] | null
+          severity: string
+          steps: number | null
+          triggers: string[] | null
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          estimated_time?: string | null
+          id?: string
+          last_used?: string | null
+          name: string
+          roles?: string[] | null
+          severity: string
+          steps?: number | null
+          triggers?: string[] | null
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          estimated_time?: string | null
+          id?: string
+          last_used?: string | null
+          name?: string
+          roles?: string[] | null
+          severity?: string
+          steps?: number | null
+          triggers?: string[] | null
+          updated_at?: string
+          usage_count?: number | null
         }
         Relationships: []
       }
