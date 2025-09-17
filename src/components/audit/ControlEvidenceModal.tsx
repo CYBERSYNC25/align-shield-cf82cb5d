@@ -41,15 +41,17 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
   
   if (!control) return null;
 
-  // Filtrar evidências relacionadas ao controle
-  const controlEvidences = evidence.filter(ev => 
-    ev.name.toLowerCase().includes(control.code.toLowerCase()) ||
-    ev.type.toLowerCase().includes(control.title.toLowerCase()) ||
-    (control.code === 'AC-1' && ev.name.toLowerCase().includes('access')) ||
-    (control.code === 'AC-2' && ev.name.toLowerCase().includes('authorization')) ||
-    (control.code === 'AC-6' && ev.name.toLowerCase().includes('removal')) ||
-    (control.code === 'SI-4' && ev.name.toLowerCase().includes('monitoring'))
-  );
+  // Filtrar evidências relacionadas ao controle com verificação de null/undefined
+  const controlEvidences = evidence?.filter(ev => 
+    ev && ev.name && ev.type && (
+      ev.name.toLowerCase().includes(control.code.toLowerCase()) ||
+      ev.type.toLowerCase().includes(control.title.toLowerCase()) ||
+      (control.code === 'AC-1' && ev.name.toLowerCase().includes('access')) ||
+      (control.code === 'AC-2' && ev.name.toLowerCase().includes('authorization')) ||
+      (control.code === 'AC-6' && ev.name.toLowerCase().includes('removal')) ||
+      (control.code === 'SI-4' && ev.name.toLowerCase().includes('monitoring'))
+    )
+  ) || [];
 
   const getStatusBadge = (status: string) => {
     const config = {
