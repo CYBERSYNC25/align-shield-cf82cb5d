@@ -14,11 +14,14 @@ import {
   Download
 } from 'lucide-react';
 import { useAudits } from '@/hooks/useAudits';
+import ConfigureAuditorModal from './ConfigureAuditorModal';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 const AuditorAccess = () => {
   const { audits, evidence, loading } = useAudits();
+  const { toast } = useToast();
 
   if (loading) {
     return (
@@ -98,10 +101,7 @@ const AuditorAccess = () => {
             <Users className="h-3 w-3" />
             {auditorSessions.filter(s => s.status === 'active').length} Sessões Ativas
           </Badge>
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
-            Configurar Acesso
-          </Button>
+          <ConfigureAuditorModal variant="configure" />
         </div>
       </div>
 
@@ -111,10 +111,7 @@ const AuditorAccess = () => {
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum auditor configurado</h3>
             <p className="text-muted-foreground mb-4">Configure o acesso para auditores externos</p>
-            <Button variant="outline">
-              <Settings className="h-4 w-4 mr-2" />
-              Configurar Primeiro Auditor
-            </Button>
+            <ConfigureAuditorModal variant="first-auditor" />
           </div>
         ) : (
           auditorSessions.map((session) => (
@@ -176,11 +173,47 @@ const AuditorAccess = () => {
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      toast({
+                        title: "Portal do Auditor",
+                        description: "Redirecionando para o portal externo do auditor...",
+                      });
+                      // Simulate redirect to external auditor portal
+                      setTimeout(() => {
+                        window.open(`/auditor-portal/${session.auditId}`, '_blank');
+                      }, 1000);
+                    }}
+                  >
                     <ExternalLink className="h-3 w-3 mr-2" />
                     Portal do Auditor
                   </Button>
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => {
+                      toast({
+                        title: "Download iniciado",
+                        description: "O log de atividades está sendo baixado...",
+                      });
+                      // Simulate file download
+                      setTimeout(() => {
+                        const blob = new Blob([`Log de atividades - ${session.auditor}\n\nData: ${new Date().toLocaleString()}\nAções realizadas: ${Math.floor(Math.random() * 50) + 10}`], { type: 'text/plain' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `log-atividades-${session.auditor.replace(' ', '-').toLowerCase()}.txt`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                      }, 1000);
+                    }}
+                  >
                     <Download className="h-3 w-3 mr-2" />
                     Log de Atividades
                   </Button>

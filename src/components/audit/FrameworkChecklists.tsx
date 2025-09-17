@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useFrameworks } from '@/hooks/useFrameworks';
 import { useAuth } from '@/hooks/useAuth';
+import AuditReportModal from './AuditReportModal';
 
 const FrameworkChecklists = () => {
   const { frameworks, controls, loading, updateControlStatus, getFrameworkStats } = useFrameworks();
@@ -82,10 +83,7 @@ const FrameworkChecklists = () => {
         <h2 className="text-xl font-semibold text-foreground">
           Checklists por Framework
         </h2>
-        <Button variant="outline" size="sm">
-          <Download className="h-4 w-4 mr-2" />
-          Gerar Relatório
-        </Button>
+        <AuditReportModal />
       </div>
 
       <Tabs value={selectedFramework || frameworks[0]?.id} onValueChange={setSelectedFramework} className="w-full">

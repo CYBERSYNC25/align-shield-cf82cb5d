@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,11 +17,15 @@ import {
 } from 'lucide-react';
 import { useAudits } from '@/hooks/useAudits';
 import CreateAuditModal from './CreateAuditModal';
+import EvidenceViewModal from './EvidenceViewModal';
+import SearchEvidenceModal from './SearchEvidenceModal';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const EvidenceLocker = () => {
   const { evidence, stats, loading } = useAudits();
+  const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
 
   if (loading) {
     return (
@@ -55,10 +60,7 @@ const EvidenceLocker = () => {
             Cofre Seguro
           </Badge>
           <CreateAuditModal />
-          <Button variant="outline" size="sm">
-            <Search className="h-4 w-4 mr-2" />
-            Buscar Evidências
-          </Button>
+          <SearchEvidenceModal />
         </div>
       </div>
 
@@ -164,11 +166,40 @@ const EvidenceLocker = () => {
                     {format(new Date(item.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="outline" size="sm" className="h-6 text-xs">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 text-xs"
+                      onClick={() => {
+                        setSelectedEvidence(item);
+                        setViewModalOpen(true);
+                      }}
+                    >
                       <Eye className="h-3 w-3 mr-1" />
                       Ver
                     </Button>
-                    <Button variant="outline" size="sm" className="h-6 text-xs">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 text-xs"
+                      onClick={async () => {
+                        if (!item.file_url) return;
+                        try {
+                          const response = await fetch(item.file_url);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = item.name;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        } catch (error) {
+                          console.error('Erro ao baixar arquivo:', error);
+                        }
+                      }}
+                    >
                       <Download className="h-3 w-3 mr-1" />
                       Export
                     </Button>
@@ -179,6 +210,15 @@ const EvidenceLocker = () => {
           ))
         )}
       </div>
+
+      {/* Evidence View Modal */}
+      {selectedEvidence && (
+        <EvidenceViewModal
+          evidence={selectedEvidence}
+          open={viewModalOpen}
+          onOpenChange={setViewModalOpen}
+        />
+      )}
     </div>
   );
 };
