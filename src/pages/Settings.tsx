@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,8 +17,30 @@ import {
   Palette,
   Trash2
 } from 'lucide-react';
+import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal';
+import { Setup2FAModal } from '@/components/settings/Setup2FAModal';
+import { BackupDataModal } from '@/components/settings/BackupDataModal';
+import { ManageSessionsModal } from '@/components/settings/ManageSessionsModal';
+import { ViewLogsModal } from '@/components/settings/ViewLogsModal';
+import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
+import { useToast } from '@/hooks/use-toast';
 
 const Settings = () => {
+  const { toast } = useToast();
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [setup2FAOpen, setSetup2FAOpen] = useState(false);
+  const [backupDataOpen, setBackupDataOpen] = useState(false);
+  const [manageSessionsOpen, setManageSessionsOpen] = useState(false);
+  const [viewLogsOpen, setViewLogsOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+
+  const handleSaveProfile = () => {
+    toast({
+      title: "Sucesso",
+      description: "Perfil atualizado com sucesso!"
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -64,7 +87,7 @@ const Settings = () => {
                   <Label htmlFor="company">Empresa</Label>
                   <Input id="company" placeholder="Nome da empresa" />
                 </div>
-                <Button>Salvar Alterações</Button>
+                <Button onClick={handleSaveProfile}>Salvar Alterações</Button>
               </CardContent>
             </Card>
 
@@ -74,15 +97,27 @@ const Settings = () => {
                 <CardTitle className="text-base">Ações Rápidas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={() => setChangePasswordOpen(true)}
+                >
                   <Key className="h-4 w-4" />
                   Alterar Senha
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={() => setSetup2FAOpen(true)}
+                >
                   <Shield className="h-4 w-4" />
                   Autenticação 2FA
                 </Button>
-                <Button variant="outline" className="w-full justify-start gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start gap-2"
+                  onClick={() => setBackupDataOpen(true)}
+                >
                   <Database className="h-4 w-4" />
                   Backup de Dados
                 </Button>
@@ -139,7 +174,13 @@ const Settings = () => {
                   <div className="text-sm font-medium">Sessões Ativas</div>
                   <div className="text-sm text-muted-foreground">3 dispositivos conectados</div>
                 </div>
-                <Button variant="outline" size="sm">Gerenciar</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setManageSessionsOpen(true)}
+                >
+                  Gerenciar
+                </Button>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
@@ -147,7 +188,13 @@ const Settings = () => {
                   <div className="text-sm font-medium">Log de Atividades</div>
                   <div className="text-sm text-muted-foreground">Visualizar histórico de ações</div>
                 </div>
-                <Button variant="outline" size="sm">Ver Logs</Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setViewLogsOpen(true)}
+                >
+                  Ver Logs
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -222,12 +269,44 @@ const Settings = () => {
                   <div className="text-sm font-medium">Excluir Conta</div>
                   <div className="text-sm text-muted-foreground">Permanentemente remove sua conta e todos os dados</div>
                 </div>
-                <Button variant="destructive" size="sm">Excluir</Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => setDeleteAccountOpen(true)}
+                >
+                  Excluir
+                </Button>
               </div>
             </CardContent>
           </Card>
         </main>
       </div>
+
+      {/* Modals */}
+      <ChangePasswordModal 
+        open={changePasswordOpen} 
+        onOpenChange={setChangePasswordOpen} 
+      />
+      <Setup2FAModal 
+        open={setup2FAOpen} 
+        onOpenChange={setSetup2FAOpen} 
+      />
+      <BackupDataModal 
+        open={backupDataOpen} 
+        onOpenChange={setBackupDataOpen} 
+      />
+      <ManageSessionsModal 
+        open={manageSessionsOpen} 
+        onOpenChange={setManageSessionsOpen} 
+      />
+      <ViewLogsModal 
+        open={viewLogsOpen} 
+        onOpenChange={setViewLogsOpen} 
+      />
+      <DeleteAccountModal 
+        open={deleteAccountOpen} 
+        onOpenChange={setDeleteAccountOpen} 
+      />
     </div>
   );
 };
