@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { 
   User, 
   Bell, 
@@ -25,6 +29,15 @@ import { ViewLogsModal } from '@/components/settings/ViewLogsModal';
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
 import { useToast } from '@/hooks/use-toast';
 
+const profileSchema = z.object({
+  firstName: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  lastName: z.string().min(2, 'Sobrenome deve ter pelo menos 2 caracteres'),
+  email: z.string().email('Email inválido'),
+  company: z.string().min(2, 'Nome da empresa deve ter pelo menos 2 caracteres'),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
+
 const Settings = () => {
   const { toast } = useToast();
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -34,7 +47,17 @@ const Settings = () => {
   const [viewLogsOpen, setViewLogsOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
 
-  const handleSaveProfile = () => {
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      company: '',
+    },
+  });
+
+  const handleSaveProfile = (data: ProfileFormData) => {
     toast({
       title: "Sucesso",
       description: "Perfil atualizado com sucesso!"
@@ -68,26 +91,66 @@ const Settings = () => {
                   <CardTitle>Perfil da Conta</CardTitle>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">Nome</Label>
-                    <Input id="firstName" placeholder="Seu nome" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Sobrenome</Label>
-                    <Input id="lastName" placeholder="Seu sobrenome" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="seu@email.com" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company">Empresa</Label>
-                  <Input id="company" placeholder="Nome da empresa" />
-                </div>
-                <Button onClick={handleSaveProfile}>Salvar Alterações</Button>
+              <CardContent>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(handleSaveProfile)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="firstName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nome</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Seu nome" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="lastName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Sobrenome</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Seu sobrenome" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" placeholder="seu@email.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="company"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Empresa</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Nome da empresa" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit">Salvar Alterações</Button>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
 
