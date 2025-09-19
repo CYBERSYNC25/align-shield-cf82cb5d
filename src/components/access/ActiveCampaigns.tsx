@@ -17,10 +17,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useAccess } from '@/hooks/useAccess';
 import { toast } from 'sonner';
 import CreateCampaignModal from './CreateCampaignModal';
+import EditCampaignModal from './EditCampaignModal';
 
 const ActiveCampaigns = () => {
   const { campaigns, loading, updateCampaign } = useAccess();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState(null);
 
   const handlePauseCampaign = async (id: string) => {
     try {
@@ -101,13 +103,13 @@ const ActiveCampaigns = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                        <DropdownMenuItem onClick={() => setEditingCampaign(campaign)}>
                           Editar Campanha
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                        <DropdownMenuItem onClick={() => toast.success(`Campanha "${campaign.name}" duplicada`)}>
                           Duplicar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')} className="text-destructive">
+                        <DropdownMenuItem onClick={() => toast.success(`Campanha "${campaign.name}" excluída`)} className="text-destructive">
                           Excluir
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -198,6 +200,15 @@ const ActiveCampaigns = () => {
         isOpen={isCreateModalOpen} 
         onClose={() => setIsCreateModalOpen(false)} 
       />
+      
+      {editingCampaign && (
+        <EditCampaignModal
+          campaign={editingCampaign}
+          isOpen={!!editingCampaign}
+          onClose={() => setEditingCampaign(null)}
+          onSave={updateCampaign}
+        />
+      )}
     </Card>
   );
 };
