@@ -206,7 +206,7 @@ const ActiveCampaigns = () => {
           campaign={editingCampaign}
           isOpen={!!editingCampaign}
           onClose={() => setEditingCampaign(null)}
-          onSave={updateCampaign}
+          onSave={(campaignData) => updateCampaign(campaignData.id, campaignData)}
         />
       )}
     </Card>
