@@ -15,8 +15,11 @@ import {
   Shield,
   FileText,
   Plus,
-  Loader2
+  Loader2,
+  ArrowLeft,
+  CheckSquare
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useTasks } from '@/hooks/useTasks';
 import { useAuth } from '@/hooks/useAuth';
@@ -144,6 +147,7 @@ const TaskItem: React.FC<{ task: Task; onStatusUpdate: (id: string, status: Task
 const Tasks = () => {
   const { tasks, loading, updateTask } = useTasks();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -177,6 +181,24 @@ const Tasks = () => {
         <Sidebar />
         
         <main className="flex-1 p-6 space-y-8 overflow-auto">
+          {/* Breadcrumb and Module Indicator */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="gap-2 hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Voltar ao Dashboard
+            </Button>
+            <ChevronRight className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-foreground font-medium">
+              <CheckSquare className="h-4 w-4" />
+              Tarefas
+            </div>
+          </div>
+
           {/* Header */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
