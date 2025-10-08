@@ -11,7 +11,8 @@ import {
   Calendar,
   Target,
   BarChart3,
-  FileText
+  FileText,
+  Download
 } from 'lucide-react';
 
 interface TestDetailsModalProps {
@@ -219,7 +220,50 @@ const TestDetailsModal = ({ open, onOpenChange, test }: TestDetailsModalProps) =
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button variant="outline" className="flex-1">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => {
+                const reportContent = `
+RELATÓRIO DE TESTE BCP - ${test.plan.toUpperCase()}
+ID: ${testDetails.id}
+Data de Geração: ${new Date().toLocaleString('pt-BR')}
+
+INFORMAÇÕES DO TESTE:
+- Duração: ${testDetails.duration}
+- RTO Alvo: ${test.rto}
+- RPO Alvo: ${test.rpo}
+- Progresso Geral: ${Math.round(getOverallProgress())}%
+
+PARTICIPANTES:
+${testDetails.participants.map(p => `- ${p}`).join('\n')}
+
+OBJETIVOS:
+${testDetails.objectives.map(o => `- ${o}`).join('\n')}
+
+RESULTADOS:
+${testDetails.results.map(r => `- ${r.item}: ${r.status.toUpperCase()} (Realizado: ${r.time}, Alvo: ${r.target})`).join('\n')}
+
+RECOMENDAÇÕES:
+${testDetails.recommendations.map((r, i) => `${i + 1}. ${r}`).join('\n')}
+
+TIMELINE:
+- Último teste: ${test.lastTested}
+- Próximo teste: ${test.nextTest}
+                `;
+
+                const blob = new Blob([reportContent], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `teste-bcp-${testDetails.id}-${new Date().getTime()}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+              }}
+            >
+              <FileText className="h-4 w-4 mr-2" />
               Exportar Relatório
             </Button>
             <Button onClick={() => onOpenChange(false)}>

@@ -36,20 +36,53 @@ const BCPReportModal = ({ open, onOpenChange }: BCPReportModalProps) => {
       return;
     }
 
-    // Simulate report generation
+    // Generate and download report
+    const reportTypeName = reportTypes.find(r => r.value === reportType)?.label || reportType;
+    const periodName = periods.find(p => p.value === period)?.label || period;
+    
     toast({
-      title: "Relatório Gerado",
-      description: `Gerando relatório de ${reportType} para ${period}...`,
+      title: "Gerando Relatório",
+      description: `Preparando ${reportTypeName} para ${periodName}...`,
     });
 
-    // Simulate download after a delay
+    // Simulate report generation and download
     setTimeout(() => {
+      // Create a mock PDF content
+      const reportContent = `
+RELATÓRIO BCP - ${reportTypeName.toUpperCase()}
+Período: ${periodName}
+Data de Geração: ${new Date().toLocaleString('pt-BR')}
+
+ESTATÍSTICAS GERAIS:
+- Total de Planos BCP: ${stats.totalPlans}
+- Planos Ativos: ${stats.activePlans}
+- Testes Realizados no Mês: ${stats.testsThisMonth}
+- Taxa de Conformidade: ${stats.conformityRate}%
+
+RESUMO:
+Este relatório contém análises detalhadas sobre ${reportTypeName.toLowerCase()}.
+Todos os dados foram coletados durante o período especificado.
+
+Para mais informações, consulte o sistema ComplianceSync.
+      `;
+
+      // Create blob and download
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio-bcp-${reportType}-${new Date().getTime()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
       toast({
-        title: "Download Iniciado",
-        description: "O relatório está sendo baixado.",
+        title: "Relatório Gerado com Sucesso",
+        description: "O arquivo foi baixado para sua máquina.",
       });
       onOpenChange(false);
-    }, 2000);
+    }, 1500);
   };
 
   const reportTypes = [
