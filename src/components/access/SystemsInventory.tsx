@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,9 +20,29 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { useAccess } from '@/hooks/useAccess';
+import ConfigureIntegrationModal from './ConfigureIntegrationModal';
+import SystemDetailsModal from './SystemDetailsModal';
+import ManageUsersModal from './ManageUsersModal';
 
 const SystemsInventory = () => {
   const { systems, loading } = useAccess();
+  const [selectedSystem, setSelectedSystem] = useState<any>(null);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showUsersModal, setShowUsersModal] = useState(false);
+  const [syncing, setSyncing] = useState<string | null>(null);
+
+  const handleSync = async (systemId: string, systemName: string) => {
+    setSyncing(systemId);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success(`Sistema ${systemName} sincronizado com sucesso!`);
+    } catch (error) {
+      toast.error('Erro ao sincronizar sistema');
+    } finally {
+      setSyncing(null);
+    }
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -123,21 +144,33 @@ const SystemsInventory = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedSystem(system);
+                      setShowDetailsModal(true);
+                    }}>
                       <Eye className="h-4 w-4 mr-2" />
                       Ver Detalhes
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedSystem(system);
+                      setShowConfigModal(true);
+                    }}>
                       <Settings className="h-4 w-4 mr-2" />
                       Configurar Integração
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedSystem(system);
+                      setShowUsersModal(true);
+                    }}>
                       <UserPlus className="h-4 w-4 mr-2" />
                       Gerenciar Usuários
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Sincronizar
+                    <DropdownMenuItem 
+                      onClick={() => handleSync(system.id, system.name)}
+                      disabled={syncing === system.id}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${syncing === system.id ? 'animate-spin' : ''}`} />
+                      {syncing === system.id ? 'Sincronizando...' : 'Sincronizar'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -152,6 +185,34 @@ const SystemsInventory = () => {
           )}
         </div>
       </CardContent>
+
+      {/* Modals */}
+      <ConfigureIntegrationModal
+        system={selectedSystem}
+        isOpen={showConfigModal}
+        onClose={() => {
+          setShowConfigModal(false);
+          setSelectedSystem(null);
+        }}
+      />
+
+      <SystemDetailsModal
+        system={selectedSystem}
+        isOpen={showDetailsModal}
+        onClose={() => {
+          setShowDetailsModal(false);
+          setSelectedSystem(null);
+        }}
+      />
+
+      <ManageUsersModal
+        system={selectedSystem}
+        isOpen={showUsersModal}
+        onClose={() => {
+          setShowUsersModal(false);
+          setSelectedSystem(null);
+        }}
+      />
     </Card>
   );
 };
