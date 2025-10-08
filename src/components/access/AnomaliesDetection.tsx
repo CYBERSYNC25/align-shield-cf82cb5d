@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,9 +17,16 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAccess } from '@/hooks/useAccess';
 import { toast } from 'sonner';
+import ViewHistoryModal from './ViewHistoryModal';
+import AssignResponsibleModal from './AssignResponsibleModal';
+import AddCommentModal from './AddCommentModal';
 
 const AnomaliesDetection = () => {
   const { anomalies, loading, resolveAnomaly } = useAccess();
+  const [selectedAnomaly, setSelectedAnomaly] = useState<any>(null);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showCommentModal, setShowCommentModal] = useState(false);
 
   const handleResolveAnomaly = async (id: string, status: 'resolved' | 'false_positive') => {
     try {
@@ -127,15 +135,24 @@ const AnomaliesDetection = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedAnomaly(anomaly);
+                      setShowHistoryModal(true);
+                    }}>
                       <History className="h-4 w-4 mr-2" />
                       Ver Histórico
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedAnomaly(anomaly);
+                      setShowAssignModal(true);
+                    }}>
                       <UserCog className="h-4 w-4 mr-2" />
                       Atribuir Responsável
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedAnomaly(anomaly);
+                      setShowCommentModal(true);
+                    }}>
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Adicionar Comentário
                     </DropdownMenuItem>
@@ -179,6 +196,34 @@ const AnomaliesDetection = () => {
           )}
         </div>
       </CardContent>
+
+      {/* Modals */}
+      <ViewHistoryModal
+        entity={selectedAnomaly}
+        isOpen={showHistoryModal}
+        onClose={() => {
+          setShowHistoryModal(false);
+          setSelectedAnomaly(null);
+        }}
+      />
+
+      <AssignResponsibleModal
+        entity={selectedAnomaly}
+        isOpen={showAssignModal}
+        onClose={() => {
+          setShowAssignModal(false);
+          setSelectedAnomaly(null);
+        }}
+      />
+
+      <AddCommentModal
+        entity={selectedAnomaly}
+        isOpen={showCommentModal}
+        onClose={() => {
+          setShowCommentModal(false);
+          setSelectedAnomaly(null);
+        }}
+      />
     </Card>
   );
 };

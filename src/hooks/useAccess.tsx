@@ -133,12 +133,12 @@ const mockSystems: SystemInventory[] = [
     name: 'Legacy ERP System',
     type: 'on-premise',
     users_count: 234,
-    last_review: '2024-09-15',
-    risk_level: 'critical',
-    compliance_status: 'non-compliant',
-    integration_status: 'disconnected',
+    last_review: '2024-11-08',
+    risk_level: 'high',
+    compliance_status: 'compliant',
+    integration_status: 'connected',
     created_at: '2024-01-05T00:00:00Z',
-    updated_at: '2024-09-15T00:00:00Z'
+    updated_at: '2024-11-08T00:00:00Z'
   },
   {
     id: '5',
