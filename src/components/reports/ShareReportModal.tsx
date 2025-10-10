@@ -29,6 +29,7 @@ const ShareReportModal = ({ isOpen, onClose, reportName }: ShareReportModalProps
   const [expirationDays, setExpirationDays] = useState('7');
   const [requireAuth, setRequireAuth] = useState(true);
   const [allowDownload, setAllowDownload] = useState(true);
+  const [shareMethod, setShareMethod] = useState<'email' | 'link'>('email');
   const { toast } = useToast();
 
   const shareLink = 'https://secure-reports.example.com/share/abc123def456';
@@ -64,16 +65,36 @@ const ShareReportModal = ({ isOpen, onClose, reportName }: ShareReportModalProps
           <div className="space-y-4">
             <h4 className="font-medium">Método de Compartilhamento</h4>
             <div className="grid grid-cols-2 gap-4">
-              <div className="border border-border rounded-lg p-4 cursor-pointer hover:bg-muted/5">
+              <div 
+                onClick={() => setShareMethod('email')}
+                className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                  shareMethod === 'email' 
+                    ? 'border-primary bg-primary/5 shadow-sm' 
+                    : 'border-border hover:bg-muted/5'
+                }`}
+              >
                 <div className="flex items-center gap-3 mb-2">
-                  <Mail className="h-5 w-5 text-primary" />
+                  <Mail className={`h-5 w-5 ${shareMethod === 'email' ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className="font-medium">Email Direto</span>
                 </div>
                 <p className="text-sm text-muted-foreground">Enviar link seguro por email</p>
               </div>
-              <div className="border border-border rounded-lg p-4 cursor-pointer hover:bg-muted/5">
+              <div 
+                onClick={() => {
+                  setShareMethod('link');
+                  toast({
+                    title: "Link Gerado",
+                    description: "Link seguro gerado com sucesso. Copie e compartilhe.",
+                  });
+                }}
+                className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                  shareMethod === 'link' 
+                    ? 'border-success bg-success/5 shadow-sm' 
+                    : 'border-border hover:bg-muted/5'
+                }`}
+              >
                 <div className="flex items-center gap-3 mb-2">
-                  <Link className="h-5 w-5 text-success" />
+                  <Link className={`h-5 w-5 ${shareMethod === 'link' ? 'text-success' : 'text-muted-foreground'}`} />
                   <span className="font-medium">Link Seguro</span>
                 </div>
                 <p className="text-sm text-muted-foreground">Gerar link compartilhável</p>
@@ -81,31 +102,35 @@ const ShareReportModal = ({ isOpen, onClose, reportName }: ShareReportModalProps
             </div>
           </div>
 
-          {/* Email Recipients */}
-          <div className="space-y-2">
-            <Label htmlFor="emails">Destinatários (Email)</Label>
-            <Input
-              id="emails"
-              placeholder="email1@example.com, email2@example.com"
-              value={emails}
-              onChange={(e) => setEmails(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Separe múltiplos emails com vírgula
-            </p>
-          </div>
+          {/* Email Recipients - Only show for email method */}
+          {shareMethod === 'email' && (
+            <div className="space-y-2">
+              <Label htmlFor="emails">Destinatários (Email)</Label>
+              <Input
+                id="emails"
+                placeholder="email1@example.com, email2@example.com"
+                value={emails}
+                onChange={(e) => setEmails(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Separe múltiplos emails com vírgula
+              </p>
+            </div>
+          )}
 
-          {/* Custom Message */}
-          <div className="space-y-2">
-            <Label htmlFor="message">Mensagem Personalizada (Opcional)</Label>
-            <Textarea
-              id="message"
-              placeholder="Adicione uma mensagem personalizada para os destinatários..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={3}
-            />
-          </div>
+          {/* Custom Message - Only show for email method */}
+          {shareMethod === 'email' && (
+            <div className="space-y-2">
+              <Label htmlFor="message">Mensagem Personalizada (Opcional)</Label>
+              <Textarea
+                id="message"
+                placeholder="Adicione uma mensagem personalizada para os destinatários..."
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
 
           {/* Security Settings */}
           <div className="space-y-4">
@@ -178,14 +203,23 @@ const ShareReportModal = ({ isOpen, onClose, reportName }: ShareReportModalProps
               Cancelar
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCopyLink}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copiar Link
-              </Button>
-              <Button onClick={handleSendEmail} disabled={!emails.trim()}>
-                <Mail className="h-4 w-4 mr-2" />
-                Enviar por Email
-              </Button>
+              {shareMethod === 'link' ? (
+                <Button onClick={handleCopyLink}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copiar Link
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={handleCopyLink}>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copiar Link
+                  </Button>
+                  <Button onClick={handleSendEmail} disabled={!emails.trim()}>
+                    <Mail className="h-4 w-4 mr-2" />
+                    Enviar por Email
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
