@@ -21,6 +21,8 @@ import {
   Clock
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useIntegrations } from '@/hooks/useIntegrations';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ConnectIntegrationModalProps {
   isOpen: boolean;
@@ -32,6 +34,7 @@ interface ConnectIntegrationModalProps {
     controls: string[];
     evidences: number;
     setupTime: string;
+    category?: string;
   } | null;
 }
 
@@ -43,6 +46,8 @@ const ConnectIntegrationModal = ({ isOpen, onClose, integration }: ConnectIntegr
     endpoint: ''
   });
   const { toast } = useToast();
+  const { connectIntegration } = useIntegrations();
+  const { user } = useAuth();
 
   // Early return if integration is null
   if (!integration) {
@@ -61,19 +66,28 @@ const ConnectIntegrationModal = ({ isOpen, onClose, integration }: ConnectIntegr
 
     setStep('connecting');
     
-    // Simular conexão
+    // Simular validação de credenciais
     setTimeout(() => {
-      setStep('success');
-      toast({
-        title: 'Integração conectada!',
-        description: `${integration.name} foi conectado com sucesso.`,
-      });
-      
-      setTimeout(() => {
-        onClose();
+      try {
+        // Conectar a integração
+        const userName = user?.email || 'Usuário';
+        connectIntegration(integration!, credentials, userName);
+        
+        setStep('success');
+        
+        setTimeout(() => {
+          onClose();
+          setStep('config');
+          setCredentials({ apiKey: '', apiSecret: '', endpoint: '' });
+        }, 2000);
+      } catch (error) {
+        toast({
+          title: 'Erro ao conectar',
+          description: 'Não foi possível conectar a integração. Verifique as credenciais.',
+          variant: 'destructive'
+        });
         setStep('config');
-        setCredentials({ apiKey: '', apiSecret: '', endpoint: '' });
-      }, 2000);
+      }
     }, 2000);
   };
 

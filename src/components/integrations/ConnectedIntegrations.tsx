@@ -8,96 +8,64 @@ import {
   Clock,
   MoreHorizontal,
   Pause,
-  Play
+  Play,
+  Trash2
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useIntegrations } from '@/hooks/useIntegrations';
+import { EmptyState } from '@/components/common';
 
 const ConnectedIntegrations = () => {
-  const connectedIntegrations = [
-    {
-      name: 'AWS',
-      category: 'Cloud',
-      status: 'active',
-      lastSync: '2 min atrás',
-      evidences: 156,
-      controls: 23,
-      logo: '☁️',
-      health: 'healthy',
-      config: {
-        regions: ['us-east-1', 'sa-east-1'],
-        services: ['IAM', 'S3', 'EC2', 'VPC']
-      }
-    },
-    {
-      name: 'Okta',
-      category: 'Identidade',
-      status: 'active',
-      lastSync: '5 min atrás',
-      evidences: 89,
-      controls: 12,
-      logo: '🔐',
-      health: 'healthy',
-      config: {
-        domain: 'empresa.okta.com',
-        apps: 47
-      }
-    },
-    {
-      name: 'GitHub',
-      category: 'DevOps',
-      status: 'active',
-      lastSync: '1 min atrás',
-      evidences: 203,
-      controls: 18,
-      logo: '🐙',
-      health: 'healthy',
-      config: {
-        orgs: ['empresa-dev', 'empresa-ops'],
-        repos: 127
-      }
-    },
-    {
-      name: 'Microsoft 365',
-      category: 'Produtividade',
-      status: 'warning',
-      lastSync: '2h atrás',
-      evidences: 67,
-      controls: 8,
-      logo: '📧',
-      health: 'degraded',
-      issue: 'Rate limit atingido'
-    },
-    {
-      name: 'Jamf',
-      category: 'Endpoints',
-      status: 'active',
-      lastSync: '15 min atrás',
-      evidences: 234,
-      controls: 15,
-      logo: '💻',
-      health: 'healthy',
-      config: {
-        devices: 186,
-        policies: 23
-      }
-    },
-    {
-      name: 'Jira',
-      category: 'ITSM',
-      status: 'paused',
-      lastSync: '1 dia atrás',
-      evidences: 45,
-      controls: 6,
-      logo: '🎫',
-      health: 'paused',
-      pausedBy: 'Manutenção programada'
+  const { integrations, loading, pauseIntegration, resumeIntegration, disconnectIntegration } = useIntegrations();
+
+  const handleAction = (action: string, integrationId: string) => {
+    switch (action) {
+      case 'pause':
+        pauseIntegration(integrationId);
+        break;
+      case 'resume':
+        resumeIntegration(integrationId);
+        break;
+      case 'disconnect':
+        if (confirm('Tem certeza que deseja desconectar esta integração?')) {
+          disconnectIntegration(integrationId);
+        }
+        break;
     }
-  ];
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">
+          Integrações Conectadas
+        </h2>
+        <div className="flex items-center justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (integrations.length === 0) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">
+          Integrações Conectadas
+        </h2>
+        <EmptyState 
+          title="Nenhuma integração conectada"
+          description="Conecte suas primeiras integrações para começar a coletar evidências automaticamente."
+        />
+      </div>
+    );
+  }
 
   const getStatusBadge = (status: string, health: string) => {
     if (status === 'paused') {
@@ -120,13 +88,13 @@ const ConnectedIntegrations = () => {
         </h2>
         <Badge variant="outline" className="gap-1">
           <CheckCircle className="h-3 w-3" />
-          {connectedIntegrations.filter(i => i.status === 'active').length} ativas
+          {integrations.filter(i => i.status === 'active').length} ativas
         </Badge>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-        {connectedIntegrations.map((integration, index) => (
-          <Card key={index} className="bg-surface-elevated border-card-border">
+        {integrations.map((integration) => (
+          <Card key={integration.id} className="bg-surface-elevated border-card-border">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -151,12 +119,24 @@ const ConnectedIntegrations = () => {
                     <DropdownMenuItem>
                       <Settings className="h-4 w-4 mr-2" />Configurar
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleAction(
+                        integration.status === 'paused' ? 'resume' : 'pause', 
+                        integration.id
+                      )}
+                    >
                       {integration.status === 'paused' ? (
                         <><Play className="h-4 w-4 mr-2" />Retomar</>
                       ) : (
                         <><Pause className="h-4 w-4 mr-2" />Pausar</>
                       )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => handleAction('disconnect', integration.id)}
+                      className="text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />Desconectar
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
