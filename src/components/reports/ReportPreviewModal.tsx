@@ -2,6 +2,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
+import ShareReportModal from './ShareReportModal';
 import { 
   FileText, 
   Download, 
@@ -30,7 +33,62 @@ interface ReportPreviewModalProps {
 }
 
 const ReportPreviewModal = ({ isOpen, onClose, report }: ReportPreviewModalProps) => {
+  const { toast } = useToast();
+  const [shareOpen, setShareOpen] = useState(false);
+
   if (!report) return null;
+
+  const handleGenerateReport = () => {
+    toast({
+      title: "Gerando Relatório",
+      description: `Preparando ${report.name}...`,
+    });
+
+    // Simulate report generation and download
+    setTimeout(() => {
+      const reportContent = `
+RELATÓRIO - ${report.name.toUpperCase()}
+Framework: ${report.framework}
+Audiência: ${report.audience}
+Data de Geração: ${new Date().toLocaleString('pt-BR')}
+
+DESCRIÇÃO:
+${report.description}
+
+SEÇÕES INCLUÍDAS:
+${report.sections.map((section, idx) => `${idx + 1}. ${section}`).join('\n')}
+
+READINESS STATUS: ${report.readiness}%
+
+ESTATÍSTICAS:
+- Total de Páginas: ${report.pages}
+- Tamanho: ${report.size}
+
+Este é um relatório completo gerado pelo sistema ComplianceSync.
+Para mais informações, acesse o painel de controle.
+      `;
+
+      // Create blob and download
+      const blob = new Blob([reportContent], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `relatorio-${report.name.toLowerCase().replace(/\s+/g, '-')}-${new Date().getTime()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Relatório Gerado com Sucesso",
+        description: "O arquivo foi baixado para sua máquina.",
+      });
+    }, 1500);
+  };
+
+  const handleShare = () => {
+    setShareOpen(true);
+  };
 
   const previewSections = [
     {
@@ -165,17 +223,24 @@ const ReportPreviewModal = ({ isOpen, onClose, report }: ReportPreviewModalProps
             Fechar
           </Button>
           <div className="flex gap-2">
-            <Button variant="outline" className="gap-2">
+            <Button variant="outline" className="gap-2" onClick={handleShare}>
               <Share2 className="h-4 w-4" />
               Compartilhar
             </Button>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={handleGenerateReport}>
               <Download className="h-4 w-4" />
               Gerar Relatório
             </Button>
           </div>
         </div>
       </DialogContent>
+
+      {/* Share Modal */}
+      <ShareReportModal
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+        reportName={report.name}
+      />
     </Dialog>
   );
 };
