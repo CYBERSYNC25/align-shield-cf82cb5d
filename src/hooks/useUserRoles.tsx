@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 
-export type AppRole = 'admin' | 'auditor' | 'compliance_officer' | 'viewer';
+export type AppRole = 'admin' | 'auditor' | 'compliance_officer' | 'viewer' | 'master_admin' | 'master_ti' | 'master_governance';
 
 export interface UserRole {
   id: string;
@@ -55,6 +55,11 @@ export const useUserRoles = () => {
   const isAuditor = () => hasRole('auditor');
   const isComplianceOfficer = () => hasRole('compliance_officer');
   const isViewer = () => hasRole('viewer');
+  const isMasterAdmin = () => hasRole('master_admin');
+  const isMasterTI = () => hasRole('master_ti');
+  const isMasterGovernance = () => hasRole('master_governance');
+  
+  const isMasterUser = () => isMasterAdmin() || isMasterTI() || isMasterGovernance();
 
   const canManageUsers = () => isAdmin();
   const canManageControls = () => isAdmin() || isComplianceOfficer();
@@ -69,6 +74,10 @@ export const useUserRoles = () => {
     isAuditor,
     isComplianceOfficer,
     isViewer,
+    isMasterAdmin,
+    isMasterTI,
+    isMasterGovernance,
+    isMasterUser,
     canManageUsers,
     canManageControls,
     canViewAuditLogs,

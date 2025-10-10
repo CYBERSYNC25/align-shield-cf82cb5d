@@ -845,6 +845,72 @@ export type Database = {
         }
         Relationships: []
       }
+      user_deletion_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          master_admin_approved_at: string | null
+          master_admin_approved_by: string | null
+          master_governance_approved_at: string | null
+          master_governance_approved_by: string | null
+          master_ti_approved_at: string | null
+          master_ti_approved_by: string | null
+          notes: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          requested_at: string
+          requested_by: string
+          status: string
+          target_user_email: string
+          target_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          master_admin_approved_at?: string | null
+          master_admin_approved_by?: string | null
+          master_governance_approved_at?: string | null
+          master_governance_approved_by?: string | null
+          master_ti_approved_at?: string | null
+          master_ti_approved_by?: string | null
+          notes?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          requested_by: string
+          status?: string
+          target_user_email: string
+          target_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          master_admin_approved_at?: string | null
+          master_admin_approved_by?: string | null
+          master_governance_approved_at?: string | null
+          master_governance_approved_by?: string | null
+          master_ti_approved_at?: string | null
+          master_ti_approved_by?: string | null
+          notes?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          requested_by?: string
+          status?: string
+          target_user_email?: string
+          target_user_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           assigned_at: string | null

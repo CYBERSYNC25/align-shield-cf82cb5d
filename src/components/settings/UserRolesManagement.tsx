@@ -7,8 +7,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRoles } from '@/hooks/useUserRoles';
-import { Shield, UserPlus, Trash2, UserX } from 'lucide-react';
+import { Shield, UserPlus, Trash2, UserX, ShieldAlert } from 'lucide-react';
 import { useAuditLogs } from '@/hooks/useAuditLogs';
+import MasterUserDeletionModal from './MasterUserDeletionModal';
 
 interface UserWithRoles {
   id: string;
@@ -20,30 +21,38 @@ const roleLabels = {
   admin: 'Administrador',
   auditor: 'Auditor',
   compliance_officer: 'Oficial de Compliance',
-  viewer: 'Visualizador'
+  viewer: 'Visualizador',
+  master_admin: 'Master Admin',
+  master_ti: 'Master TI',
+  master_governance: 'Master Governança'
 };
 
 const roleColors = {
   admin: 'destructive',
   auditor: 'secondary',
   compliance_officer: 'default',
-  viewer: 'outline'
+  viewer: 'outline',
+  master_admin: 'destructive',
+  master_ti: 'destructive',
+  master_governance: 'destructive'
 } as const;
 
 export default function UserRolesManagement() {
   const { toast } = useToast();
-  const { isAdmin } = useUserRoles();
+  const { isAdmin, isMasterAdmin, isMasterUser } = useUserRoles();
   const { logAction } = useAuditLogs();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [masterDeletionModalOpen, setMasterDeletionModalOpen] = useState(false);
+  const [selectedUserForDeletion, setSelectedUserForDeletion] = useState<{id: string, email: string} | null>(null);
 
   useEffect(() => {
-    if (isAdmin()) {
+    if (isAdmin() || isMasterUser()) {
       loadUsers();
     }
-  }, [isAdmin]);
+  }, [isAdmin, isMasterUser]);
 
   const loadUsers = async () => {
     try {
@@ -189,7 +198,12 @@ export default function UserRolesManagement() {
     }
   };
 
-  if (!isAdmin()) {
+  const openMasterDeletionModal = (userId: string, userEmail: string) => {
+    setSelectedUserForDeletion({ id: userId, email: userEmail });
+    setMasterDeletionModalOpen(true);
+  };
+
+  if (!isAdmin() && !isMasterUser()) {
     return (
       <Card>
         <CardHeader>
@@ -294,42 +308,71 @@ export default function UserRolesManagement() {
                       )}
                     </div>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
+                  <div className="flex gap-2 ml-4">
+                    {/* Master deletion with triple authentication */}
+                    {isMasterAdmin() && (
                       <Button
                         variant="destructive"
                         size="sm"
-                        className="ml-4"
+                        onClick={() => openMasterDeletionModal(user.id, user.email)}
                       >
-                        <UserX className="w-4 h-4 mr-2" />
-                        Excluir
+                        <ShieldAlert className="w-4 h-4 mr-2" />
+                        Exclusão Master
                       </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tem certeza que deseja excluir o usuário <strong>{user.email}</strong>? 
-                          Esta ação não pode ser desfeita e todos os dados do usuário serão removidos.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deleteUser(user.id, user.email)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Excluir Usuário
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                    )}
+                    
+                    {/* Regular deletion (admin only, non-master) */}
+                    {isAdmin() && !isMasterAdmin() && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                          >
+                            <UserX className="w-4 h-4 mr-2" />
+                            Excluir
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tem certeza que deseja excluir o usuário <strong>{user.email}</strong>? 
+                              Esta ação não pode ser desfeita e todos os dados do usuário serão removidos.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteUser(user.id, user.email)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Excluir Usuário
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           )}
         </div>
       </CardContent>
+
+      {/* Master User Deletion Modal */}
+      <MasterUserDeletionModal
+        open={masterDeletionModalOpen}
+        onOpenChange={setMasterDeletionModalOpen}
+        targetUserId={selectedUserForDeletion?.id}
+        targetUserEmail={selectedUserForDeletion?.email}
+        onSuccess={() => {
+          setMasterDeletionModalOpen(false);
+          setSelectedUserForDeletion(null);
+          loadUsers();
+        }}
+      />
     </Card>
   );
 }
