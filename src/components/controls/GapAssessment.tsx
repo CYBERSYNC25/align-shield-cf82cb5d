@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, TrendingUp, Clock, Users, FileText, Download } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const gapData = [
   {
@@ -97,13 +98,84 @@ const getEffortIcon = (effort: string) => {
 };
 
 const GapAssessment = () => {
+  const { toast } = useToast();
+
+  const handleExportReport = () => {
+    toast({
+      title: "Gerando Relatório",
+      description: "Preparando relatório de análise de gaps...",
+    });
+
+    setTimeout(() => {
+      const reportContent = `RELATÓRIO DE ANÁLISE DE GAPS CRÍTICOS
+========================================
+Data: ${new Date().toLocaleDateString('pt-BR')}
+Hora: ${new Date().toLocaleTimeString('pt-BR')}
+
+RESUMO EXECUTIVO
+----------------
+Total de Gaps Identificados: ${gapData.length}
+Gaps Críticos: 2
+Gaps Médios: 1
+Dias Médios para Resolução: 45
+Equipes Envolvidas: 3
+
+DETALHAMENTO DOS GAPS
+--------------------
+
+${gapData.map((gap, index) => `
+${index + 1}. ${gap.title} (${gap.control})
+   Severidade: ${gap.severity === 'high' ? 'Alta' : gap.severity === 'medium' ? 'Média' : 'Baixa'}
+   Status: ${gap.currentStatus === 'missing' ? 'Não Implementado' : gap.currentStatus === 'partial' ? 'Parcial' : 'Implementado'}
+   Esforço: ${gap.effort === 'high' ? 'Alto' : gap.effort === 'medium' ? 'Médio' : 'Baixo'}
+   
+   Descrição:
+   ${gap.description}
+   
+   Frameworks Relacionados:
+   ${gap.frameworks.join(', ')}
+   
+   Ações Necessárias:
+   ${gap.requiredActions.map((action, i) => `   ${i + 1}) ${action}`).join('\n   ')}
+   
+   Responsável: ${gap.assignedTo}
+   Prazo: ${new Date(gap.dueDate).toLocaleDateString('pt-BR')}
+   
+`).join('\n')}
+
+OBSERVAÇÕES FINAIS
+-----------------
+Este relatório apresenta uma análise detalhada dos gaps críticos identificados
+na implementação dos frameworks de compliance. As ações necessárias devem ser
+priorizadas de acordo com a severidade e o prazo estabelecido.
+
+Gerado em: ${new Date().toLocaleString('pt-BR')}
+`;
+
+      const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `analise-gaps-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Relatório Exportado",
+        description: "O relatório foi baixado com sucesso.",
+      });
+    }, 1000);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-foreground">
           Análise de Gaps Críticos
         </h2>
-        <Button variant="outline" size="sm" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2" onClick={handleExportReport}>
           <Download className="w-4 h-4" />
           Exportar Relatório
         </Button>

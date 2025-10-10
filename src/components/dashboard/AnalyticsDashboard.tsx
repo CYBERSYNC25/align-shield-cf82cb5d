@@ -16,8 +16,11 @@ import {
   FileText,
   Target
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 const AnalyticsDashboard = () => {
+  const { toast } = useToast();
+
   const complianceMetrics = [
     {
       title: 'Score Geral de Compliance',
@@ -120,6 +123,95 @@ const AnalyticsDashboard = () => {
     }
   };
 
+  const handleExportReport = () => {
+    toast({
+      title: "Gerando Relatório",
+      description: "Preparando relatório de analytics...",
+    });
+
+    setTimeout(() => {
+      const reportContent = `RELATÓRIO DE ANALYTICS & INSIGHTS
+==========================================
+Data: ${new Date().toLocaleDateString('pt-BR')}
+Hora: ${new Date().toLocaleTimeString('pt-BR')}
+
+MÉTRICAS PRINCIPAIS
+-------------------
+${complianceMetrics.map(metric => `
+${metric.title}: ${metric.value}${metric.total ? `/${metric.total}` : ''}
+Variação: ${metric.change > 0 ? '+' : ''}${metric.change}
+Tendência: ${metric.trend === 'up' ? '↑ Crescimento' : '↓ Redução'}
+Descrição: ${metric.description}
+`).join('\n')}
+
+PROGRESSO POR FRAMEWORK
+-----------------------
+${frameworkProgress.map(fw => `
+${fw.name}
+  Progresso: ${fw.progress}%
+  Status: ${fw.status === 'excellent' ? 'Excelente' : fw.status === 'good' ? 'Bom' : fw.status === 'warning' ? 'Atenção' : 'Crítico'}
+  Controles: ${fw.controls}/${fw.total} implementados
+`).join('\n')}
+
+ATIVIDADES RECENTES
+-------------------
+${recentActivities.map((activity, i) => `
+${i + 1}. ${activity.title}
+   ${activity.description}
+   Registrado há: ${activity.time}
+   Tipo: ${activity.type}
+`).join('\n')}
+
+METAS DE COMPLIANCE
+-------------------
+Meta Geral: 87% / 90%
+Status: Faltam 3% para atingir a meta mensal
+
+Progresso por Framework:
+- SOC 2: 89% ✓
+- ISO 27001: 92% ✓
+- LGPD: 76% (Necessita atenção)
+- GDPR: 83% ✓
+
+CRONOGRAMA DE AUDITORIA
+-----------------------
+✓ SOC 2 - Concluída (15/Jan)
+⚠ ISO 27001 - Em Progresso (30/Jan)
+○ LGPD - Agendada (15/Fev)
+
+RESUMO EXECUTIVO
+----------------
+
+Pontos Fortes:
+• ISO 27001 com 92% de conformidade
+• PCI DSS quase certificado (94%)
+• Programa de treinamento ativo
+
+Atenção Necessária:
+• LGPD precisa de melhorias (76%)
+• 3 controles críticos falhando
+• 7 ações pendentes urgentes
+
+Gerado em: ${new Date().toLocaleString('pt-BR')}
+`;
+
+      const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `analytics-report-${new Date().toISOString().split('T')[0]}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Relatório Exportado",
+        description: "O relatório foi baixado com sucesso.",
+      });
+    }, 1000);
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -131,7 +223,7 @@ const AnalyticsDashboard = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2" onClick={() => window.location.href = '/reports'}>
+          <Button variant="outline" className="gap-2" onClick={handleExportReport}>
             <BarChart3 className="h-4 w-4" />
             Exportar Relatório
           </Button>
