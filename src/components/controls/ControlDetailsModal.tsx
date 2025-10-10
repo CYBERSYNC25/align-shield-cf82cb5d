@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,9 +17,13 @@ import {
   Shield,
   Settings,
   MessageSquare,
-  Upload
+  Upload,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useFrameworks } from '@/hooks/useFrameworks';
+import EvidenceUploadModal from '@/components/audit/EvidenceUploadModal';
 
 interface Control {
   id: string;
@@ -41,10 +45,53 @@ interface ControlDetailsModalProps {
   children: React.ReactNode;
 }
 
+interface HistoryEntry {
+  id: string;
+  action: string;
+  user: string;
+  date: string;
+  details?: string;
+}
+
+interface CommentEntry {
+  id: string;
+  text: string;
+  user: string;
+  date: string;
+}
+
+interface Evidence {
+  id: string;
+  name: string;
+  type: string;
+  uploadedBy: string;
+  uploadDate: string;
+}
+
 const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [comment, setComment] = useState('');
+  const [comments, setComments] = useState<CommentEntry[]>([]);
+  const [evidences, setEvidences] = useState<Evidence[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showEvidenceUpload, setShowEvidenceUpload] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { updateControlStatus } = useFrameworks();
+
+  const userName = user?.user_metadata?.display_name || user?.email || 'Usuário';
+
+  // Initialize history with control creation
+  useEffect(() => {
+    if (history.length === 0) {
+      setHistory([{
+        id: crypto.randomUUID(),
+        action: 'Controle criado',
+        user: control.owner,
+        date: control.lastUpdated
+      }]);
+    }
+  }, []);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -98,21 +145,100 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
     }
   };
 
-  const handleUpdateStatus = (newStatus: string) => {
+  const handleUpdateStatus = async (newStatus: string) => {
+    // Update control status
+    control.status = newStatus;
+    await updateControlStatus(control.id, newStatus as any);
+
+    // Add to history
+    const statusLabel = newStatus === 'implemented' ? 'Implementado' : 
+                        newStatus === 'partial' ? 'Parcial' : 'Pendente';
+    
+    const newHistoryEntry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      action: `Status alterado para ${statusLabel}`,
+      user: userName,
+      date: new Date().toLocaleDateString('pt-BR')
+    };
+
+    setHistory(prev => [newHistoryEntry, ...prev]);
+
     toast({
       title: "Status atualizado",
-      description: `Controle ${control.id} marcado como ${newStatus}`,
+      description: `Controle ${control.id} marcado como ${statusLabel}`,
     });
   };
 
   const handleAddComment = () => {
     if (comment.trim()) {
+      const newComment: CommentEntry = {
+        id: crypto.randomUUID(),
+        text: comment,
+        user: userName,
+        date: new Date().toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })
+      };
+
+      setComments(prev => [newComment, ...prev]);
+
+      // Add to history
+      const newHistoryEntry: HistoryEntry = {
+        id: crypto.randomUUID(),
+        action: 'Comentário adicionado',
+        user: userName,
+        date: new Date().toLocaleDateString('pt-BR'),
+        details: comment.substring(0, 100) + (comment.length > 100 ? '...' : '')
+      };
+
+      setHistory(prev => [newHistoryEntry, ...prev]);
+
       toast({
         title: "Comentário adicionado",
         description: "Seu comentário foi registrado com sucesso",
       });
       setComment('');
     }
+  };
+
+  const handleEvidenceUploaded = () => {
+    // Simulate evidence added
+    const newEvidence: Evidence = {
+      id: crypto.randomUUID(),
+      name: `Evidência ${evidences.length + 1}`,
+      type: 'PDF',
+      uploadedBy: userName,
+      uploadDate: new Date().toLocaleDateString('pt-BR')
+    };
+
+    setEvidences(prev => [...prev, newEvidence]);
+
+    // Update control evidence count
+    control.evidences = evidences.length + 1;
+
+    // Add to history
+    const newHistoryEntry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      action: 'Evidência carregada',
+      user: userName,
+      date: new Date().toLocaleDateString('pt-BR'),
+      details: newEvidence.name
+    };
+
+    setHistory(prev => [newHistoryEntry, ...prev]);
+
+    setShowEvidenceUpload(false);
+  };
+
+  const handleDownloadEvidence = (evidence: Evidence) => {
+    toast({
+      title: "Download iniciado",
+      description: `Baixando ${evidence.name}...`,
+    });
   };
 
   return (
@@ -246,7 +372,7 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
                       <AlertTriangle className="w-4 h-4 mr-2" />
                       Marcar como Parcial
                     </Button>
-                    <Button size="sm" variant="outline">
+                    <Button size="sm" variant="outline" onClick={() => setShowEvidenceUpload(true)}>
                       <Upload className="w-4 h-4 mr-2" />
                       Carregar Evidência
                     </Button>
@@ -257,21 +383,48 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
 
             <TabsContent value="evidence" className="space-y-4">
               <Card className="bg-surface-elevated border-card-border">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <FileText className="w-4 h-4" />
-                    Evidências do Controle
+                    Evidências do Controle ({evidences.length})
                   </CardTitle>
+                  <Button size="sm" onClick={() => setShowEvidenceUpload(true)}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Carregar Evidência
+                  </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhuma evidência carregada ainda.</p>
-                    <Button variant="outline" className="mt-4" size="sm">
-                      <Upload className="w-4 h-4 mr-2" />
-                      Carregar Primeira Evidência
-                    </Button>
-                  </div>
+                  {evidences.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Nenhuma evidência carregada ainda.</p>
+                      <Button variant="outline" className="mt-4" size="sm" onClick={() => setShowEvidenceUpload(true)}>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Carregar Primeira Evidência
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {evidences.map((evidence) => (
+                        <div key={evidence.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-primary" />
+                            <div>
+                              <div className="text-sm font-medium">{evidence.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {evidence.type} • Enviado por {evidence.uploadedBy} • {evidence.uploadDate}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => handleDownloadEvidence(evidence)}>
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -298,13 +451,30 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
               
               <Card className="bg-surface-elevated border-card-border">
                 <CardHeader>
-                  <CardTitle className="text-sm font-medium">Histórico de Comentários</CardTitle>
+                  <CardTitle className="text-sm font-medium">Histórico de Comentários ({comments.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Nenhum comentário ainda.</p>
-                  </div>
+                  {comments.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Nenhum comentário ainda.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {comments.map((commentEntry) => (
+                        <div key={commentEntry.id} className="p-4 bg-background rounded-lg border border-border">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-primary" />
+                              <span className="text-sm font-medium">{commentEntry.user}</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">{commentEntry.date}</span>
+                          </div>
+                          <p className="text-sm text-foreground">{commentEntry.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -314,26 +484,54 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
                 <CardHeader>
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
-                    Histórico de Alterações
+                    Histórico de Alterações ({history.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-start gap-3 p-3 bg-background rounded-lg">
-                      <div className="w-2 h-2 bg-success rounded-full mt-2"></div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">Controle criado</div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(control.lastUpdated).toLocaleDateString('pt-BR')} - {control.owner}
+                  <div className="space-y-3">
+                    {history.map((entry) => (
+                      <div key={entry.id} className="flex items-start gap-3 p-3 bg-background rounded-lg border border-border">
+                        <div className="w-2 h-2 bg-primary rounded-full mt-2"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="text-sm font-medium">{entry.action}</div>
+                            <div className="text-xs text-muted-foreground">{entry.date}</div>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <User className="w-3 h-3" />
+                            <span>{entry.user}</span>
+                          </div>
+                          {entry.details && (
+                            <div className="mt-2 text-xs text-muted-foreground italic">
+                              {entry.details}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
           </Tabs>
         </div>
+
+        {/* Evidence Upload Modal */}
+        {showEvidenceUpload && (
+          <Dialog open={showEvidenceUpload} onOpenChange={setShowEvidenceUpload}>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  Upload de Evidência para {control.id}
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <EvidenceUploadModal onSuccess={handleEvidenceUploaded} />
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </DialogContent>
     </Dialog>
   );
