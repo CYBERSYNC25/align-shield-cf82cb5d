@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRoles } from '@/hooks/useUserRoles';
-import { Shield, UserPlus, Trash2 } from 'lucide-react';
+import { Shield, UserPlus, Trash2, UserX } from 'lucide-react';
 import { useAuditLogs } from '@/hooks/useAuditLogs';
 
 interface UserWithRoles {
@@ -153,6 +154,41 @@ export default function UserRolesManagement() {
     }
   };
 
+  const deleteUser = async (userId: string, userEmail: string) => {
+    try {
+      // Delete user's data from all tables
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (profileError) throw profileError;
+
+      const { error: rolesError } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId);
+
+      if (rolesError) throw rolesError;
+
+      await logAction('delete_user', 'profiles', userId, { email: userEmail }, null);
+
+      toast({
+        title: 'Usuário excluído',
+        description: 'O usuário foi removido do sistema com sucesso'
+      });
+
+      loadUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: 'Erro ao excluir usuário',
+        description: error.message || 'Não foi possível excluir o usuário',
+        variant: 'destructive'
+      });
+    }
+  };
+
   if (!isAdmin()) {
     return (
       <Card>
@@ -258,6 +294,36 @@ export default function UserRolesManagement() {
                       )}
                     </div>
                   </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="ml-4"
+                      >
+                        <UserX className="w-4 h-4 mr-2" />
+                        Excluir
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja excluir o usuário <strong>{user.email}</strong>? 
+                          Esta ação não pode ser desfeita e todos os dados do usuário serão removidos.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => deleteUser(user.id, user.email)}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Excluir Usuário
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               ))}
             </div>
