@@ -134,6 +134,10 @@ const TaskItem: React.FC<{ task: Task; onStatusUpdate: (id: string, status: Task
             <Button 
               variant="ghost" 
               size="sm"
+              onClick={() => {
+                alert(`Detalhes da Tarefa:\n\nTítulo: ${task.title}\nDescrição: ${task.description}\nResponsável: ${task.assigned_to}\nPrazo: ${format(new Date(task.due_date), "dd/MM/yyyy", { locale: ptBR })}\nStatus: ${statusConfig[task.status].label}\nPrioridade: ${priorityConfig[task.priority].label}`);
+              }}
+              title="Ver detalhes da tarefa"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>

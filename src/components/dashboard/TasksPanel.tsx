@@ -123,7 +123,9 @@ const TaskItem: React.FC<{ task: Task; onStatusUpdate: (id: string, status: Task
           <Button 
             variant="ghost" 
             size="sm" 
+            onClick={() => window.location.href = '/tasks'}
             className="opacity-0 group-hover:opacity-100 transition-opacity"
+            title="Ver detalhes da tarefa"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
