@@ -22,6 +22,7 @@ import NotFound from "./pages/NotFound";
 import FileManagement from "./pages/FileManagement";
 import Notifications from "./pages/Notifications";
 import Tasks from "./pages/Tasks";
+import ComplianceReadiness from "./pages/ComplianceReadiness";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,11 @@ const App = () => (
           <Route path="/tasks" element={
             <ProtectedRoute>
               <Tasks />
+            </ProtectedRoute>
+          } />
+          <Route path="/readiness" element={
+            <ProtectedRoute>
+              <ComplianceReadiness />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

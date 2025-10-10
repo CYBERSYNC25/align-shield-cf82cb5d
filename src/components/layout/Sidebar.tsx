@@ -46,6 +46,13 @@ const sidebarItems: SidebarItem[] = [
     badge: 12
   },
   {
+    id: 'readiness',
+    label: 'Prontidão para Certificação',
+    icon: TrendingUp,
+    href: '/readiness',
+    badge: 'Novo'
+  },
+  {
     id: 'policies',
     label: 'Políticas & Treinamentos',
     icon: FileText,
