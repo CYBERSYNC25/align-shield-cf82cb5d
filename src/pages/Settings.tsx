@@ -1,68 +1,41 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { 
-  User, 
-  Bell, 
-  Shield, 
-  Database, 
-  Globe, 
-  Key,
-  Palette,
-  Trash2
-} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal';
 import { Setup2FAModal } from '@/components/settings/Setup2FAModal';
-import { BackupDataModal } from '@/components/settings/BackupDataModal';
 import { ManageSessionsModal } from '@/components/settings/ManageSessionsModal';
+import { BackupDataModal } from '@/components/settings/BackupDataModal';
 import { ViewLogsModal } from '@/components/settings/ViewLogsModal';
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
-import { useToast } from '@/hooks/use-toast';
-
-const profileSchema = z.object({
-  firstName: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  lastName: z.string().min(2, 'Sobrenome deve ter pelo menos 2 caracteres'),
-  email: z.string().email('Email inválido'),
-  company: z.string().min(2, 'Nome da empresa deve ter pelo menos 2 caracteres'),
-});
-
-type ProfileFormData = z.infer<typeof profileSchema>;
+import UserRolesManagement from '@/components/settings/UserRolesManagement';
+import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
+import {
+  User,
+  Shield,
+  Bell,
+  Smartphone,
+  Database,
+  Activity,
+  Trash2,
+  Key,
+  Users
+} from 'lucide-react';
 
 const Settings = () => {
-  const { toast } = useToast();
-  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
-  const [setup2FAOpen, setSetup2FAOpen] = useState(false);
-  const [backupDataOpen, setBackupDataOpen] = useState(false);
-  const [manageSessionsOpen, setManageSessionsOpen] = useState(false);
-  const [viewLogsOpen, setViewLogsOpen] = useState(false);
-  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
-
-  const form = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      email: '',
-      company: '',
-    },
-  });
-
-  const handleSaveProfile = (data: ProfileFormData) => {
-    toast({
-      title: "Sucesso",
-      description: "Perfil atualizado com sucesso!"
-    });
-  };
+  const { user } = useAuth();
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showSetup2FAModal, setShowSetup2FAModal] = useState(false);
+  const [showManageSessionsModal, setShowManageSessionsModal] = useState(false);
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,297 +51,274 @@ const Settings = () => {
               Configurações
             </h1>
             <p className="text-muted-foreground">
-              Gerencie suas preferências, segurança e configurações da conta
+              Gerencie suas preferências e configurações de conta
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Profile Settings */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  <CardTitle>Perfil da Conta</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(handleSaveProfile)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="firstName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Seu nome" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="lastName"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sobrenome</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Seu sobrenome" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+          <Tabs defaultValue="account" className="space-y-6">
+            <TabsList>
+              <TabsTrigger value="account">Conta</TabsTrigger>
+              <TabsTrigger value="security">Segurança</TabsTrigger>
+              <TabsTrigger value="notifications">Notificações</TabsTrigger>
+              <TabsTrigger value="permissions">Permissões</TabsTrigger>
+              <TabsTrigger value="audit">Auditoria</TabsTrigger>
+            </TabsList>
+
+            {/* Account Tab */}
+            <TabsContent value="account" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Informações da Conta
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie as informações do seu perfil
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Email</label>
+                    <p className="text-sm text-muted-foreground">{user?.email || 'Não informado'}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Status da Conta</label>
+                    <div>
+                      <Badge variant="default">Ativa</Badge>
                     </div>
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input type="email" placeholder="seu@email.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="company"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Empresa</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Nome da empresa" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit">Salvar Alterações</Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Ações Rápidas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
-                  onClick={() => setChangePasswordOpen(true)}
-                >
-                  <Key className="h-4 w-4" />
-                  Alterar Senha
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
-                  onClick={() => setSetup2FAOpen(true)}
-                >
-                  <Shield className="h-4 w-4" />
-                  Autenticação 2FA
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start gap-2"
-                  onClick={() => setBackupDataOpen(true)}
-                >
-                  <Database className="h-4 w-4" />
-                  Backup de Dados
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Notifications */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                <CardTitle>Notificações</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">Relatórios por Email</div>
-                  <div className="text-sm text-muted-foreground">Receber relatórios semanais de compliance</div>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">Alertas de Risco</div>
-                  <div className="text-sm text-muted-foreground">Notificações sobre novos riscos identificados</div>
-                </div>
-                <Switch defaultChecked />
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">Lembretes de Auditoria</div>
-                  <div className="text-sm text-muted-foreground">Lembretes sobre auditorias pendentes</div>
-                </div>
-                <Switch />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Security Settings */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                <CardTitle>Segurança</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">Sessões Ativas</div>
-                  <div className="text-sm text-muted-foreground">3 dispositivos conectados</div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setManageSessionsOpen(true)}
-                >
-                  Gerenciar
-                </Button>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">Log de Atividades</div>
-                  <div className="text-sm text-muted-foreground">Visualizar histórico de ações</div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setViewLogsOpen(true)}
-                >
-                  Ver Logs
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* System Preferences */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Palette className="h-5 w-5" />
-                  <CardTitle>Aparência</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-medium">Tema Escuro</div>
-                    <div className="text-sm text-muted-foreground">Usar tema escuro na interface</div>
                   </div>
-                  <Switch />
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <div className="text-sm font-medium">Modo Compacto</div>
-                    <div className="text-sm text-muted-foreground">Interface mais compacta</div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Security Tab */}
+            <TabsContent value="security" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="w-5 h-5" />
+                    Segurança
+                  </CardTitle>
+                  <CardDescription>
+                    Configure opções de segurança da sua conta
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Alterar Senha</p>
+                      <p className="text-sm text-muted-foreground">
+                        Atualize sua senha de acesso
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={() => setShowChangePasswordModal(true)}>
+                      <Key className="w-4 h-4 mr-2" />
+                      Alterar
+                    </Button>
                   </div>
-                  <Switch />
-                </div>
-              </CardContent>
-            </Card>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Autenticação de Dois Fatores</p>
+                      <p className="text-sm text-muted-foreground">
+                        Adicione uma camada extra de segurança
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={() => setShowSetup2FAModal(true)}>
+                      <Smartphone className="w-4 h-4 mr-2" />
+                      Configurar
+                    </Button>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Sessões Ativas</p>
+                      <p className="text-sm text-muted-foreground">
+                        Gerencie seus dispositivos conectados
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={() => setShowManageSessionsModal(true)}>
+                      <Activity className="w-4 h-4 mr-2" />
+                      Gerenciar
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Data Management */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="w-5 h-5" />
+                    Gerenciamento de Dados
+                  </CardTitle>
+                  <CardDescription>
+                    Backup e gerenciamento dos seus dados
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Backup de Dados</p>
+                      <p className="text-sm text-muted-foreground">
+                        Faça backup de todos os seus dados
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={() => setShowBackupModal(true)}>
+                      <Database className="w-4 h-4 mr-2" />
+                      Backup
+                    </Button>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Logs de Atividade</p>
+                      <p className="text-sm text-muted-foreground">
+                        Visualize o histórico de ações
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={() => setShowLogsModal(true)}>
+                      <Activity className="w-4 h-4 mr-2" />
+                      Ver Logs
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Globe className="h-5 w-5" />
-                  <CardTitle>Sistema</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Idioma</Label>
-                  <select className="w-full p-2 border rounded-md bg-background">
-                    <option>Português (Brasil)</option>
-                    <option>English (US)</option>
-                    <option>Español</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Fuso Horário</Label>
-                  <select className="w-full p-2 border rounded-md bg-background">
-                    <option>UTC-3 (São Paulo)</option>
-                    <option>UTC-5 (New York)</option>
-                    <option>UTC+0 (London)</option>
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              {/* Danger Zone */}
+              <Card className="border-destructive">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-destructive">
+                    <Trash2 className="w-5 h-5" />
+                    Zona de Perigo
+                  </CardTitle>
+                  <CardDescription>
+                    Ações irreversíveis de conta
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Excluir Conta</p>
+                      <p className="text-sm text-muted-foreground">
+                        Remova permanentemente sua conta e todos os dados
+                      </p>
+                    </div>
+                    <Button variant="destructive" onClick={() => setShowDeleteModal(true)}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Excluir Conta
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          {/* Danger Zone */}
-          <Card className="border-destructive/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Trash2 className="h-5 w-5 text-destructive" />
-                <CardTitle className="text-destructive">Zona de Perigo</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="text-sm font-medium">Excluir Conta</div>
-                  <div className="text-sm text-muted-foreground">Permanentemente remove sua conta e todos os dados</div>
-                </div>
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={() => setDeleteAccountOpen(true)}
-                >
-                  Excluir
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            {/* Notifications Tab */}
+            <TabsContent value="notifications" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="w-5 h-5" />
+                    Preferências de Notificação
+                  </CardTitle>
+                  <CardDescription>
+                    Configure como você deseja ser notificado
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Notificações por Email</p>
+                      <p className="text-sm text-muted-foreground">
+                        Receba notificações importantes por email
+                      </p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Alertas de Risco</p>
+                      <p className="text-sm text-muted-foreground">
+                        Notificações sobre novos riscos identificados
+                      </p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Lembretes de Auditoria</p>
+                      <p className="text-sm text-muted-foreground">
+                        Lembretes sobre auditorias pendentes
+                      </p>
+                    </div>
+                    <Switch />
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Relatórios Semanais</p>
+                      <p className="text-sm text-muted-foreground">
+                        Resumo semanal de compliance
+                      </p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Permissions Tab */}
+            <TabsContent value="permissions">
+              <UserRolesManagement />
+            </TabsContent>
+
+            {/* Audit Tab */}
+            <TabsContent value="audit">
+              <AuditLogsViewer />
+            </TabsContent>
+          </Tabs>
         </main>
       </div>
 
       {/* Modals */}
       <ChangePasswordModal 
-        open={changePasswordOpen} 
-        onOpenChange={setChangePasswordOpen} 
+        open={showChangePasswordModal} 
+        onOpenChange={setShowChangePasswordModal} 
       />
       <Setup2FAModal 
-        open={setup2FAOpen} 
-        onOpenChange={setSetup2FAOpen} 
-      />
-      <BackupDataModal 
-        open={backupDataOpen} 
-        onOpenChange={setBackupDataOpen} 
+        open={showSetup2FAModal} 
+        onOpenChange={setShowSetup2FAModal} 
       />
       <ManageSessionsModal 
-        open={manageSessionsOpen} 
-        onOpenChange={setManageSessionsOpen} 
+        open={showManageSessionsModal} 
+        onOpenChange={setShowManageSessionsModal} 
+      />
+      <BackupDataModal 
+        open={showBackupModal} 
+        onOpenChange={setShowBackupModal} 
       />
       <ViewLogsModal 
-        open={viewLogsOpen} 
-        onOpenChange={setViewLogsOpen} 
+        open={showLogsModal} 
+        onOpenChange={setShowLogsModal} 
       />
       <DeleteAccountModal 
-        open={deleteAccountOpen} 
-        onOpenChange={setDeleteAccountOpen} 
+        open={showDeleteModal} 
+        onOpenChange={setShowDeleteModal} 
       />
     </div>
   );

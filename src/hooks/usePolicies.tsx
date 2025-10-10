@@ -32,7 +32,11 @@ export function usePolicies() {
       file_url: '/policies/security-policy-v2.1.pdf',
       created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id'
+      user_id: 'mock-user-id',
+      approval_status: 'approved',
+      approved_by: 'mock-approver-id',
+      approved_at: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000).toISOString(),
+      version_history: []
     },
     {
       id: '2',
@@ -50,7 +54,11 @@ export function usePolicies() {
       file_url: '/policies/access-control-v1.5.pdf',
       created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id'
+      user_id: 'mock-user-id',
+      approval_status: 'approved',
+      approved_by: 'mock-approver-id',
+      approved_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
+      version_history: []
     },
     {
       id: '3',
@@ -68,7 +76,11 @@ export function usePolicies() {
       file_url: '/policies/backup-policy-v1.0.pdf',
       created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id'
+      user_id: 'mock-user-id',
+      approval_status: 'pending',
+      approved_by: null,
+      approved_at: null,
+      version_history: []
     }
   ];
 
@@ -141,7 +153,11 @@ export function usePolicies() {
         review_date: policyData.review_date || null,
         next_review: policyData.next_review || null,
         tags: policyData.tags || null,
-        file_url: policyData.file_url || null
+        file_url: policyData.file_url || null,
+        approval_status: 'draft',
+        approved_by: null,
+        approved_at: null,
+        version_history: []
       };
 
       setPolicies(prev => [newPolicy, ...prev]);

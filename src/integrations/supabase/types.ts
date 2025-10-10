@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       audits: {
         Row: {
           auditor: string | null
@@ -103,6 +142,94 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      control_assignments: {
+        Row: {
+          assigned_by: string | null
+          assigned_to: string
+          control_id: string
+          created_at: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to: string
+          control_id: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to?: string
+          control_id?: string
+          created_at?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "control_assignments_control_id_fkey"
+            columns: ["control_id"]
+            isOneToOne: false
+            referencedRelation: "controls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      control_tests: {
+        Row: {
+          control_id: string
+          error_message: string | null
+          id: string
+          next_test_date: string | null
+          result_data: Json | null
+          status: string
+          test_name: string
+          test_type: string
+          tested_at: string | null
+        }
+        Insert: {
+          control_id: string
+          error_message?: string | null
+          id?: string
+          next_test_date?: string | null
+          result_data?: Json | null
+          status: string
+          test_name: string
+          test_type: string
+          tested_at?: string | null
+        }
+        Update: {
+          control_id?: string
+          error_message?: string | null
+          id?: string
+          next_test_date?: string | null
+          result_data?: Json | null
+          status?: string
+          test_name?: string
+          test_type?: string
+          tested_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "control_tests_control_id_fkey"
+            columns: ["control_id"]
+            isOneToOne: false
+            referencedRelation: "controls"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       controls: {
         Row: {
@@ -351,6 +478,50 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_evidence_mapping: {
+        Row: {
+          collection_frequency: string | null
+          config: Json | null
+          control_id: string | null
+          created_at: string | null
+          evidence_type: string
+          id: string
+          integration_name: string
+          is_active: boolean | null
+          last_collected: string | null
+        }
+        Insert: {
+          collection_frequency?: string | null
+          config?: Json | null
+          control_id?: string | null
+          created_at?: string | null
+          evidence_type: string
+          id?: string
+          integration_name: string
+          is_active?: boolean | null
+          last_collected?: string | null
+        }
+        Update: {
+          collection_frequency?: string | null
+          config?: Json | null
+          control_id?: string | null
+          created_at?: string | null
+          evidence_type?: string
+          id?: string
+          integration_name?: string
+          is_active?: boolean | null
+          last_collected?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_evidence_mapping_control_id_fkey"
+            columns: ["control_id"]
+            isOneToOne: false
+            referencedRelation: "controls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_label: string | null
@@ -407,6 +578,9 @@ export type Database = {
       }
       policies: {
         Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approved_by: string | null
           approver: string | null
           category: string
           created_at: string
@@ -423,8 +597,12 @@ export type Database = {
           updated_at: string
           user_id: string
           version: string
+          version_history: Json | null
         }
         Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           approver?: string | null
           category: string
           created_at?: string
@@ -441,8 +619,12 @@ export type Database = {
           updated_at?: string
           user_id: string
           version?: string
+          version_history?: Json | null
         }
         Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           approver?: string | null
           category?: string
           created_at?: string
@@ -459,6 +641,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           version?: string
+          version_history?: Json | null
         }
         Relationships: []
       }
@@ -662,6 +845,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       vendors: {
         Row: {
           category: string
@@ -737,9 +947,22 @@ export type Database = {
         }
         Returns: string
       }
+      get_user_roles: {
+        Args: { _user_id: string }
+        Returns: {
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "auditor" | "compliance_officer" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -866,6 +1089,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "auditor", "compliance_officer", "viewer"],
+    },
   },
 } as const
