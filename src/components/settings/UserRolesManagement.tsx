@@ -39,7 +39,7 @@ const roleColors = {
 
 export default function UserRolesManagement() {
   const { toast } = useToast();
-  const { isAdmin, isMasterAdmin, isMasterUser } = useUserRoles();
+  const { isAdmin, isMasterAdmin, isMasterUser, loading: rolesLoading } = useUserRoles();
   const { logAction } = useAuditLogs();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
@@ -202,6 +202,24 @@ export default function UserRolesManagement() {
     setSelectedUserForDeletion({ id: userId, email: userEmail });
     setMasterDeletionModalOpen(true);
   };
+
+  if (rolesLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5" />
+            Gestão de Permissões
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Carregando permissões...
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (!isAdmin() && !isMasterUser()) {
     return (
