@@ -87,7 +87,7 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
       setHistory([{
         id: crypto.randomUUID(),
         action: 'Controle criado',
-        user: control.owner,
+        user: control.owner || userName,
         date: control.lastUpdated
       }]);
     }
@@ -212,7 +212,13 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
       name: `Evidência ${evidences.length + 1}`,
       type: 'PDF',
       uploadedBy: userName,
-      uploadDate: new Date().toLocaleDateString('pt-BR')
+      uploadDate: new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     };
 
     setEvidences(prev => [...prev, newEvidence]);
@@ -225,11 +231,22 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
       id: crypto.randomUUID(),
       action: 'Evidência carregada',
       user: userName,
-      date: new Date().toLocaleDateString('pt-BR'),
+      date: new Date().toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
       details: newEvidence.name
     };
 
     setHistory(prev => [newHistoryEntry, ...prev]);
+
+    toast({
+      title: "Evidência carregada",
+      description: `Evidência adicionada por ${userName}`,
+    });
 
     setShowEvidenceUpload(false);
   };
@@ -237,7 +254,14 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
   const handleDownloadEvidence = (evidence: Evidence) => {
     toast({
       title: "Download iniciado",
-      description: `Baixando ${evidence.name}...`,
+      description: `${evidence.name} - Enviado por ${evidence.uploadedBy}`,
+    });
+  };
+
+  const handleViewEvidence = (evidence: Evidence) => {
+    toast({
+      title: "Visualizar Evidência",
+      description: `${evidence.name} - Enviado por ${evidence.uploadedBy} em ${evidence.uploadDate}`,
     });
   };
 
@@ -404,20 +428,29 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-3">
+                     <div className="space-y-3">
                       {evidences.map((evidence) => (
-                        <div key={evidence.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
-                          <div className="flex items-center gap-3">
-                            <FileText className="w-5 h-5 text-primary" />
-                            <div>
-                              <div className="text-sm font-medium">{evidence.name}</div>
+                        <div key={evidence.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-border hover:border-primary/50 transition-colors">
+                          <div className="flex items-center gap-3 flex-1">
+                            <FileText className="w-5 h-5 text-primary flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{evidence.name}</div>
                               <div className="text-xs text-muted-foreground">
-                                {evidence.type} • Enviado por {evidence.uploadedBy} • {evidence.uploadDate}
+                                {evidence.type}
+                              </div>
+                              <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                <User className="w-3 h-3" />
+                                <span className="font-medium">{evidence.uploadedBy}</span>
+                                <span>•</span>
+                                <span>{evidence.uploadDate}</span>
                               </div>
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => handleDownloadEvidence(evidence)}>
+                            <Button size="sm" variant="ghost" onClick={() => handleViewEvidence(evidence)} title="Visualizar evidência">
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDownloadEvidence(evidence)} title="Baixar evidência">
                               <Download className="w-4 h-4" />
                             </Button>
                           </div>
