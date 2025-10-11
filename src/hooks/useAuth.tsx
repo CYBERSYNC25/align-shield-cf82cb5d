@@ -10,6 +10,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signUp: (email: string, password: string, metadata?: any) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -93,13 +94,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
   }
 
+  const resetPassword = async (email: string) => {
+    const redirectUrl = `${window.location.origin}/auth`;
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: redirectUrl
+    })
+    
+    if (error) {
+      toast({
+        title: "Erro ao recuperar senha",
+        description: error.message,
+        variant: "destructive"
+      })
+    } else {
+      toast({
+        title: "Email enviado!",
+        description: "Verifique seu email para redefinir a senha"
+      })
+    }
+    
+    return { error }
+  }
+
   const value = {
     user,
     session,
     loading,
     signIn,
     signUp,
-    signOut
+    signOut,
+    resetPassword
   }
 
   return (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,11 +8,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Navigate } from 'react-router-dom';
 import { Shield, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Turnstile } from '@marsidev/react-turnstile';
+import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 
 const Auth = () => {
   const { user, signIn, signUp, loading } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const turnstileRef = useRef<any>(null);
 
   // Redirect if already authenticated
   if (user && !loading) {
@@ -21,6 +25,16 @@ const Auth = () => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!captchaToken) {
+      toast({
+        title: "Verificação necessária",
+        description: "Por favor, complete a verificação de segurança",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     const formData = new FormData(e.target as HTMLFormElement);
@@ -35,6 +49,8 @@ const Auth = () => {
         description: error.message,
         variant: "destructive"
       });
+      turnstileRef.current?.reset();
+      setCaptchaToken('');
     }
     
     setIsLoading(false);
@@ -110,7 +126,10 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Senha</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Senha</Label>
+                    <ForgotPasswordModal />
+                  </div>
                   <Input 
                     id="login-password"
                     name="password"
@@ -119,7 +138,16 @@ const Auth = () => {
                     required 
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <div className="flex justify-center">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setCaptchaToken('')}
+                    onExpire={() => setCaptchaToken('')}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>
