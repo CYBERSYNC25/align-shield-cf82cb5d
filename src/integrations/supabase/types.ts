@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_anomalies: {
+        Row: {
+          anomaly_type: string
+          assigned_to: string | null
+          created_at: string
+          description: string
+          detected_at: string
+          id: string
+          severity: string
+          status: string
+          system_name: string
+          updated_at: string
+          user_id: string | null
+          user_name: string
+        }
+        Insert: {
+          anomaly_type: string
+          assigned_to?: string | null
+          created_at?: string
+          description: string
+          detected_at?: string
+          id?: string
+          severity: string
+          status?: string
+          system_name: string
+          updated_at?: string
+          user_id?: string | null
+          user_name: string
+        }
+        Update: {
+          anomaly_type?: string
+          assigned_to?: string | null
+          created_at?: string
+          description?: string
+          detected_at?: string
+          id?: string
+          severity?: string
+          status?: string
+          system_name?: string
+          updated_at?: string
+          user_id?: string | null
+          user_name?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string

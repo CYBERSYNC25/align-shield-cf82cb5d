@@ -282,12 +282,6 @@ export const useAccess = () => {
   };
 
   const fetchAnomalies = async () => {
-    if (!isSupabaseConfigured()) {
-      console.log('Using mock data for access anomalies');
-      setAnomalies(mockAnomalies);
-      return;
-    }
-
     try {
       const { data, error } = await supabase
         .from('access_anomalies')
@@ -300,10 +294,10 @@ export const useAccess = () => {
         return;
       }
 
-      setAnomalies(data || mockAnomalies);
+      setAnomalies(data || []);
     } catch (err) {
       console.error('Error:', err);
-      setAnomalies(mockAnomalies);
+      setAnomalies([]);
     }
   };
 
@@ -372,16 +366,6 @@ export const useAccess = () => {
   };
 
   const resolveAnomaly = async (id: string, resolution: { status: AccessAnomaly['status']; assigned_to?: string }) => {
-    if (!isSupabaseConfigured()) {
-      setAnomalies(prev => prev.map(anomaly => 
-        anomaly.id === id 
-          ? { ...anomaly, ...resolution, updated_at: new Date().toISOString() }
-          : anomaly
-      ));
-      toast.success('Anomalia atualizada com sucesso (mock)');
-      return;
-    }
-
     try {
       const { data, error } = await supabase
         .from('access_anomalies')
@@ -395,7 +379,6 @@ export const useAccess = () => {
       setAnomalies(prev => prev.map(anomaly => 
         anomaly.id === id ? data : anomaly
       ));
-      toast.success('Anomalia atualizada com sucesso');
     } catch (err) {
       console.error('Error resolving anomaly:', err);
       toast.error('Erro ao atualizar anomalia');
