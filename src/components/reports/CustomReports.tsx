@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import CreateReportModal from './CreateReportModal';
 import ReportPreviewModal from './ReportPreviewModal';
+import ConfigureReportModal from './ConfigureReportModal';
 import { 
   Plus, 
   Settings, 
@@ -21,6 +22,7 @@ const CustomReports = () => {
   const { toast } = useToast();
   const [createReportOpen, setCreateReportOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [configureOpen, setConfigureOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const customReports = [
     {
@@ -128,11 +130,9 @@ const CustomReports = () => {
     });
   };
 
-  const handleConfigureReport = (reportName: string) => {
-    toast({
-      title: "Configurar Relatório",
-      description: `Abrindo configurações para "${reportName}"...`,
-    });
+  const handleConfigureReport = (report: any) => {
+    setSelectedReport(report);
+    setConfigureOpen(true);
   };
 
   const handleGenerateNow = (reportName: string) => {
@@ -261,7 +261,7 @@ const CustomReports = () => {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleConfigureReport(report.name)}
+                        onClick={() => handleConfigureReport(report)}
                       >
                         <Settings className="h-4 w-4 mr-2" />
                         Configurar
@@ -367,6 +367,12 @@ const CustomReports = () => {
       <ReportPreviewModal
         isOpen={previewOpen}
         onClose={() => setPreviewOpen(false)}
+        report={selectedReport}
+      />
+      
+      <ConfigureReportModal
+        isOpen={configureOpen}
+        onClose={() => setConfigureOpen(false)}
         report={selectedReport}
       />
     </div>
