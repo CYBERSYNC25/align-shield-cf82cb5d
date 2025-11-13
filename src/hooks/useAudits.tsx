@@ -271,6 +271,58 @@ export function useAudits() {
     }
   };
 
+  /**
+   * Updates an existing audit
+   * 
+   * @param id - Audit ID
+   * @param updates - Fields to update
+   */
+  const updateAudit = async (id: string, updates: AuditUpdate) => {
+    try {
+      if (!user) {
+        // Mock update for development
+        setAudits(prev => prev.map(audit => 
+          audit.id === id 
+            ? { ...audit, ...updates, updated_at: new Date().toISOString() }
+            : audit
+        ));
+        toast({
+          title: "Auditoria atualizada",
+          description: "Auditoria atualizada com sucesso (mock)"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('audits')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Auditoria atualizada",
+        description: "Auditoria atualizada com sucesso"
+      });
+      
+      // Update local state
+      setAudits(prev => prev.map(audit => 
+        audit.id === id 
+          ? { ...audit, ...updates, updated_at: new Date().toISOString() }
+          : audit
+      ));
+    } catch (error) {
+      console.error('Error updating audit:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar auditoria",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchAudits();
@@ -298,6 +350,7 @@ export function useAudits() {
     loading,
     createAudit,
     createEvidence,
+    updateAudit,
     updateAuditStatus,
     refetch: fetchAudits
   };
