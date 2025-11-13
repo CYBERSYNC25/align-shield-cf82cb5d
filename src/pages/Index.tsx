@@ -8,6 +8,7 @@ import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 import ComplianceChart from '@/components/dashboard/ComplianceChart';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import EvidenceUploadModal from '@/components/audit/EvidenceUploadModal';
+import DashboardOnboarding from '@/components/dashboard/DashboardOnboarding';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -98,6 +99,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-dashboard">
+      <DashboardOnboarding />
       <Header />
       
       <div className="flex">
