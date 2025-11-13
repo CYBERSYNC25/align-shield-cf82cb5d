@@ -320,6 +320,46 @@ export function useFrameworks() {
     return newControl;
   };
 
+  const deleteFramework = async (id: string) => {
+    try {
+      if (!user) {
+        setFrameworks(frameworks.filter(f => f.id !== id));
+        toast({ title: 'Framework excluído (mock)', variant: 'default' });
+        return;
+      }
+
+      const { error } = await supabase.from('frameworks').delete().eq('id', id).eq('user_id', user.id);
+      if (error) throw error;
+
+      setFrameworks(frameworks.filter(f => f.id !== id));
+      toast({ title: 'Framework excluído com sucesso' });
+    } catch (error) {
+      console.error('Error deleting framework:', error);
+      toast({ title: 'Erro ao excluir framework', variant: 'destructive' });
+      throw error;
+    }
+  };
+
+  const updateControl = async (id: string, updates: any) => {
+    try {
+      if (!user) {
+        setControls(controls.map(c => c.id === id ? { ...c, ...updates } : c));
+        toast({ title: 'Controle atualizado (mock)', variant: 'default' });
+        return;
+      }
+
+      const { error } = await supabase.from('controls').update(updates).eq('id', id).eq('user_id', user.id);
+      if (error) throw error;
+
+      setControls(controls.map(c => c.id === id ? { ...c, ...updates } : c));
+      toast({ title: 'Controle atualizado com sucesso' });
+    } catch (error) {
+      console.error('Error updating control:', error);
+      toast({ title: 'Erro ao atualizar controle', variant: 'destructive' });
+      throw error;
+    }
+  };
+
   return {
     frameworks,
     controls,
@@ -327,6 +367,8 @@ export function useFrameworks() {
     createFramework,
     createControl,
     updateFramework,
+    deleteFramework,
+    updateControl,
     updateControlStatus,
     getFrameworkStats,
     refetch: fetchData
