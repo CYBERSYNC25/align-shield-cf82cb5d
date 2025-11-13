@@ -12,20 +12,31 @@ import {
 } from '@/components/ui/dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { Mail } from 'lucide-react';
+import { forgotPasswordSchema } from '@/lib/auth-schemas';
 
 export const ForgotPasswordModal = () => {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
   const { resetPassword } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setIsLoading(true);
 
-    const { error } = await resetPassword(email);
+    // Validação Zod
+    const validation = forgotPasswordSchema.safeParse({ email });
+    if (!validation.success) {
+      setError(validation.error.errors[0].message);
+      setIsLoading(false);
+      return;
+    }
 
-    if (!error) {
+    const { error: resetError } = await resetPassword(email);
+
+    if (!resetError) {
       setEmail('');
       setOpen(false);
     }
@@ -57,11 +68,12 @@ export const ForgotPasswordModal = () => {
                 type="email"
                 placeholder="seu@email.com"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setError(''); }}
                 className="pl-10"
                 required
               />
             </div>
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'Enviando...' : 'Enviar email de recuperação'}
