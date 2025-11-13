@@ -573,6 +573,103 @@ export const useRisks = () => {
     }
   };
 
+  /**
+   * Calculates risk score based on probability and impact
+   * 
+   * @param probability - Risk probability level
+   * @param impact - Risk impact level
+   * @returns Calculated score (1-12)
+   */
+  const calculateRiskScore = (
+    probability: 'low' | 'medium' | 'high',
+    impact: 'low' | 'medium' | 'high' | 'critical'
+  ): number => {
+    const probabilityValues = { low: 1, medium: 2, high: 3 };
+    const impactValues = { low: 1, medium: 2, high: 3, critical: 4 };
+    
+    return probabilityValues[probability] * impactValues[impact];
+  };
+
+  /**
+   * Updates an existing risk
+   * 
+   * @param riskId - Risk ID
+   * @param updates - Fields to update
+   */
+  const updateRisk = async (riskId: string, updates: Partial<Risk>) => {
+    try {
+      if (!user) {
+        // Mock update for development
+        setRisks(risks.map(r => r.id === riskId ? { ...r, ...updates, updated_at: new Date().toISOString() } : r));
+        toast({
+          title: "Risco atualizado",
+          description: "Risco atualizado com sucesso (mock)"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('risks')
+        .update(updates)
+        .eq('id', riskId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Risco atualizado",
+        description: "Risco atualizado com sucesso"
+      });
+      
+      // Update local state
+      setRisks(risks.map(r => r.id === riskId ? { ...r, ...updates } : r));
+    } catch (error) {
+      console.error('Error updating risk:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar risco",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  /**
+   * Creates an audit log entry
+   * 
+   * @param logData - Audit log data
+   */
+  const createAuditLog = async (logData: {
+    action: string;
+    resource_type: string;
+    resource_id: string;
+    old_data?: any;
+    new_data?: any;
+  }) => {
+    try {
+      if (!user) {
+        console.log('Audit log (mock):', logData);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('audit_logs')
+        .insert([{
+          user_id: user.id,
+          action: logData.action,
+          resource_type: logData.resource_type,
+          resource_id: logData.resource_id,
+          old_data: logData.old_data || null,
+          new_data: logData.new_data || null,
+        }]);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error creating audit log:', error);
+      // Don't show error toast for audit logs to avoid noise
+    }
+  };
+
   useEffect(() => {
     fetchRisks();
   }, []);
@@ -589,6 +686,9 @@ export const useRisks = () => {
     refetch: fetchRisks,
     createVendor,
     createRisk,
-    createAssessment
+    createAssessment,
+    calculateRiskScore,
+    updateRisk,
+    createAuditLog,
   };
 };

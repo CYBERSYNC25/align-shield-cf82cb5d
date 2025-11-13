@@ -4,6 +4,7 @@ import RiskStats from '@/components/risk/RiskStats';
 import RiskRegistry from '@/components/risk/RiskRegistry';
 import VendorManagement from '@/components/risk/VendorManagement';
 import RiskAssessments from '@/components/risk/RiskAssessments';
+import RiskMatrix from '@/components/risk/RiskMatrix';
 
 const RiskManagement = () => {
   return (
@@ -26,6 +27,9 @@ const RiskManagement = () => {
 
           {/* Stats Overview */}
           <RiskStats />
+
+          {/* Risk Matrix - Full Width */}
+          <RiskMatrix />
 
           {/* Risk Registry & Vendor Management */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
