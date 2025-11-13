@@ -1,8 +1,48 @@
+/**
+ * Hook de Autenticação - useAuth
+ * 
+ * Responsável por gerenciar todo o estado de autenticação da aplicação.
+ * 
+ * @module useAuth
+ * @description
+ * - Gerencia login, signup, logout e recuperação de senha
+ * - Mantém estado global da sessão e usuário autenticado
+ * - Integra com Supabase Auth (JWT-based)
+ * - Persiste sessão em localStorage
+ * - Auto-refresh de tokens
+ * 
+ * @example
+ * ```typescript
+ * function LoginPage() {
+ *   const { signIn, user, loading } = useAuth();
+ *   
+ *   const handleLogin = async () => {
+ *     const { error } = await signIn('user@example.com', 'password');
+ *     if (error) console.error('Login failed:', error);
+ *   };
+ * }
+ * ```
+ * 
+ * @returns {AuthContextType} Contexto de autenticação com funções e estados
+ */
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 
+/**
+ * Interface do contexto de autenticação
+ * 
+ * @interface AuthContextType
+ * @property {User | null} user - Usuário autenticado atual (null se não autenticado)
+ * @property {Session | null} session - Sessão ativa com tokens JWT
+ * @property {boolean} loading - Estado de carregamento da autenticação
+ * @property {Function} signIn - Função de login
+ * @property {Function} signUp - Função de cadastro
+ * @property {Function} signOut - Função de logout
+ * @property {Function} resetPassword - Função de recuperação de senha
+ */
 interface AuthContextType {
   user: User | null
   session: Session | null
@@ -39,6 +79,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  /**
+   * Realiza login do usuário
+   * 
+   * @param {string} email - Email do usuário
+   * @param {string} password - Senha do usuário
+   * @returns {Promise<{error: AuthError | null}>} Objeto com erro (se houver)
+   * 
+   * @example
+   * const { error } = await signIn('user@example.com', 'senha123');
+   * 
+   * @sideEffects
+   * - Cria sessão no localStorage
+   * - Atualiza estados user e session
+   * - Exibe toast de sucesso/erro
+   */
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     
@@ -58,6 +113,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error }
   }
 
+  /**
+   * Realiza cadastro de novo usuário
+   * 
+   * @param {string} email - Email do novo usuário
+   * @param {string} password - Senha do novo usuário
+   * @param {any} metadata - Metadados adicionais (opcional)
+   * @returns {Promise<{error: AuthError | null}>} Objeto com erro (se houver)
+   * 
+   * @example
+   * const { error } = await signUp('novousuario@example.com', 'senha123', {
+   *   display_name: 'Novo Usuário'
+   * });
+   * 
+   * @sideEffects
+   * - Envia email de confirmação
+   * - Trigger handle_new_user() cria perfil automaticamente
+   * - Primeiro usuário recebe role 'admin'
+   */
   const signUp = async (email: string, password: string, metadata?: any) => {
     const redirectUrl = `${window.location.origin}/`;
     
