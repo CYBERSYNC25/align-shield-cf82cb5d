@@ -1,3 +1,25 @@
+/**
+ * Modal para criação de novas políticas corporativas
+ * 
+ * @component CreatePolicyModal
+ * @description
+ * Formulário completo com validação Zod em tempo real para criação de políticas.
+ * Valida todos os campos obrigatórios, formatos de dados e datas.
+ * 
+ * @example
+ * ```tsx
+ * <CreatePolicyModal onSuccess={() => refetchPolicies()} />
+ * ```
+ * 
+ * @validation
+ * - Nome: 3-200 caracteres
+ * - Descrição: 10-2000 caracteres (opcional)
+ * - Versão: formato v1.0 ou 1.0.0
+ * - Datas: reviewDate > effectiveDate
+ * - URL: formato https:// válido
+ * - Owner/Approver: apenas letras, espaços e hífens
+ */
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +29,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePolicies } from '@/hooks/usePolicies';
-import { FileText, Plus } from 'lucide-react';
+import { FileText, Plus, AlertCircle } from 'lucide-react';
 import FileUploader from '@/components/common/FileUploader';
+import { policySchema, formatValidationErrors, type PolicyInput } from '@/lib/form-schemas';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CreatePolicyModalProps {
   onSuccess?: () => void;
@@ -19,6 +43,7 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
   const [loading, setLoading] = useState(false);
   const { createPolicy } = usePolicies();
 
+  // Estado do formulário
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -34,14 +59,129 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
     file_url: ''
   });
 
+  /**
+   * Estado de erros de validação
+   * Armazena mensagens de erro por campo para feedback visual
+   */
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  /**
+   * Valida um campo individual usando Zod
+   * @param field - Nome do campo a validar
+   * @param value - Valor do campo
+   * @returns true se válido, false se inválido
+   * 
+   * @example
+   * validateField('name', 'Política de Segurança') // true
+   * validateField('name', 'Po') // false - muito curto
+   */
+  const validateField = (field: string, value: any): boolean => {
+    try {
+      // Cria objeto parcial para validação
+      const testData: any = { ...formData, [field]: value };
+      
+      // Converte datas string para Date se necessário
+      if (field === 'effectiveDate' && testData.effectiveDate) {
+        testData.effectiveDate = new Date(testData.effectiveDate);
+      }
+      if (field === 'reviewDate' && testData.reviewDate) {
+        testData.reviewDate = new Date(testData.reviewDate);
+      }
+      
+      policySchema.parse(testData);
+      
+      // Remove erro se validação passou
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[field];
+        return newErrors;
+      });
+      
+      return true;
+    } catch (error: any) {
+      // Extrai mensagem de erro específica do Zod
+      if (error.errors) {
+        const fieldError = error.errors.find((e: any) => e.path[0] === field);
+        if (fieldError) {
+          setErrors(prev => ({ ...prev, [field]: fieldError.message }));
+        }
+      }
+      return false;
+    }
+  };
+
+  /**
+   * Handler para mudança de campo com validação em tempo real
+   * Valida o campo assim que o usuário digita
+   * 
+   * @example
+   * <Input onChange={handleFieldChange('name')} />
+   */
+  const handleFieldChange = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Valida apenas se o campo já foi tocado ou tem conteúdo
+    if (value || errors[field]) {
+      validateField(field, value);
+    }
+  };
+
+  /**
+   * Handler para mudança de Select
+   */
+  const handleSelectChange = (field: string) => (value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    validateField(field, value);
+  };
+
+  /**
+   * Submete o formulário após validação completa
+   * 
+   * @validation
+   * - Valida todos os campos obrigatórios
+   * - Bloqueia envio se houver erros
+   * - Converte datas string para Date
+   * 
+   * @errors
+   * - "Nome deve ter no mínimo 3 caracteres"
+   * - "Data de revisão deve ser posterior à data de vigência"
+   * - "URL de arquivo inválida"
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prepara dados para validação (converte datas)
+    const dataToValidate: any = {
+      name: formData.name,
+      description: formData.description || '',
+      category: formData.category,
+      version: formData.version,
+      status: formData.status,
+      owner: formData.owner || '',
+      approver: formData.approver || '',
+      effectiveDate: formData.effective_date ? new Date(formData.effective_date) : undefined,
+      reviewDate: formData.review_date ? new Date(formData.review_date) : undefined,
+      fileUrl: formData.file_url || ''
+    };
+
+    // Validação completa do formulário
+    const result = policySchema.safeParse(dataToValidate);
+    
+    if (!result.success) {
+      // Exibe todos os erros de validação
+      const validationErrors = formatValidationErrors(result.error);
+      setErrors(validationErrors);
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const result = await createPolicy(formData);
+      const submitResult = await createPolicy(formData);
       
-      if (result) {
+      if (submitResult) {
+        // Reset completo do formulário
         setOpen(false);
         setFormData({
           name: '',
@@ -57,6 +197,7 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
           tags: [],
           file_url: ''
         });
+        setErrors({});
         onSuccess?.();
       }
     } catch (error) {
@@ -87,25 +228,52 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="name">Nome da Política *</Label>
+                <Label htmlFor="name">
+                  Nome da Política * 
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (3-200 caracteres)
+                  </span>
+                </Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={handleFieldChange('name')}
                   placeholder="Ex: Política de Segurança da Informação"
+                  className={errors.name ? 'border-destructive' : ''}
                   required
                 />
+                {errors.name && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.name}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  ✓ Válido: "Política de Segurança da Informação", "Controle de Acesso"
+                </p>
               </div>
 
               <div className="col-span-2 space-y-2">
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="description">
+                  Descrição
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (10-2000 caracteres, opcional)
+                  </span>
+                </Label>
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={handleFieldChange('description')}
                   placeholder="Descreva o objetivo e escopo da política"
+                  className={errors.description ? 'border-destructive' : ''}
                   rows={3}
                 />
+                {errors.description && (
+                  <p className="text-sm text-destructive flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.description}
+                  </p>
+                )}
               </div>
             </div>
 
