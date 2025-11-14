@@ -24,9 +24,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import CreatePolicyModal from '@/components/policies/CreatePolicyModal';
+import EditPolicyModal from '@/components/policies/EditPolicyModal';
+import PolicyVersionHistory from '@/components/policies/PolicyVersionHistory';
+import PolicyApprovalWorkflow from '@/components/policies/PolicyApprovalWorkflow';
+import { usePolicies } from '@/hooks/usePolicies';
+import EditPolicyModal from '@/components/policies/EditPolicyModal';
+import PolicyVersionHistory from '@/components/policies/PolicyVersionHistory';
+import PolicyApprovalWorkflow from '@/components/policies/PolicyApprovalWorkflow';
+import { usePolicies } from '@/hooks/usePolicies';
 
 const PoliciesLibrary = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const { policies: realPolicies } = usePolicies();
+  const { policies: realPolicies, loading } = usePolicies();
 
   const policiesData = [
     {
