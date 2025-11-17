@@ -3,6 +3,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import AvailableIntegrations from '@/components/integrations/AvailableIntegrations';
 import ConnectedIntegrations from '@/components/integrations/ConnectedIntegrations';
 import IntegrationsStats from '@/components/integrations/IntegrationsStats';
+import SecretsManagement from '@/components/integrations/SecretsManagement';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const IntegrationsHub = () => {
   return (
@@ -26,11 +28,26 @@ const IntegrationsHub = () => {
           {/* Integration Stats */}
           <IntegrationsStats />
 
-          {/* Connected Integrations */}
-          <ConnectedIntegrations />
+          {/* Tabs for different sections */}
+          <Tabs defaultValue="available" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="available">Integrações Disponíveis</TabsTrigger>
+              <TabsTrigger value="connected">Conectadas</TabsTrigger>
+              <TabsTrigger value="secrets">🔐 Secrets</TabsTrigger>
+            </TabsList>
 
-          {/* Available Integrations */}
-          <AvailableIntegrations />
+            <TabsContent value="available" className="mt-6">
+              <AvailableIntegrations />
+            </TabsContent>
+
+            <TabsContent value="connected" className="mt-6">
+              <ConnectedIntegrations />
+            </TabsContent>
+
+            <TabsContent value="secrets" className="mt-6">
+              <SecretsManagement />
+            </TabsContent>
+          </Tabs>
         </main>
       </div>
     </div>
