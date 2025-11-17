@@ -8,6 +8,7 @@ import GoogleWorkspaceOAuth from '@/components/integrations/GoogleWorkspaceOAuth
 import IntegrationDemo from '@/components/integrations/IntegrationDemo';
 import WebhookMonitor from '@/components/integrations/WebhookMonitor';
 import IntegrationOnboarding from '@/components/integrations/IntegrationOnboarding';
+import GoogleApiTester from '@/components/integrations/GoogleApiTester';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -35,16 +36,16 @@ const IntegrationsHub = () => {
 
           {/* Tabs for different sections */}
           <Tabs defaultValue="onboarding" className="w-full">
-            <TabsList className="grid w-full grid-cols-8">
+            <TabsList className="grid w-full grid-cols-9">
               <TabsTrigger value="onboarding">📚 Guia</TabsTrigger>
               <TabsTrigger value="oauth">OAuth 2.0</TabsTrigger>
+              <TabsTrigger value="api">🔌 API Test</TabsTrigger>
               <TabsTrigger value="demo">Demo API</TabsTrigger>
               <TabsTrigger value="testing">🧪 Testes</TabsTrigger>
               <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
               <TabsTrigger value="audit">📋 Auditoria</TabsTrigger>
               <TabsTrigger value="available">Disponíveis</TabsTrigger>
               <TabsTrigger value="connected">Conectadas</TabsTrigger>
-              <TabsTrigger value="secrets">🔐 Secrets</TabsTrigger>
             </TabsList>
 
             <TabsContent value="onboarding" className="mt-6">
@@ -53,6 +54,10 @@ const IntegrationsHub = () => {
 
             <TabsContent value="oauth" className="mt-6">
               <GoogleWorkspaceOAuth />
+            </TabsContent>
+
+            <TabsContent value="api" className="mt-6">
+              <GoogleApiTester />
             </TabsContent>
 
             <TabsContent value="demo" className="mt-6">
@@ -77,10 +82,6 @@ const IntegrationsHub = () => {
 
             <TabsContent value="connected" className="mt-6">
               <ConnectedIntegrations />
-            </TabsContent>
-
-            <TabsContent value="secrets" className="mt-6">
-              <SecretsManagement />
             </TabsContent>
           </Tabs>
         </main>
