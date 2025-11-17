@@ -4,6 +4,7 @@ import AvailableIntegrations from '@/components/integrations/AvailableIntegratio
 import ConnectedIntegrations from '@/components/integrations/ConnectedIntegrations';
 import IntegrationsStats from '@/components/integrations/IntegrationsStats';
 import SecretsManagement from '@/components/integrations/SecretsManagement';
+import GoogleWorkspaceOAuth from '@/components/integrations/GoogleWorkspaceOAuth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const IntegrationsHub = () => {
@@ -29,12 +30,17 @@ const IntegrationsHub = () => {
           <IntegrationsStats />
 
           {/* Tabs for different sections */}
-          <Tabs defaultValue="available" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="available">Integrações Disponíveis</TabsTrigger>
+          <Tabs defaultValue="oauth" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="oauth">OAuth 2.0</TabsTrigger>
+              <TabsTrigger value="available">Disponíveis</TabsTrigger>
               <TabsTrigger value="connected">Conectadas</TabsTrigger>
               <TabsTrigger value="secrets">🔐 Secrets</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="oauth" className="mt-6">
+              <GoogleWorkspaceOAuth />
+            </TabsContent>
 
             <TabsContent value="available" className="mt-6">
               <AvailableIntegrations />
