@@ -174,6 +174,18 @@ serve(async (req) => {
       throw new Error(`Failed to update tokens: ${updateError.message}`);
     }
 
+    // Log successful refresh to audit trail
+    await supabase.from('audit_logs').insert({
+      user_id: user.id,
+      action: 'token.refreshed',
+      resource_type: 'oauth_token',
+      resource_id: 'google_workspace',
+      new_data: { 
+        expires_at: expiresAt.toISOString(),
+        expires_in: tokens.expires_in 
+      },
+    });
+
     console.log('Google OAuth Refresh: Tokens updated successfully');
 
     return new Response(
