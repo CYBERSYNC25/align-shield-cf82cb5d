@@ -36,6 +36,7 @@ const GoogleWorkspaceOAuth = () => {
   const [tokenData, setTokenData] = useState<OAuthToken | null>(null);
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<'idle' | 'authorizing' | 'complete'>('idle');
+  const [autoRefreshing, setAutoRefreshing] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -83,7 +84,10 @@ const GoogleWorkspaceOAuth = () => {
 
       if (diff <= 0) {
         setTimeUntilExpiry('Expirado');
-        if (connectionStatus === 'connected') handleRefreshToken();
+        // Tenta renovar automaticamente apenas uma vez
+        if (connectionStatus === 'connected' && !autoRefreshing) {
+          handleAutoRefresh();
+        }
       } else {
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -145,6 +149,37 @@ const GoogleWorkspaceOAuth = () => {
         variant: 'destructive'
       });
       setLoading(false);
+    }
+  };
+
+  // Renovação automática quando token expira
+  const handleAutoRefresh = async () => {
+    setAutoRefreshing(true);
+    try {
+      console.log('[AutoRefresh] Tentando renovar token automaticamente...');
+      
+      const { data, error } = await supabase.functions.invoke('google-oauth-refresh');
+      
+      if (error) throw error;
+      
+      if (data.success) {
+        toast({
+          title: '🔄 Token renovado automaticamente',
+          description: `Conexão restabelecida. Novo token válido até ${new Date(data.expiresAt).toLocaleString('pt-BR')}`,
+        });
+        await checkConnectionStatus();
+      } else {
+        throw new Error(data.error || 'Falha ao renovar token');
+      }
+    } catch (err: any) {
+      console.error('[AutoRefresh] Erro:', err);
+      toast({
+        title: '⚠️ Falha na renovação automática',
+        description: 'Por favor, clique em "Renovar Token" manualmente ou reconecte a integração.',
+        variant: 'destructive',
+      });
+    } finally {
+      setAutoRefreshing(false);
     }
   };
 

@@ -10,6 +10,7 @@ import WebhookMonitor from '@/components/integrations/WebhookMonitor';
 import IntegrationOnboarding from '@/components/integrations/IntegrationOnboarding';
 import GoogleApiTester from '@/components/integrations/GoogleApiTester';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
+import { GoogleConnectionStatus } from '@/components/integrations/GoogleConnectionStatus';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const IntegrationsHub = () => {
@@ -53,7 +54,10 @@ const IntegrationsHub = () => {
             </TabsContent>
 
             <TabsContent value="oauth" className="mt-6">
-              <GoogleWorkspaceOAuth />
+              <GoogleConnectionStatus />
+              <div className="mt-6">
+                <GoogleWorkspaceOAuth />
+              </div>
             </TabsContent>
 
             <TabsContent value="api" className="mt-6">

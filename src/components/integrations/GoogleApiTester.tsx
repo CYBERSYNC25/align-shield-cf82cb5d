@@ -70,6 +70,29 @@ const GoogleApiTester = () => {
 
   return (
     <div className="space-y-6">
+      {/* Instruções de uso */}
+      <Alert>
+        <CheckCircle className="h-4 w-4" />
+        <AlertTitle>Como testar a integração</AlertTitle>
+        <AlertDescription className="space-y-2 mt-2">
+          <p>
+            <strong>1. Certifique-se de estar conectado:</strong> Sua conta Google Workspace deve estar autorizada na aba "🔐 OAuth 2.0".
+          </p>
+          <p>
+            <strong>2. Escolha um endpoint:</strong> Cada aba representa um tipo de consulta diferente.
+          </p>
+          <p>
+            <strong>3. Configure parâmetros:</strong> Ajuste filtros como domínio, número de resultados, etc.
+          </p>
+          <p>
+            <strong>4. Execute:</strong> Clique no botão para fazer a requisição e visualize os resultados.
+          </p>
+          <p className="text-xs text-muted-foreground mt-2">
+            💡 <strong>Dica:</strong> Se receber erro de token expirado, a renovação será feita automaticamente. Aguarde alguns segundos e tente novamente.
+          </p>
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
           <CardTitle>🧪 Testador de API Google Workspace</CardTitle>
