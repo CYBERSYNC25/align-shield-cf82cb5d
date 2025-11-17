@@ -123,30 +123,61 @@ export const useGoogleWorkspaceApi = () => {
 
   /**
    * Chama a edge function google-workspace-sync
-   * Trata erros automaticamente e exibe toasts
+   * Trata erros automaticamente e exibe toasts apropriados
+   * 
+   * @param action - Nome da ação a executar (get_user_profile, list_users, etc)
+   * @param params - Parâmetros específicos da ação
+   * 
+   * @example Estrutura da requisição:
+   * {
+   *   action: "list_users",
+   *   params: { maxResults: 50, domain: "empresa.com" }
+   * }
+   * 
+   * @example Resposta de sucesso:
+   * {
+   *   success: true,
+   *   data: {
+   *     users: [...],
+   *     metadata: { totalCount: 42, syncedAt: "...", nextPageToken: null }
+   *   }
+   * }
+   * 
+   * @example Resposta de erro:
+   * {
+   *   success: false,
+   *   error: "Token expirado...",
+   *   code: "TOKEN_EXPIRED"
+   * }
+   * 
+   * @returns Dados da API ou null em caso de erro
    */
   const callAPI = async (action: string, params?: any): Promise<any> => {
+    const startTime = Date.now();
     setLoading(true);
     setError(null);
 
     try {
-      console.log(`[GoogleAPI] Calling ${action}`, params);
+      console.log(`[GoogleAPI] Calling ${action}`, params || {});
 
       const { data, error: functionError } = await supabase.functions.invoke('google-workspace-sync', {
         body: { action, params: params || {} }
       });
 
+      const elapsed = Date.now() - startTime;
+
       if (functionError) {
-        console.error('[GoogleAPI] Function error:', functionError);
+        console.error(`[GoogleAPI] Function error (${elapsed}ms):`, functionError);
         throw new Error(functionError.message);
       }
 
       if (!data.success) {
-        console.error('[GoogleAPI] API error:', data);
+        console.error(`[GoogleAPI] API error (${elapsed}ms):`, data);
         
         // Tratamento específico por código de erro
         switch (data.code) {
           case 'TOKEN_EXPIRED':
+            console.warn('[GoogleAPI] Token expirado, renovação necessária');
             toast({
               title: '🔑 Token expirado',
               description: 'Seu token OAuth expirou. Clique em "Renovar Token" na aba OAuth 2.0.',
@@ -155,6 +186,7 @@ export const useGoogleWorkspaceApi = () => {
             break;
           
           case 'FORBIDDEN':
+            console.error('[GoogleAPI] Sem permissão:', data.error);
             toast({
               title: '⛔ Sem permissão',
               description: data.error,
@@ -163,6 +195,7 @@ export const useGoogleWorkspaceApi = () => {
             break;
           
           case 'RATE_LIMIT':
+            console.warn('[GoogleAPI] Rate limit atingido');
             toast({
               title: '⏳ Muitas requisições',
               description: 'Aguarde alguns minutos antes de tentar novamente.',
@@ -171,6 +204,7 @@ export const useGoogleWorkspaceApi = () => {
             break;
           
           case 'SERVER_ERROR':
+            console.error('[GoogleAPI] Erro no servidor Google:', data.error);
             toast({
               title: '🔧 Erro no servidor',
               description: 'Erro temporário do Google. Tente novamente em alguns instantes.',
@@ -179,6 +213,7 @@ export const useGoogleWorkspaceApi = () => {
             break;
           
           default:
+            console.error('[GoogleAPI] Erro desconhecido:', data);
             toast({
               title: '❌ Erro na requisição',
               description: data.error || 'Falha ao buscar dados do Google Workspace',
@@ -189,13 +224,18 @@ export const useGoogleWorkspaceApi = () => {
         throw new Error(data.error);
       }
 
-      console.log('[GoogleAPI] Success:', data);
+      console.log(`[GoogleAPI] Success (${elapsed}ms):`, {
+        action,
+        data_preview: Object.keys(data.data || {}).join(', ')
+      });
+      
       return data.data;
 
     } catch (err) {
+      const elapsed = Date.now() - startTime;
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
       setError(errorMessage);
-      console.error('[GoogleAPI] Exception:', err);
+      console.error(`[GoogleAPI] Exception (${elapsed}ms):`, err);
       return null;
     } finally {
       setLoading(false);
