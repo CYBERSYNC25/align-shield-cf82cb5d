@@ -83,15 +83,12 @@ serve(async (req) => {
       );
     }
 
-    // Criar cliente Supabase com o token do usuário
-    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey, {
-      global: {
-        headers: { authorization: authHeader }
-      }
-    });
+    // Criar cliente Supabase usando o token do usuário (não service role)
+    const token = authHeader.replace('Bearer ', '');
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verificar se o usuário está autenticado
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    // Verificar o usuário usando o JWT token
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
     if (userError || !user) {
       console.error('Google OAuth: Invalid user token', userError);
       return new Response(
