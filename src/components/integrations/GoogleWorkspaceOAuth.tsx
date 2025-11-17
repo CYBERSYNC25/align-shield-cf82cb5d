@@ -159,6 +159,22 @@ const GoogleWorkspaceOAuth = () => {
       setCurrentStep('authorizing');
       
       console.log('[OAuth] Iniciando fluxo de conexão');
+
+      // Verificar autenticação antes de chamar a edge function
+      if (!user) {
+        console.error('[OAuth] Usuário não autenticado');
+        throw new Error('Você precisa estar logado para conectar integrações.');
+      }
+
+      // Verificar se a sessão está válida
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData.session) {
+        console.error('[OAuth] Sessão inválida ou expirada:', sessionError);
+        throw new Error('Sua sessão expirou. Por favor, faça login novamente.');
+      }
+
+      console.log('[OAuth] Usuário autenticado, prosseguindo...');
       toast({ title: '🚀 Iniciando conexão', description: 'Gerando URL de autorização...' });
 
       const { data, error } = await supabase.functions.invoke('google-oauth-start', { body: {} });
