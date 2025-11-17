@@ -127,21 +127,61 @@ const GoogleWorkspaceOAuth = () => {
     }
   };
 
+  /**
+   * Inicia o fluxo de autenticação OAuth 2.0 com Google
+   * 
+   * Chama a edge function google-oauth-start que:
+   * 1. Valida credenciais (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET)
+   * 2. Gera state para proteção CSRF
+   * 3. Cria URL de autorização do Google com scopes necessários
+   * 4. Retorna URL para redirecionamento
+   * 
+   * @example Fluxo completo:
+   * Frontend -> google-oauth-start -> Google Consent Screen
+   * 
+   * URL gerada tem formato:
+   * https://accounts.google.com/o/oauth2/v2/auth?
+   *   client_id=xxx.apps.googleusercontent.com&
+   *   redirect_uri=https://project.supabase.co/functions/v1/google-oauth-callback&
+   *   response_type=code&
+   *   scope=openid email profile admin.directory.user.readonly&
+   *   state=eyJ1c2VySWQ...&
+   *   access_type=offline&
+   *   prompt=consent
+   * 
+   * @throws {Error} Se credenciais não estiverem configuradas
+   */
   const handleConnect = async () => {
+    const startTime = Date.now();
+    
     try {
       setLoading(true);
       setCurrentStep('authorizing');
       
+      console.log('[OAuth] Iniciando fluxo de conexão');
       toast({ title: '🚀 Iniciando conexão', description: 'Gerando URL de autorização...' });
 
       const { data, error } = await supabase.functions.invoke('google-oauth-start', { body: {} });
+      const elapsed = Date.now() - startTime;
 
-      if (error || data.error) throw new Error(error?.message || data.error);
+      if (error || data.error) {
+        console.error(`[OAuth] Erro ao gerar URL (${elapsed}ms):`, error || data.error);
+        throw new Error(error?.message || data.error);
+      }
 
+      console.log(`[OAuth] URL gerada com sucesso (${elapsed}ms)`);
+      console.log('[OAuth] Auth URL preview:', data.authUrl.substring(0, 100) + '...');
+      
       toast({ title: '✅ URL gerada', description: 'Redirecionando para o Google...' });
       
-      setTimeout(() => { window.location.href = data.authUrl; }, 1000);
+      setTimeout(() => { 
+        console.log('[OAuth] Redirecionando para Google...');
+        window.location.href = data.authUrl; 
+      }, 1000);
     } catch (error) {
+      const elapsed = Date.now() - startTime;
+      console.error(`[OAuth] Exceção capturada (${elapsed}ms):`, error);
+      
       setCurrentStep('idle');
       toast({
         title: '❌ Erro ao conectar',
@@ -183,17 +223,61 @@ const GoogleWorkspaceOAuth = () => {
     }
   };
 
+  /**
+   * Renovação manual de token pelo usuário
+   * 
+   * Permite ao usuário forçar a renovação do token sem esperar expirar.
+   * Útil quando há suspeita de problemas ou para testar o fluxo de refresh.
+   * 
+   * @example Fluxo:
+   * 1. Usuário clica no botão "Renovar Token"
+   * 2. Chama google-oauth-refresh edge function
+   * 3. Edge function busca refresh_token do banco
+   * 4. Faz POST para https://oauth2.googleapis.com/token com grant_type=refresh_token
+   * 5. Google retorna novo access_token (válido por 1 hora)
+   * 6. Atualiza banco de dados com novo token e nova data de expiração
+   * 7. Frontend recebe confirmação e atualiza estado
+   * 
+   * @example Resposta de sucesso:
+   * {
+   *   success: true,
+   *   accessToken: "ya29.new_token...",
+   *   expiresAt: "2025-11-17T22:00:00Z"
+   * }
+   * 
+   * @example Resposta de erro:
+   * {
+   *   success: false,
+   *   error: "Invalid refresh token. Please reconnect your account.",
+   *   code: "INVALID_GRANT"
+   * }
+   */
   const handleRefreshToken = async () => {
+    const startTime = Date.now();
+    
     try {
+      console.log('[OAuth] Renovação manual iniciada pelo usuário');
       toast({ title: '🔄 Renovando token', description: 'Solicitando novo access_token...' });
 
       const { data, error } = await supabase.functions.invoke('google-oauth-refresh', { body: {} });
+      const elapsed = Date.now() - startTime;
 
-      if (error || data.error) throw new Error(error?.message || data.error);
+      if (error || data.error) {
+        console.error(`[OAuth] Erro na renovação manual (${elapsed}ms):`, error || data.error);
+        throw new Error(error?.message || data.error);
+      }
 
-      toast({ title: '✅ Token renovado', description: `Válido até ${new Date(data.expires_at).toLocaleString('pt-BR')}` });
+      console.log(`[OAuth] Token renovado manualmente com sucesso (${elapsed}ms):`, {
+        expires_at: data.expiresAt,
+        token_preview: `${data.accessToken?.substring(0, 15)}...`
+      });
+
+      toast({ title: '✅ Token renovado', description: `Válido até ${new Date(data.expiresAt).toLocaleString('pt-BR')}` });
       await checkConnectionStatus();
     } catch (error) {
+      const elapsed = Date.now() - startTime;
+      console.error(`[OAuth] Exceção na renovação manual (${elapsed}ms):`, error);
+      
       toast({
         title: '❌ Erro ao renovar',
         description: error instanceof Error ? error.message : 'Falha ao renovar token',
@@ -202,17 +286,43 @@ const GoogleWorkspaceOAuth = () => {
     }
   };
 
+  /**
+   * Revoga o acesso do aplicativo à conta Google do usuário
+   * 
+   * Remove completamente a integração:
+   * 1. Revoga o token no Google (via API de revogação)
+   * 2. Remove tokens do banco de dados
+   * 3. Cria notificação de desconexão
+   * 
+   * @example Após revogação:
+   * - Usuário precisará autorizar novamente para reconectar
+   * - Todos os access_tokens e refresh_tokens se tornam inválidos
+   * - Histórico de sincronização é mantido (apenas tokens são removidos)
+   * 
+   * @example Requisição para Google:
+   * POST https://oauth2.googleapis.com/revoke
+   * Content-Type: application/x-www-form-urlencoded
+   * token=1//0gB3k9x...
+   */
   const handleRevoke = async () => {
-    if (!confirm('Deseja desconectar o Google Workspace?')) return;
+    if (!confirm('Deseja realmente desconectar o Google Workspace? Você precisará autorizar novamente para reconectar.')) return;
+    
+    const startTime = Date.now();
     
     try {
       setLoading(true);
+      console.log('[OAuth] Iniciando revogação de acesso');
       toast({ title: '🔓 Revogando acesso', description: 'Removendo permissões...' });
 
       const { data, error } = await supabase.functions.invoke('google-oauth-revoke', { body: {} });
+      const elapsed = Date.now() - startTime;
 
-      if (error || data.error) throw new Error(error?.message || data.error);
+      if (error || data.error) {
+        console.error(`[OAuth] Erro na revogação (${elapsed}ms):`, error || data.error);
+        throw new Error(error?.message || data.error);
+      }
 
+      console.log(`[OAuth] Acesso revogado com sucesso (${elapsed}ms)`);
       toast({ title: '✅ Desconectado', description: 'Integração removida com sucesso.' });
       setConnectionStatus('disconnected');
       setTokenData(null);

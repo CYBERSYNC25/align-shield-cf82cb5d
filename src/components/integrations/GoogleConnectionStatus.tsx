@@ -45,13 +45,38 @@ export const GoogleConnectionStatus = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Verifica status da conexão
+  /**
+   * Verifica o status atual da conexão com Google Workspace
+   * 
+   * Consulta a tabela integration_oauth_tokens para verificar se existe
+   * um token válido para o usuário atual.
+   * 
+   * @example
+   * // Retorna status 'connected' se encontrar token válido:
+   * {
+   *   id: "uuid",
+   *   user_id: "uuid",
+   *   integration_name: "google_workspace",
+   *   access_token: "ya29.xxx...",
+   *   refresh_token: "1//xxx...",
+   *   expires_at: "2025-11-18T20:30:00Z",
+   *   metadata: { email: "user@domain.com", domain: "domain.com" }
+   * }
+   * 
+   * @throws {Error} Se houver erro na consulta ao banco
+   */
   const checkStatus = async () => {
+    const startTime = Date.now();
+    console.log('[GoogleConnectionStatus] Verificando status da conexão...');
+    
     try {
       if (!user) {
+        console.log('[GoogleConnectionStatus] Usuário não autenticado');
         setStatus('disconnected');
         return;
       }
+
+      console.log(`[GoogleConnectionStatus] Buscando token para user_id: ${user.id}`);
 
       const { data, error } = await supabase
         .from('integration_oauth_tokens')
@@ -60,15 +85,30 @@ export const GoogleConnectionStatus = () => {
         .eq('integration_name', 'google_workspace')
         .single();
 
+      const elapsed = Date.now() - startTime;
+
       if (error || !data) {
+        console.log(`[GoogleConnectionStatus] Token não encontrado (${elapsed}ms)`, error);
         setStatus('disconnected');
         setTokenInfo(null);
       } else {
+        const expiresAt = new Date(data.expires_at);
+        const isExpired = expiresAt.getTime() < Date.now();
+        
+        console.log(`[GoogleConnectionStatus] Token encontrado (${elapsed}ms):`, {
+          id: data.id,
+          expires_at: data.expires_at,
+          is_expired: isExpired,
+          email: (data.metadata as any)?.email,
+          domain: (data.metadata as any)?.domain
+        });
+        
         setStatus('connected');
         setTokenInfo(data);
       }
     } catch (err) {
-      console.error('Erro ao verificar status:', err);
+      const elapsed = Date.now() - startTime;
+      console.error(`[GoogleConnectionStatus] Erro ao verificar status (${elapsed}ms):`, err);
       setStatus('disconnected');
     }
   };
@@ -106,25 +146,60 @@ export const GoogleConnectionStatus = () => {
     return () => clearInterval(interval);
   }, [tokenInfo, status, autoRefreshing]);
 
-  // Renovação automática de token
+  /**
+   * Renovação automática de token quando expira
+   * 
+   * Chamado automaticamente quando o token expira ou está prestes a expirar.
+   * Usa o refresh_token para obter um novo access_token sem intervenção do usuário.
+   * 
+   * @example Fluxo de renovação:
+   * 1. Detecta token expirado (expires_at < now())
+   * 2. Chama edge function google-oauth-refresh
+   * 3. Edge function usa refresh_token para obter novo access_token
+   * 4. Atualiza banco de dados com novos tokens
+   * 5. Retorna:
+   * {
+   *   success: true,
+   *   accessToken: "ya29.new_token...",
+   *   expiresAt: "2025-11-18T21:30:00Z"
+   * }
+   * 
+   * @throws {Error} Se refresh_token for inválido ou expirado
+   */
   const handleAutoRefresh = async () => {
     setAutoRefreshing(true);
+    const startTime = Date.now();
+    
     try {
-      console.log('[AutoRefresh] Tentando renovar token automaticamente...');
+      console.log('[AutoRefresh] Iniciando renovação automática de token');
+      console.log('[AutoRefresh] Token atual expira em:', tokenInfo?.expires_at);
       
       const { data, error } = await supabase.functions.invoke('google-oauth-refresh');
+      const elapsed = Date.now() - startTime;
       
-      if (error) throw error;
+      if (error) {
+        console.error(`[AutoRefresh] Erro na chamada (${elapsed}ms):`, error);
+        throw error;
+      }
       
       if (data.success) {
+        console.log(`[AutoRefresh] Token renovado com sucesso (${elapsed}ms):`, {
+          new_expires_at: data.expiresAt,
+          token_preview: `${data.accessToken?.substring(0, 20)}...`
+        });
+        
         toast({
           title: '🔄 Token renovado automaticamente',
           description: `Novo token válido até ${new Date(data.expiresAt).toLocaleString('pt-BR')}`,
         });
         await checkStatus();
+      } else {
+        console.error(`[AutoRefresh] Renovação falhou (${elapsed}ms):`, data.error);
+        throw new Error(data.error || 'Falha desconhecida na renovação');
       }
     } catch (err) {
-      console.error('[AutoRefresh] Erro:', err);
+      const elapsed = Date.now() - startTime;
+      console.error(`[AutoRefresh] Exceção capturada (${elapsed}ms):`, err);
       toast({
         title: '⚠️ Falha na renovação automática',
         description: 'Por favor, reconecte manualmente a integração.',
