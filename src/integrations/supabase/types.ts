@@ -609,6 +609,87 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_status: {
+        Row: {
+          created_at: string
+          failed_webhooks: number | null
+          health_score: number | null
+          id: string
+          integration_name: string
+          last_sync_at: string | null
+          last_webhook_at: string | null
+          metadata: Json | null
+          status: string
+          total_webhooks: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          failed_webhooks?: number | null
+          health_score?: number | null
+          id?: string
+          integration_name: string
+          last_sync_at?: string | null
+          last_webhook_at?: string | null
+          metadata?: Json | null
+          status?: string
+          total_webhooks?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          failed_webhooks?: number | null
+          health_score?: number | null
+          id?: string
+          integration_name?: string
+          last_sync_at?: string | null
+          last_webhook_at?: string | null
+          metadata?: Json | null
+          status?: string
+          total_webhooks?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      integration_webhooks: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          integration_name: string
+          payload: Json
+          processed_at: string | null
+          retry_count: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          integration_name: string
+          payload: Json
+          processed_at?: string | null
+          retry_count?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          integration_name?: string
+          payload?: Json
+          processed_at?: string | null
+          retry_count?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           action_label: string | null
