@@ -8,6 +8,7 @@ import GoogleWorkspaceOAuth from '@/components/integrations/GoogleWorkspaceOAuth
 import IntegrationDemo from '@/components/integrations/IntegrationDemo';
 import WebhookMonitor from '@/components/integrations/WebhookMonitor';
 import IntegrationOnboarding from '@/components/integrations/IntegrationOnboarding';
+import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const IntegrationsHub = () => {
@@ -34,11 +35,13 @@ const IntegrationsHub = () => {
 
           {/* Tabs for different sections */}
           <Tabs defaultValue="onboarding" className="w-full">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="onboarding">📚 Guia</TabsTrigger>
               <TabsTrigger value="oauth">OAuth 2.0</TabsTrigger>
               <TabsTrigger value="demo">Demo API</TabsTrigger>
+              <TabsTrigger value="testing">🧪 Testes</TabsTrigger>
               <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+              <TabsTrigger value="audit">📋 Auditoria</TabsTrigger>
               <TabsTrigger value="available">Disponíveis</TabsTrigger>
               <TabsTrigger value="connected">Conectadas</TabsTrigger>
               <TabsTrigger value="secrets">🔐 Secrets</TabsTrigger>
@@ -56,8 +59,16 @@ const IntegrationsHub = () => {
               <IntegrationDemo />
             </TabsContent>
 
+            <TabsContent value="testing" className="mt-6">
+              <IntegrationDemo />
+            </TabsContent>
+
             <TabsContent value="webhooks" className="mt-6">
               <WebhookMonitor />
+            </TabsContent>
+
+            <TabsContent value="audit" className="mt-6">
+              <AuditLogsViewer />
             </TabsContent>
 
             <TabsContent value="available" className="mt-6">
