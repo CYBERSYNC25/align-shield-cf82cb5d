@@ -1,1 +1,25 @@
 project_id = "ofbyxnpprwwuieabwhdo"
+
+[functions.google-oauth-start]
+verify_jwt = true
+
+[functions.google-oauth-callback]
+verify_jwt = false
+
+[functions.google-oauth-refresh]
+verify_jwt = true
+
+[functions.google-oauth-revoke]
+verify_jwt = true
+
+[functions.aws-integration]
+verify_jwt = true
+
+[functions.azure-integration]
+verify_jwt = true
+
+[functions.okta-integration]
+verify_jwt = true
+
+[functions.google-workspace-sync]
+verify_jwt = true
