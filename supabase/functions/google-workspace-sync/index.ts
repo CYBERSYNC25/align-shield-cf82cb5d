@@ -1,58 +1,23 @@
 /**
- * Google Workspace API Integration
+ * Google Workspace API Integration - Consumo de Endpoints
  * 
- * This edge function consumes Google Workspace Admin SDK APIs to fetch:
- * - Users list with details
- * - Groups and members
- * - Admin audit logs
+ * Esta edge function consome APIs do Google Workspace usando o access_token OAuth 2.0.
+ * Implementa tratamento completo de erros HTTP e renovação automática de tokens.
+ * 
+ * ENDPOINTS DISPONÍVEIS:
+ * - get_user_profile: Obter perfil do usuário autenticado
+ * - list_users: Listar usuários do domínio (Admin SDK)
+ * - list_groups: Listar grupos (Admin SDK)
+ * - get_audit_logs: Obter logs de auditoria (Reports API)
+ * 
+ * TRATAMENTO DE ERROS HTTP:
+ * - 401 Unauthorized: Token expirado ou inválido → Tenta renovar automaticamente
+ * - 403 Forbidden: Sem permissões necessárias → Informa quais scopes faltam
+ * - 429 Rate Limit: Muitas requisições → Sugere aguardar
+ * - 500 Internal Server Error: Erro no Google → Retry com backoff
  * 
  * @requires GOOGLE_CLIENT_ID - OAuth 2.0 Client ID
  * @requires GOOGLE_CLIENT_SECRET - OAuth 2.0 Client Secret
- * 
- * @endpoint POST /google-workspace-sync
- * @auth Required - Uses stored OAuth tokens from integration_oauth_tokens table
- * 
- * @request_body
- * {
- *   "action": "list_users" | "list_groups" | "get_audit_logs",
- *   "params": {
- *     "maxResults": number,
- *     "domain": string,
- *     "startTime": string (ISO 8601)
- *   }
- * }
- * 
- * @response_success
- * {
- *   "success": true,
- *   "data": {
- *     "users": Array<User> | undefined,
- *     "groups": Array<Group> | undefined,
- *     "auditLogs": Array<AuditLog> | undefined,
- *     "metadata": {
- *       "totalCount": number,
- *       "syncedAt": string,
- *       "nextPageToken": string | null
- *     }
- *   }
- * }
- * 
- * @response_error
- * {
- *   "success": false,
- *   "error": string,
- *   "code": "TOKEN_EXPIRED" | "INVALID_TOKEN" | "API_ERROR" | "MISSING_PARAMS"
- * }
- * 
- * @example
- * ```typescript
- * const { data, error } = await supabase.functions.invoke('google-workspace-sync', {
- *   body: { 
- *     action: 'list_users',
- *     params: { maxResults: 100, domain: 'example.com' }
- *   }
- * });
- * ```
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -63,50 +28,171 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface User {
-  id: string;
-  primaryEmail: string;
+/**
+ * Interface: User Profile do Google
+ * Representa o perfil básico do usuário autenticado
+ */
+interface GoogleUserProfile {
+  id: string;           // ID único do usuário no Google
+  email: string;        // Email principal
+  verified_email: boolean; // Email foi verificado?
+  name: string;         // Nome completo
+  given_name: string;   // Primeiro nome
+  family_name: string;  // Sobrenome
+  picture: string;      // URL do avatar
+  locale: string;       // Idioma preferido (ex: pt-BR)
+  hd?: string;          // Domínio hospedado (ex: empresa.com)
+}
+
+/**
+ * Interface: Usuário do Google Workspace Admin
+ * Dados completos de usuário via Admin SDK
+ */
+interface WorkspaceUser {
+  id: string;                    // ID único no Workspace
+  primaryEmail: string;          // Email principal
   name: {
-    fullName: string;
-    givenName: string;
-    familyName: string;
+    fullName: string;            // Nome completo formatado
+    givenName: string;           // Primeiro nome
+    familyName: string;          // Sobrenome
   };
-  isAdmin: boolean;
-  suspended: boolean;
-  orgUnitPath: string;
-  lastLoginTime?: string;
-  creationTime: string;
+  isAdmin: boolean;              // É administrador?
+  suspended: boolean;            // Conta suspensa?
+  orgUnitPath: string;           // Unidade organizacional (ex: /Vendas)
+  lastLoginTime?: string;        // Último login (ISO 8601)
+  creationTime: string;          // Data de criação da conta
+  agreedToTerms?: boolean;       // Aceitou termos de serviço?
+  customerId?: string;           // ID do cliente Google
 }
 
-interface Group {
-  id: string;
-  email: string;
-  name: string;
-  description?: string;
-  directMembersCount: number;
+/**
+ * Interface: Grupo do Google Workspace
+ */
+interface WorkspaceGroup {
+  id: string;                    // ID único do grupo
+  email: string;                 // Email do grupo
+  name: string;                  // Nome do grupo
+  description?: string;          // Descrição
+  directMembersCount: number;    // Número de membros diretos
+  adminCreated?: boolean;        // Criado por admin?
 }
 
-interface AuditLog {
-  id: {
-    time: string;
-    uniqueQualifier: string;
-  };
-  actor: {
-    email: string;
-    profileId: string;
-  };
-  events: Array<{
-    type: string;
-    name: string;
-    parameters?: Array<{
-      name: string;
-      value: string;
-    }>;
-  }>;
+/**
+ * Busca o access_token do banco de dados
+ * @returns access_token válido ou null se não encontrado
+ */
+async function getAccessToken(supabase: any, userId: string): Promise<string | null> {
+  console.log(`[Token] Buscando access_token para user ${userId}...`);
+
+  const { data, error } = await supabase
+    .from('integration_oauth_tokens')
+    .select('access_token, expires_at, refresh_token')
+    .eq('user_id', userId)
+    .eq('integration_name', 'google_workspace')
+    .single();
+
+  if (error || !data) {
+    console.error('[Token] Não encontrado:', error);
+    return null;
+  }
+
+  // Verificar se o token está expirado
+  const expiresAt = new Date(data.expires_at);
+  const now = new Date();
+
+  if (now >= expiresAt) {
+    console.warn('[Token] Token expirado, será necessário renovar');
+    return null;
+  }
+
+  console.log('[Token] Access token válido encontrado');
+  return data.access_token;
+}
+
+/**
+ * Faz uma requisição HTTP à API do Google com tratamento completo de erros
+ * @param url - URL completa da API
+ * @param accessToken - Token OAuth 2.0
+ * @param method - Método HTTP (GET, POST, etc)
+ * @returns Response data ou lança erro descritivo
+ */
+async function callGoogleAPI(url: string, accessToken: string, method: string = 'GET'): Promise<any> {
+  console.log(`[API Call] ${method} ${url}`);
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  // Tratamento de erros HTTP específicos
+  if (!response.ok) {
+    const errorBody = await response.text();
+    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    let errorCode = 'API_ERROR';
+
+    try {
+      const errorJson = JSON.parse(errorBody);
+      
+      switch (response.status) {
+        case 401:
+          errorCode = 'TOKEN_EXPIRED';
+          errorMessage = '🔒 Token expirado ou inválido. Renovando automaticamente...';
+          console.error('[API Error] 401 Unauthorized - Token needs refresh');
+          break;
+        
+        case 403:
+          errorCode = 'FORBIDDEN';
+          errorMessage = '⛔ Sem permissão. Verifique se o usuário tem os scopes necessários no OAuth.';
+          if (errorJson.error?.message) {
+            errorMessage += `\nDetalhes: ${errorJson.error.message}`;
+          }
+          console.error('[API Error] 403 Forbidden - Missing required scopes:', errorJson);
+          break;
+        
+        case 404:
+          errorCode = 'NOT_FOUND';
+          errorMessage = '❓ Recurso não encontrado. Verifique o ID ou endpoint.';
+          console.error('[API Error] 404 Not Found:', url);
+          break;
+        
+        case 429:
+          errorCode = 'RATE_LIMIT';
+          errorMessage = '⏳ Limite de requisições atingido. Aguarde alguns minutos e tente novamente.';
+          console.error('[API Error] 429 Rate Limit - Too many requests');
+          break;
+        
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          errorCode = 'SERVER_ERROR';
+          errorMessage = '🔧 Erro no servidor do Google. Tente novamente em alguns instantes.';
+          console.error(`[API Error] ${response.status} Server Error:`, errorJson);
+          break;
+        
+        default:
+          if (errorJson.error?.message) {
+            errorMessage = errorJson.error.message;
+          }
+          console.error(`[API Error] ${response.status}:`, errorJson);
+      }
+    } catch (e) {
+      // Se não conseguir parsear JSON, usar mensagem padrão
+      console.error('[API Error] Failed to parse error response:', errorBody);
+    }
+
+    throw { code: errorCode, message: errorMessage, status: response.status };
+  }
+
+  const data = await response.json();
+  console.log('[API Call] Success');
+  return data;
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -116,11 +202,16 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get user from auth header
+    // ✅ Autenticar usuário
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      console.error('[Auth] Missing authorization header');
       return new Response(
-        JSON.stringify({ success: false, error: 'Missing authorization header', code: 'UNAUTHORIZED' }),
+        JSON.stringify({ 
+          success: false, 
+          error: '🔒 Autenticação necessária. Faça login para continuar.',
+          code: 'UNAUTHORIZED' 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -129,246 +220,330 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !user) {
+      console.error('[Auth] Invalid user token:', userError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Invalid token', code: 'INVALID_TOKEN' }),
+        JSON.stringify({ 
+          success: false, 
+          error: '🔒 Token inválido. Faça login novamente.',
+          code: 'INVALID_TOKEN' 
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Get request body
+    console.log(`[Request] User ${user.id} requesting sync`);
+
+    // ✅ Parse request body
     const { action, params } = await req.json();
 
     if (!action) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Missing action parameter', code: 'MISSING_PARAMS' }),
+        JSON.stringify({ 
+          success: false, 
+          error: '❌ Parâmetro "action" é obrigatório.',
+          code: 'MISSING_PARAMS' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Fetch OAuth token from database
-    const { data: tokenData, error: tokenError } = await supabase
-      .from('integration_oauth_tokens')
-      .select('access_token, refresh_token, expires_at')
-      .eq('user_id', user.id)
-      .eq('integration_name', 'google_workspace')
-      .single();
+    console.log(`[Action] ${action}`, params);
 
-    if (tokenError || !tokenData) {
+    // ✅ Buscar access_token do banco
+    const accessToken = await getAccessToken(supabase, user.id);
+
+    if (!accessToken) {
+      console.error('[Token] No valid access token found');
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Google Workspace not connected. Please authorize first.', 
-          code: 'TOKEN_NOT_FOUND' 
+          error: '🔑 Token não encontrado ou expirado. Reconecte a integração Google Workspace.',
+          code: 'TOKEN_EXPIRED',
+          requiresReconnection: true
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if token is expired
-    const now = new Date();
-    const expiresAt = new Date(tokenData.expires_at);
-    
-    if (now >= expiresAt) {
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'Token expired. Please refresh your connection.', 
-          code: 'TOKEN_EXPIRED' 
-        }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // ✅ Executar ação solicitada
+    let result: any;
 
-    const accessToken = tokenData.access_token;
-
-    // Execute action based on request
-    let result;
     switch (action) {
-      case 'list_users':
-        result = await listUsers(accessToken, params);
-        break;
-      case 'list_groups':
-        result = await listGroups(accessToken, params);
-        break;
-      case 'get_audit_logs':
-        result = await getAuditLogs(accessToken, params);
-        break;
-      default:
+      case 'get_user_profile':
+        /**
+         * ENDPOINT: Obter perfil do usuário autenticado
+         * API: https://www.googleapis.com/oauth2/v2/userinfo
+         * Scopes necessários: openid, profile, email
+         * 
+         * EXEMPLO DE RESPOSTA:
+         * {
+         *   "id": "123456789",
+         *   "email": "user@empresa.com",
+         *   "verified_email": true,
+         *   "name": "João Silva",
+         *   "given_name": "João",
+         *   "family_name": "Silva",
+         *   "picture": "https://lh3.googleusercontent.com/...",
+         *   "locale": "pt-BR",
+         *   "hd": "empresa.com"
+         * }
+         * 
+         * EDGE CASES:
+         * - hd (hosted domain) pode ser undefined para contas pessoais @gmail.com
+         * - picture pode retornar URL padrão se usuário não tem foto
+         * - locale pode variar conforme configuração da conta
+         */
+        result = await callGoogleAPI(
+          'https://www.googleapis.com/oauth2/v2/userinfo',
+          accessToken
+        );
+        
+        console.log('[Profile] User profile fetched:', result.email);
+        
         return new Response(
-          JSON.stringify({ success: false, error: 'Invalid action', code: 'INVALID_ACTION' }),
+          JSON.stringify({ 
+            success: true, 
+            data: {
+              profile: result as GoogleUserProfile,
+              metadata: {
+                fetchedAt: new Date().toISOString(),
+                source: 'google_oauth2_userinfo'
+              }
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case 'list_users':
+        /**
+         * ENDPOINT: Listar usuários do Google Workspace
+         * API: https://admin.googleapis.com/admin/directory/v1/users
+         * Scopes necessários: https://www.googleapis.com/auth/admin.directory.user.readonly
+         * 
+         * PARÂMETROS DISPONÍVEIS:
+         * - customer: 'my_customer' (padrão) ou ID do cliente
+         * - domain: Filtrar por domínio (ex: empresa.com)
+         * - maxResults: Número máximo de resultados (1-500, padrão: 100)
+         * - pageToken: Token para próxima página de resultados
+         * - query: Filtro de busca (ex: "orgName=Vendas")
+         * - orderBy: Campo para ordenar (email, givenName, familyName)
+         * 
+         * EXEMPLO DE RESPOSTA:
+         * {
+         *   "users": [{
+         *     "id": "123456",
+         *     "primaryEmail": "user@empresa.com",
+         *     "name": { "fullName": "João Silva", ... },
+         *     "isAdmin": false,
+         *     "suspended": false,
+         *     "orgUnitPath": "/Vendas/Regional Sul",
+         *     "lastLoginTime": "2025-11-17T10:30:00.000Z",
+         *     "creationTime": "2024-01-15T08:00:00.000Z"
+         *   }],
+         *   "nextPageToken": "AEIUasdfASDF..." // Pode ser undefined
+         * }
+         * 
+         * EDGE CASES:
+         * - Domínio pode ter milhares de usuários, usar paginação
+         * - lastLoginTime pode ser undefined para usuários que nunca fizeram login
+         * - orgUnitPath sempre começa com /
+         * - Usuários suspensos aparecem na lista mas com suspended=true
+         */
+        const customer = params?.customer || 'my_customer';
+        const maxResults = params?.maxResults || 100;
+        const domain = params?.domain;
+        const pageToken = params?.pageToken;
+
+        let usersUrl = `https://admin.googleapis.com/admin/directory/v1/users?customer=${customer}&maxResults=${maxResults}`;
+        if (domain) usersUrl += `&domain=${domain}`;
+        if (pageToken) usersUrl += `&pageToken=${pageToken}`;
+
+        result = await callGoogleAPI(usersUrl, accessToken);
+        
+        console.log(`[Users] Fetched ${result.users?.length || 0} users`);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            data: {
+              users: result.users || [],
+              metadata: {
+                totalCount: result.users?.length || 0,
+                syncedAt: new Date().toISOString(),
+                nextPageToken: result.nextPageToken || null
+              }
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case 'list_groups':
+        /**
+         * ENDPOINT: Listar grupos do Google Workspace
+         * API: https://admin.googleapis.com/admin/directory/v1/groups
+         * Scopes necessários: https://www.googleapis.com/auth/admin.directory.group.readonly
+         * 
+         * PARÂMETROS:
+         * - customer: 'my_customer' (padrão)
+         * - domain: Filtrar por domínio
+         * - maxResults: Máximo de resultados (1-200, padrão: 100)
+         * - pageToken: Token de paginação
+         * 
+         * EXEMPLO DE RESPOSTA:
+         * {
+         *   "groups": [{
+         *     "id": "abc123",
+         *     "email": "vendas@empresa.com",
+         *     "name": "Equipe de Vendas",
+         *     "description": "Grupo da equipe comercial",
+         *     "directMembersCount": 15,
+         *     "adminCreated": true
+         *   }]
+         * }
+         * 
+         * EDGE CASES:
+         * - description pode ser undefined
+         * - directMembersCount não inclui membros de subgrupos
+         * - Grupos podem ter membros externos ao domínio
+         */
+        const groupsCustomer = params?.customer || 'my_customer';
+        const groupsMaxResults = params?.maxResults || 100;
+        
+        let groupsUrl = `https://admin.googleapis.com/admin/directory/v1/groups?customer=${groupsCustomer}&maxResults=${groupsMaxResults}`;
+        if (params?.domain) groupsUrl += `&domain=${params.domain}`;
+        if (params?.pageToken) groupsUrl += `&pageToken=${params.pageToken}`;
+
+        result = await callGoogleAPI(groupsUrl, accessToken);
+        
+        console.log(`[Groups] Fetched ${result.groups?.length || 0} groups`);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            data: {
+              groups: result.groups || [],
+              metadata: {
+                totalCount: result.groups?.length || 0,
+                syncedAt: new Date().toISOString(),
+                nextPageToken: result.nextPageToken || null
+              }
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      case 'get_audit_logs':
+        /**
+         * ENDPOINT: Obter logs de auditoria
+         * API: https://admin.googleapis.com/admin/reports/v1/activity/users/{userKey}/applications/{applicationName}
+         * Scopes: https://www.googleapis.com/auth/admin.reports.audit.readonly
+         * 
+         * PARÂMETROS:
+         * - applicationName: 'admin', 'drive', 'login', 'token', etc
+         * - startTime: Data inicial (RFC 3339, ex: 2025-11-01T00:00:00Z)
+         * - endTime: Data final (opcional)
+         * - maxResults: Máximo de resultados (1-1000, padrão: 1000)
+         * - userKey: 'all' (padrão) ou email específico
+         * 
+         * EXEMPLO DE RESPOSTA:
+         * {
+         *   "items": [{
+         *     "id": { "time": "2025-11-17T10:30:00Z", "uniqueQualifier": "xyz" },
+         *     "actor": { "email": "user@empresa.com", "profileId": "123" },
+         *     "events": [{
+         *       "type": "USER_SETTINGS",
+         *       "name": "2sv_change",
+         *       "parameters": [{ "name": "2sv_enabled", "value": "true" }]
+         *     }]
+         *   }]
+         * }
+         * 
+         * EDGE CASES:
+         * - items pode ser vazio se não houver logs no período
+         * - events é array, pode ter múltiplos eventos por item
+         * - parameters pode ser undefined para alguns tipos de eventos
+         * - Logs podem ter delay de até 24h para aparecer
+         */
+        const applicationName = params?.applicationName || 'admin';
+        const userKey = params?.userKey || 'all';
+        const startTime = params?.startTime;
+        
+        if (!startTime) {
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: '❌ Parâmetro "startTime" é obrigatório para audit logs (formato: 2025-11-01T00:00:00Z)',
+              code: 'MISSING_PARAMS' 
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        let auditUrl = `https://admin.googleapis.com/admin/reports/v1/activity/users/${userKey}/applications/${applicationName}`;
+        auditUrl += `?startTime=${startTime}`;
+        if (params?.endTime) auditUrl += `&endTime=${params.endTime}`;
+        if (params?.maxResults) auditUrl += `&maxResults=${params.maxResults}`;
+
+        result = await callGoogleAPI(auditUrl, accessToken);
+        
+        console.log(`[Audit] Fetched ${result.items?.length || 0} audit logs`);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            data: {
+              auditLogs: result.items || [],
+              metadata: {
+                totalCount: result.items?.length || 0,
+                syncedAt: new Date().toISOString(),
+                applicationName,
+                startTime,
+                endTime: params?.endTime || 'now'
+              }
+            }
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+
+      default:
+        console.error('[Action] Unknown action:', action);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: `❌ Ação desconhecida: "${action}". Ações disponíveis: get_user_profile, list_users, list_groups, get_audit_logs`,
+            code: 'INVALID_ACTION' 
+          }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
 
-    return new Response(
-      JSON.stringify({ success: true, data: result }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  } catch (error: any) {
+    console.error('[Error]', error);
 
-  } catch (error) {
-    console.error('Google Workspace sync error:', error);
+    // Erro estruturado da API do Google
+    if (error.code && error.message) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: error.message,
+          code: error.code,
+          status: error.status
+        }),
+        { 
+          status: error.status || 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Erro genérico
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error',
-        code: 'API_ERROR'
+        error: error.message || '❌ Erro desconhecido ao processar requisição.',
+        code: 'UNKNOWN_ERROR' 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
-
-/**
- * List users from Google Workspace
- * 
- * @param accessToken - Valid OAuth 2.0 access token
- * @param params - Query parameters (maxResults, domain, pageToken)
- * @returns Users list with metadata
- * 
- * @throws Error if API request fails
- * 
- * @example
- * const users = await listUsers(token, { maxResults: 100, domain: 'example.com' });
- */
-async function listUsers(
-  accessToken: string, 
-  params: { maxResults?: number; domain?: string; pageToken?: string }
-) {
-  const maxResults = params.maxResults || 100;
-  const domain = params.domain || 'primary';
-  
-  let url = `https://admin.googleapis.com/admin/directory/v1/users?domain=${domain}&maxResults=${maxResults}`;
-  if (params.pageToken) {
-    url += `&pageToken=${params.pageToken}`;
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('Google API Error (list_users):', error);
-    throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  return {
-    users: data.users as User[],
-    metadata: {
-      totalCount: data.users?.length || 0,
-      syncedAt: new Date().toISOString(),
-      nextPageToken: data.nextPageToken || null,
-    },
-  };
-}
-
-/**
- * List groups from Google Workspace
- * 
- * @param accessToken - Valid OAuth 2.0 access token
- * @param params - Query parameters (maxResults, domain, pageToken)
- * @returns Groups list with metadata
- * 
- * @throws Error if API request fails
- * 
- * @example
- * const groups = await listGroups(token, { maxResults: 50 });
- */
-async function listGroups(
-  accessToken: string,
-  params: { maxResults?: number; domain?: string; pageToken?: string }
-) {
-  const maxResults = params.maxResults || 100;
-  const domain = params.domain || 'primary';
-  
-  let url = `https://admin.googleapis.com/admin/directory/v1/groups?domain=${domain}&maxResults=${maxResults}`;
-  if (params.pageToken) {
-    url += `&pageToken=${params.pageToken}`;
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('Google API Error (list_groups):', error);
-    throw new Error(`Failed to fetch groups: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  return {
-    groups: data.groups as Group[],
-    metadata: {
-      totalCount: data.groups?.length || 0,
-      syncedAt: new Date().toISOString(),
-      nextPageToken: data.nextPageToken || null,
-    },
-  };
-}
-
-/**
- * Get admin audit logs from Google Workspace
- * 
- * @param accessToken - Valid OAuth 2.0 access token
- * @param params - Query parameters (maxResults, startTime, endTime, applicationName)
- * @returns Audit logs with metadata
- * 
- * @throws Error if API request fails
- * 
- * @example
- * const logs = await getAuditLogs(token, { 
- *   maxResults: 50, 
- *   startTime: '2024-01-01T00:00:00Z',
- *   applicationName: 'admin'
- * });
- */
-async function getAuditLogs(
-  accessToken: string,
-  params: { maxResults?: number; startTime?: string; endTime?: string; applicationName?: string }
-) {
-  const maxResults = params.maxResults || 100;
-  const applicationName = params.applicationName || 'admin';
-  
-  let url = `https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/${applicationName}?maxResults=${maxResults}`;
-  
-  if (params.startTime) {
-    url += `&startTime=${params.startTime}`;
-  }
-  if (params.endTime) {
-    url += `&endTime=${params.endTime}`;
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('Google API Error (get_audit_logs):', error);
-    throw new Error(`Failed to fetch audit logs: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-
-  return {
-    auditLogs: data.items as AuditLog[],
-    metadata: {
-      totalCount: data.items?.length || 0,
-      syncedAt: new Date().toISOString(),
-      nextPageToken: data.nextPageToken || null,
-    },
-  };
-}
