@@ -9,7 +9,8 @@ import {
   MoreHorizontal,
   Pause,
   Play,
-  Trash2
+  Trash2,
+  Eye
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -20,9 +21,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useIntegrations } from '@/hooks/useIntegrations';
 import { EmptyState } from '@/components/common';
+import IntegrationDetailsModal from './IntegrationDetailsModal';
+import { useState } from 'react';
 
 const ConnectedIntegrations = () => {
   const { integrations, loading, pauseIntegration, resumeIntegration, disconnectIntegration } = useIntegrations();
+  const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
 
   const handleAction = (action: string, integrationId: string) => {
     switch (action) {
@@ -35,6 +40,24 @@ const ConnectedIntegrations = () => {
       case 'disconnect':
         if (confirm('Tem certeza que deseja desconectar esta integração?')) {
           disconnectIntegration(integrationId);
+        }
+        break;
+      case 'details':
+        const integration = integrations.find(i => i.id === integrationId);
+        if (integration) {
+          setSelectedIntegration({
+            id: integration.id,
+            name: integration.name,
+            status: integration.status === 'active' ? 'connected' : 'disconnected',
+            health: integration.health,
+            logo: integration.logo,
+            description: `Integração ${integration.category}`,
+            connectedAt: integration.connectedAt,
+            lastSync: integration.lastSync,
+            webhookCount: integration.evidences || 0,
+            failedWebhooks: 0,
+          });
+          setDetailsModalOpen(true);
         }
         break;
     }
@@ -116,6 +139,9 @@ const ConnectedIntegrations = () => {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleAction('details', integration.id)}>
+                      <Eye className="h-4 w-4 mr-2" />Ver Detalhes
+                    </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Settings className="h-4 w-4 mr-2" />Configurar
                     </DropdownMenuItem>
@@ -197,6 +223,18 @@ const ConnectedIntegrations = () => {
           </Card>
         ))}
       </div>
+
+      {/* Integration Details Modal */}
+      <IntegrationDetailsModal
+        integration={selectedIntegration}
+        open={detailsModalOpen}
+        onOpenChange={setDetailsModalOpen}
+        onDisconnect={() => {
+          if (selectedIntegration) {
+            disconnectIntegration(selectedIntegration.id);
+          }
+        }}
+      />
     </div>
   );
 };
