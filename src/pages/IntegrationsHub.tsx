@@ -7,6 +7,7 @@ import SecretsManagement from '@/components/integrations/SecretsManagement';
 import GoogleWorkspaceOAuth from '@/components/integrations/GoogleWorkspaceOAuth';
 import IntegrationDemo from '@/components/integrations/IntegrationDemo';
 import WebhookMonitor from '@/components/integrations/WebhookMonitor';
+import IntegrationOnboarding from '@/components/integrations/IntegrationOnboarding';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const IntegrationsHub = () => {
@@ -32,8 +33,9 @@ const IntegrationsHub = () => {
           <IntegrationsStats />
 
           {/* Tabs for different sections */}
-          <Tabs defaultValue="oauth" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
+          <Tabs defaultValue="onboarding" className="w-full">
+            <TabsList className="grid w-full grid-cols-7">
+              <TabsTrigger value="onboarding">📚 Guia</TabsTrigger>
               <TabsTrigger value="oauth">OAuth 2.0</TabsTrigger>
               <TabsTrigger value="demo">Demo API</TabsTrigger>
               <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
@@ -41,6 +43,10 @@ const IntegrationsHub = () => {
               <TabsTrigger value="connected">Conectadas</TabsTrigger>
               <TabsTrigger value="secrets">🔐 Secrets</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="onboarding" className="mt-6">
+              <IntegrationOnboarding />
+            </TabsContent>
 
             <TabsContent value="oauth" className="mt-6">
               <GoogleWorkspaceOAuth />
