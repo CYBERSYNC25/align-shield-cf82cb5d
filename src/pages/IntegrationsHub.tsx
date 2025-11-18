@@ -11,6 +11,9 @@ import IntegrationOnboarding from '@/components/integrations/IntegrationOnboardi
 import GoogleApiTester from '@/components/integrations/GoogleApiTester';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import { GoogleConnectionStatus } from '@/components/integrations/GoogleConnectionStatus';
+import { DynamicApiConnector } from '@/components/integrations/DynamicApiConnector';
+import { ApiRequestHistory } from '@/components/integrations/ApiRequestHistory';
+import { IntegrationValidator } from '@/components/integrations/IntegrationValidator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const IntegrationsHub = () => {
@@ -37,10 +40,12 @@ const IntegrationsHub = () => {
 
           {/* Tabs for different sections */}
           <Tabs defaultValue="onboarding" className="w-full">
-            <TabsList className="grid w-full grid-cols-9">
+            <TabsList className="grid w-full grid-cols-10">
               <TabsTrigger value="onboarding">📚 Guia</TabsTrigger>
               <TabsTrigger value="oauth">OAuth 2.0</TabsTrigger>
+              <TabsTrigger value="validator">✅ Validar</TabsTrigger>
               <TabsTrigger value="api">🔌 API Test</TabsTrigger>
+              <TabsTrigger value="connector">⚡ Conector</TabsTrigger>
               <TabsTrigger value="demo">Demo API</TabsTrigger>
               <TabsTrigger value="testing">🧪 Testes</TabsTrigger>
               <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
@@ -60,8 +65,34 @@ const IntegrationsHub = () => {
               </div>
             </TabsContent>
 
+            <TabsContent value="validator" className="mt-6">
+              <IntegrationValidator 
+                integrationName="google_workspace"
+                testEndpoint="https://www.googleapis.com/oauth2/v1/userinfo"
+                autoTest={false}
+              />
+            </TabsContent>
+
             <TabsContent value="api" className="mt-6">
               <GoogleApiTester />
+            </TabsContent>
+
+            <TabsContent value="connector" className="mt-6 space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold">Dynamic API Connector</h2>
+                <p className="text-muted-foreground">
+                  Faça requisições customizadas para APIs externas usando tokens OAuth armazenados de forma segura.
+                </p>
+              </div>
+              <DynamicApiConnector />
+              
+              <div className="mt-8 space-y-2">
+                <h2 className="text-2xl font-bold">Histórico de Requisições</h2>
+                <p className="text-muted-foreground">
+                  Acompanhe todas as requisições feitas através do conector, com detalhes completos.
+                </p>
+              </div>
+              <ApiRequestHistory />
             </TabsContent>
 
             <TabsContent value="demo" className="mt-6">
