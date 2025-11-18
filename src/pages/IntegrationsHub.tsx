@@ -14,6 +14,7 @@ import { GoogleOAuthValidator } from '@/components/integrations/GoogleOAuthValid
 import { DynamicApiConnector } from '@/components/integrations/DynamicApiConnector';
 import { ApiRequestHistory } from '@/components/integrations/ApiRequestHistory';
 import { IntegrationValidator } from '@/components/integrations/IntegrationValidator';
+import { ApiIntegrationFlow } from '@/components/integrations/ApiIntegrationFlow';
 import { QuickStartTour } from '@/components/integrations/QuickStartTour';
 import { QuickStartCard } from '@/components/integrations/QuickStartCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -45,9 +46,10 @@ const IntegrationsHub = () => {
 
           {/* Tabs for different sections */}
           <Tabs defaultValue="catalog" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="catalog" data-tour="catalog-tab">📚 Catálogo</TabsTrigger>
               <TabsTrigger value="connect" data-tour="connect-tab">🔌 Minhas Integrações</TabsTrigger>
+              <TabsTrigger value="apis" data-tour="apis-tab">🔗 Conectar APIs</TabsTrigger>
               <TabsTrigger value="test" data-tour="test-tab">✅ Testar Conexão</TabsTrigger>
               <TabsTrigger value="monitor" data-tour="monitor-tab">📊 Logs & Webhooks</TabsTrigger>
             </TabsList>
@@ -88,7 +90,12 @@ const IntegrationsHub = () => {
               </div>
             </TabsContent>
 
-            {/* Aba 3: Testar - Validação, API tester, connector */}
+            {/* Aba 3: APIs - Fluxo dinâmico para conectar APIs externas */}
+            <TabsContent value="apis" className="mt-6 space-y-6">
+              <ApiIntegrationFlow />
+            </TabsContent>
+
+            {/* Aba 4: Testar - Validação, API tester, connector */}
             <TabsContent value="test" className="mt-6 space-y-6">
               <div className="space-y-2">
                 <h2 className="h2">Validação Completa OAuth Google</h2>
