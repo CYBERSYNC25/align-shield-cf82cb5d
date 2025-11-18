@@ -53,3 +53,9 @@ verify_jwt = true
 
 [functions.azure-oauth-callback]
 verify_jwt = false
+
+[functions.azure-test-connection]
+verify_jwt = true
+
+[functions.azure-oauth-revoke]
+verify_jwt = true
