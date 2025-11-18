@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,11 +9,14 @@ import {
   CheckCircle, 
   AlertCircle,
   ExternalLink,
-  Settings
+  Settings,
+  ArrowLeft
 } from 'lucide-react';
 import { AzureAdConnector } from './connectors/AzureAdConnector';
+import { AzureConnectionStatus } from './AzureConnectionStatus';
 import { IntegrationLogs } from './IntegrationLogs';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ApiProvider {
   id: string;
@@ -88,6 +91,29 @@ const API_PROVIDERS: ApiProvider[] = [
 export const ApiIntegrationFlow = () => {
   const [selectedProvider, setSelectedProvider] = useState<ApiProvider | null>(null);
   const [activeTab, setActiveTab] = useState<string>('connect');
+  const [connectedApis, setConnectedApis] = useState<string[]>([]);
+
+  useEffect(() => {
+    checkConnectedApis();
+  }, []);
+
+  const checkConnectedApis = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data } = await supabase
+        .from('integration_oauth_tokens')
+        .select('integration_name')
+        .eq('user_id', user.id);
+
+      if (data) {
+        setConnectedApis(data.map(d => d.integration_name));
+      }
+    } catch (error) {
+      console.error('Error checking connected APIs:', error);
+    }
+  };
 
   const renderProviderCard = (provider: ApiProvider) => (
     <Card 
@@ -99,9 +125,17 @@ export const ApiIntegrationFlow = () => {
         <div className="p-3 rounded-lg bg-primary/10 text-primary">
           {provider.icon}
         </div>
-        <Badge variant={provider.status === 'available' ? 'default' : 'secondary'}>
-          {provider.status === 'available' ? 'Disponível' : 'Em breve'}
-        </Badge>
+        <div className="flex gap-2">
+          <Badge variant={provider.status === 'available' ? 'default' : 'secondary'}>
+            {provider.status === 'available' ? 'Disponível' : 'Em breve'}
+          </Badge>
+          {connectedApis.includes(provider.id) && (
+            <Badge variant="default" className="bg-green-600">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              Conectado
+            </Badge>
+          )}
+        </div>
       </div>
       
       <h3 className="text-lg font-semibold mb-2">{provider.name}</h3>
@@ -128,9 +162,21 @@ export const ApiIntegrationFlow = () => {
   const renderConnector = () => {
     if (!selectedProvider) return null;
 
+    const isConnected = connectedApis.includes(selectedProvider.id);
+
     switch (selectedProvider.id) {
       case 'azure_ad':
-        return <AzureAdConnector provider={selectedProvider} onBack={() => setSelectedProvider(null)} />;
+        return isConnected ? (
+          <AzureConnectionStatus />
+        ) : (
+          <AzureAdConnector 
+            provider={selectedProvider} 
+            onBack={() => {
+              setSelectedProvider(null);
+              checkConnectedApis();
+            }} 
+          />
+        );
       default:
         return (
           <Card className="p-6">
@@ -145,86 +191,19 @@ export const ApiIntegrationFlow = () => {
 
   if (selectedProvider) {
     return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => setSelectedProvider(null)}>
-            ← Voltar
-          </Button>
-          <div>
-            <h2 className="text-2xl font-bold">{selectedProvider.name}</h2>
-            <p className="text-muted-foreground">{selectedProvider.description}</p>
-          </div>
-        </div>
+      <div className="space-y-4">
+        <Button
+          variant="ghost"
+          onClick={() => {
+            setSelectedProvider(null);
+            checkConnectedApis();
+          }}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Voltar para lista de APIs
+        </Button>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="connect">
-              <Settings className="h-4 w-4 mr-2" />
-              Conectar
-            </TabsTrigger>
-            <TabsTrigger value="status">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Status
-            </TabsTrigger>
-            <TabsTrigger value="logs">
-              <AlertCircle className="h-4 w-4 mr-2" />
-              Histórico
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="connect" className="mt-6">
-            {renderConnector()}
-          </TabsContent>
-
-          <TabsContent value="status" className="mt-6">
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Status da Integração</h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <div>
-                      <p className="font-medium">Autenticação</p>
-                      <p className="text-sm text-muted-foreground">Token válido até 18/12/2025</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">Renovar</Button>
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <div>
-                      <p className="font-medium">Permissões</p>
-                      <p className="text-sm text-muted-foreground">3 escopos ativos</p>
-                    </div>
-                  </div>
-                  <Button variant="outline" size="sm">Configurar</Button>
-                </div>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="logs" className="mt-6">
-            <IntegrationLogs integrationName={selectedProvider.id} />
-          </TabsContent>
-        </Tabs>
-
-        {selectedProvider.docsUrl && (
-          <Card className="p-4 bg-muted/50">
-            <div className="flex items-center gap-2">
-              <ExternalLink className="h-4 w-4" />
-              <a 
-                href={selectedProvider.docsUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-sm hover:underline"
-              >
-                Documentação oficial do {selectedProvider.name}
-              </a>
-            </div>
-          </Card>
-        )}
+        {renderConnector()}
       </div>
     );
   }
