@@ -1,34 +1,55 @@
 project_id = "ofbyxnpprwwuieabwhdo"
 
-[functions.google-oauth-start]
-verify_jwt = true
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
 
-[functions.google-oauth-callback]
-verify_jwt = false
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
 
-[functions.google-oauth-refresh]
-verify_jwt = true
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
 
-[functions.google-oauth-revoke]
-verify_jwt = true
+[realtime]
+enabled = true
+ip_version = "ipv4"
 
-[functions.aws-integration]
-verify_jwt = true
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
 
-[functions.azure-integration]
-verify_jwt = true
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
 
-[functions.okta-integration]
-verify_jwt = true
+[storage]
+enabled = true
+file_size_limit = "50MiB"
 
-[functions.google-workspace-sync]
-verify_jwt = true
-
-[functions.integration-webhook]
-verify_jwt = false
-
-[functions.proxy-api-request]
-verify_jwt = true
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["https://127.0.0.1:3000"]
+jwt_expiry = 3600
+enable_signup = true
 
 [functions.google-oauth-validate]
+verify_jwt = false
+
+[functions.azure-oauth-start]
+verify_jwt = true
+
+[functions.azure-oauth-callback]
 verify_jwt = false
