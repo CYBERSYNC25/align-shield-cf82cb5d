@@ -426,14 +426,14 @@ const AvailableIntegrations = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-foreground">
-          Integrações Disponíveis
+        <h2 className="h3">
+          Conectar Nova Integração
         </h2>
         <div className="flex items-center space-x-4">
           <div className="relative">
             <Search className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar integrações..."
+              placeholder="Buscar por nome ou categoria..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9 w-64"
@@ -446,14 +446,14 @@ const AvailableIntegrations = () => {
         <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="popular" className="gap-2">
             <Star className="h-4 w-4" />
-            Populares
+            Mais Populares
           </TabsTrigger>
-          <TabsTrigger value="cloud">Cloud</TabsTrigger>
-          <TabsTrigger value="identity">Identidade</TabsTrigger>
-          <TabsTrigger value="devops">DevOps</TabsTrigger>
-          <TabsTrigger value="security">Segurança</TabsTrigger>
-          <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
-          <TabsTrigger value="communication">Comunicação</TabsTrigger>
+          <TabsTrigger value="cloud">☁️ Cloud</TabsTrigger>
+          <TabsTrigger value="identity">🔐 Identidade</TabsTrigger>
+          <TabsTrigger value="devops">⚙️ DevOps</TabsTrigger>
+          <TabsTrigger value="security">🛡️ Segurança</TabsTrigger>
+          <TabsTrigger value="endpoints">💻 Endpoints</TabsTrigger>
+          <TabsTrigger value="communication">💬 Comunicação</TabsTrigger>
         </TabsList>
 
         <TabsContent value="popular" className="mt-6">
@@ -547,7 +547,7 @@ const IntegrationCard = ({ integration, onConnect }: { integration: any; onConne
 
         <Button className="w-full gap-2" onClick={onConnect}>
           <Plus className="h-4 w-4" />
-          Conectar
+          Conectar {integration.name}
         </Button>
       </CardContent>
     </Card>
