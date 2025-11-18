@@ -10,6 +10,7 @@ import WebhookMonitor from '@/components/integrations/WebhookMonitor';
 import GoogleApiTester from '@/components/integrations/GoogleApiTester';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import { GoogleConnectionStatus } from '@/components/integrations/GoogleConnectionStatus';
+import { GoogleOAuthValidator } from '@/components/integrations/GoogleOAuthValidator';
 import { DynamicApiConnector } from '@/components/integrations/DynamicApiConnector';
 import { ApiRequestHistory } from '@/components/integrations/ApiRequestHistory';
 import { IntegrationValidator } from '@/components/integrations/IntegrationValidator';
@@ -90,6 +91,14 @@ const IntegrationsHub = () => {
             {/* Aba 3: Testar - Validação, API tester, connector */}
             <TabsContent value="test" className="mt-6 space-y-6">
               <div className="space-y-2">
+                <h2 className="h2">Validação Completa OAuth Google</h2>
+                <p className="text-body-sm">
+                  Verifique automaticamente se a integração está configurada corretamente
+                </p>
+              </div>
+              <GoogleOAuthValidator />
+
+              <div className="mt-8 space-y-2">
                 <h2 className="h2">Validar Integração</h2>
                 <p className="text-body-sm">
                   Teste se sua integração OAuth está funcionando corretamente
