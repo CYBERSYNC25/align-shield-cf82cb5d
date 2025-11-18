@@ -66,8 +66,8 @@ const ConnectedIntegrations = () => {
   if (loading) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-foreground">
-          Integrações Conectadas
+        <h2 className="h3">
+          Suas Integrações Ativas
         </h2>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -79,12 +79,12 @@ const ConnectedIntegrations = () => {
   if (integrations.length === 0) {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-foreground">
-          Integrações Conectadas
+        <h2 className="h3">
+          Suas Integrações Ativas
         </h2>
         <EmptyState 
           title="Nenhuma integração conectada"
-          description="Conecte suas primeiras integrações para começar a coletar evidências automaticamente."
+          description="Conecte suas primeiras integrações para começar a coletar evidências automaticamente e simplificar auditorias."
         />
       </div>
     );
@@ -106,12 +106,12 @@ const ConnectedIntegrations = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-foreground">
-          Integrações Conectadas
+        <h2 className="h3">
+          Suas Integrações Ativas
         </h2>
         <Badge variant="outline" className="gap-1">
           <CheckCircle className="h-3 w-3" />
-          {integrations.filter(i => i.status === 'active').length} ativas
+          {integrations.length} {integrations.length === 1 ? 'Integração' : 'Integrações'}
         </Badge>
       </div>
 
@@ -138,12 +138,12 @@ const ConnectedIntegrations = () => {
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" className="z-dropdown">
                     <DropdownMenuItem onClick={() => handleAction('details', integration.id)}>
                       <Eye className="h-4 w-4 mr-2" />Ver Detalhes
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <Settings className="h-4 w-4 mr-2" />Configurar
+                      <Settings className="h-4 w-4 mr-2" />Configurar Integração
                     </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => handleAction(
@@ -152,15 +152,15 @@ const ConnectedIntegrations = () => {
                       )}
                     >
                       {integration.status === 'paused' ? (
-                        <><Play className="h-4 w-4 mr-2" />Retomar</>
+                        <><Play className="h-4 w-4 mr-2" />Retomar Integração</>
                       ) : (
-                        <><Pause className="h-4 w-4 mr-2" />Pausar</>
+                        <><Pause className="h-4 w-4 mr-2" />Pausar Integração</>
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
                       onClick={() => handleAction('disconnect', integration.id)}
-                      className="text-destructive"
+                      className="text-danger"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />Desconectar
                     </DropdownMenuItem>
@@ -191,11 +191,11 @@ const ConnectedIntegrations = () => {
 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Evidências</p>
+                  <p className="text-caption">Evidências Coletadas</p>
                   <p className="font-semibold text-foreground">{integration.evidences}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Controles</p>
+                  <p className="text-caption">Controles Ativos</p>
                   <p className="font-semibold text-foreground">{integration.controls}</p>
                 </div>
               </div>

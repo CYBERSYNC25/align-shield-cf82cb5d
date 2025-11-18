@@ -13,7 +13,7 @@ import {
 const IntegrationsStats = () => {
   const stats = [
     {
-      title: 'Integrações Ativas',
+      title: 'Integrações Conectadas',
       value: '12',
       total: '15',
       icon: Zap,
@@ -22,8 +22,8 @@ const IntegrationsStats = () => {
       progress: 80
     },
     {
-      title: 'Coletas Hoje',
-      value: '1,247',
+      title: 'Coletas de Evidências Hoje',
+      value: '1.247',
       change: '+15%',
       icon: Database,
       color: 'text-info',
@@ -31,15 +31,15 @@ const IntegrationsStats = () => {
     },
     {
       title: 'Taxa de Sucesso',
-      value: '99.2%',
-      change: '+0.3%',
+      value: '99,2%',
+      change: '+0,3%',
       icon: CheckCircle,
       color: 'text-success',
       bgColor: 'bg-success/10'
     },
     {
       title: 'Último Incidente',
-      value: '3 dias',
+      value: 'Há 3 dias',
       status: 'Resolvido',
       icon: Clock,
       color: 'text-muted-foreground',
@@ -66,7 +66,7 @@ const IntegrationsStats = () => {
                   {stat.value}
                 </div>
                 {stat.change && (
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary" className="badge-success text-xs">
                     <TrendingUp className="h-3 w-3 mr-1" />
                     {stat.change}
                   </Badge>
@@ -80,8 +80,8 @@ const IntegrationsStats = () => {
               
               {stat.progress && (
                 <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Conectadas</span>
+                  <div className="flex justify-between text-caption">
+                    <span>Ativas</span>
                     <span>{stat.value}/{stat.total}</span>
                   </div>
                   <Progress value={stat.progress} className="h-2" />
