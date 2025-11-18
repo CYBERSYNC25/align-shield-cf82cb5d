@@ -39,49 +39,81 @@ const IntegrationsHub = () => {
           <IntegrationsStats />
 
           {/* Tabs for different sections */}
-          <Tabs defaultValue="onboarding" className="w-full">
-            <TabsList className="grid w-full grid-cols-10">
-              <TabsTrigger value="onboarding">📚 Guia</TabsTrigger>
-              <TabsTrigger value="oauth">OAuth 2.0</TabsTrigger>
-              <TabsTrigger value="validator">✅ Validar</TabsTrigger>
-              <TabsTrigger value="api">🔌 API Test</TabsTrigger>
-              <TabsTrigger value="connector">⚡ Conector</TabsTrigger>
-              <TabsTrigger value="demo">Demo API</TabsTrigger>
-              <TabsTrigger value="testing">🧪 Testes</TabsTrigger>
-              <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
-              <TabsTrigger value="audit">📋 Auditoria</TabsTrigger>
-              <TabsTrigger value="available">Disponíveis</TabsTrigger>
-              <TabsTrigger value="connected">Conectadas</TabsTrigger>
+          <Tabs defaultValue="catalog" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="catalog">📚 Catálogo</TabsTrigger>
+              <TabsTrigger value="connect">🔌 Conectar</TabsTrigger>
+              <TabsTrigger value="test">✅ Testar</TabsTrigger>
+              <TabsTrigger value="monitor">📊 Monitorar</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="onboarding" className="mt-6">
+            {/* Aba 1: Catálogo - Integrações disponíveis e guia */}
+            <TabsContent value="catalog" className="mt-6 space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold">Guia de Integrações</h2>
+                <p className="text-muted-foreground">
+                  Documentação completa sobre como conectar e usar integrações no Complice
+                </p>
+              </div>
               <IntegrationOnboarding />
+              
+              <div className="mt-8 space-y-2">
+                <h2 className="text-2xl font-bold">Integrações Disponíveis</h2>
+                <p className="text-muted-foreground">
+                  Catálogo de todas as integrações suportadas pela plataforma
+                </p>
+              </div>
+              <AvailableIntegrations />
             </TabsContent>
 
-            <TabsContent value="oauth" className="mt-6">
+            {/* Aba 2: Conectar - OAuth, integrações conectadas */}
+            <TabsContent value="connect" className="mt-6 space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold">Suas Integrações</h2>
+                <p className="text-muted-foreground">
+                  Gerencie suas conexões OAuth e integrações ativas
+                </p>
+              </div>
+              <ConnectedIntegrations />
+              
+              <div className="mt-8 space-y-2">
+                <h2 className="text-2xl font-bold">Conectar Google Workspace</h2>
+                <p className="text-muted-foreground">
+                  Configure OAuth 2.0 para integração com Google Workspace
+                </p>
+              </div>
               <GoogleConnectionStatus />
               <div className="mt-6">
                 <GoogleWorkspaceOAuth />
               </div>
             </TabsContent>
 
-            <TabsContent value="validator" className="mt-6">
+            {/* Aba 3: Testar - Validação, API tester, connector */}
+            <TabsContent value="test" className="mt-6 space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold">Validar Integração</h2>
+                <p className="text-muted-foreground">
+                  Teste automaticamente se sua integração OAuth está funcionando corretamente
+                </p>
+              </div>
               <IntegrationValidator 
                 integrationName="google_workspace"
                 testEndpoint="https://www.googleapis.com/oauth2/v1/userinfo"
                 autoTest={false}
               />
-            </TabsContent>
-
-            <TabsContent value="api" className="mt-6">
+              
+              <div className="mt-8 space-y-2">
+                <h2 className="text-2xl font-bold">Testar API Google</h2>
+                <p className="text-muted-foreground">
+                  Faça requisições de teste para endpoints da Google API
+                </p>
+              </div>
               <GoogleApiTester />
-            </TabsContent>
-
-            <TabsContent value="connector" className="mt-6 space-y-6">
-              <div className="space-y-2">
+              
+              <div className="mt-8 space-y-2">
                 <h2 className="text-2xl font-bold">Dynamic API Connector</h2>
                 <p className="text-muted-foreground">
-                  Faça requisições customizadas para APIs externas usando tokens OAuth armazenados de forma segura.
+                  Faça requisições customizadas para APIs externas usando tokens OAuth armazenados de forma segura
                 </p>
               </div>
               <DynamicApiConnector />
@@ -89,34 +121,29 @@ const IntegrationsHub = () => {
               <div className="mt-8 space-y-2">
                 <h2 className="text-2xl font-bold">Histórico de Requisições</h2>
                 <p className="text-muted-foreground">
-                  Acompanhe todas as requisições feitas através do conector, com detalhes completos.
+                  Acompanhe todas as requisições feitas através do conector
                 </p>
               </div>
               <ApiRequestHistory />
             </TabsContent>
 
-            <TabsContent value="demo" className="mt-6">
-              <IntegrationDemo />
-            </TabsContent>
-
-            <TabsContent value="testing" className="mt-6">
-              <IntegrationDemo />
-            </TabsContent>
-
-            <TabsContent value="webhooks" className="mt-6">
+            {/* Aba 4: Monitorar - Webhooks, audit logs, status */}
+            <TabsContent value="monitor" className="mt-6 space-y-6">
+              <div className="space-y-2">
+                <h2 className="text-2xl font-bold">Monitor de Webhooks</h2>
+                <p className="text-muted-foreground">
+                  Acompanhe webhooks recebidos e seu processamento em tempo real
+                </p>
+              </div>
               <WebhookMonitor />
-            </TabsContent>
-
-            <TabsContent value="audit" className="mt-6">
+              
+              <div className="mt-8 space-y-2">
+                <h2 className="text-2xl font-bold">Logs de Auditoria</h2>
+                <p className="text-muted-foreground">
+                  Histórico completo de ações e eventos do sistema de integrações
+                </p>
+              </div>
               <AuditLogsViewer />
-            </TabsContent>
-
-            <TabsContent value="available" className="mt-6">
-              <AvailableIntegrations />
-            </TabsContent>
-
-            <TabsContent value="connected" className="mt-6">
-              <ConnectedIntegrations />
             </TabsContent>
           </Tabs>
         </main>
