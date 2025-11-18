@@ -7,19 +7,21 @@ import SecretsManagement from '@/components/integrations/SecretsManagement';
 import GoogleWorkspaceOAuth from '@/components/integrations/GoogleWorkspaceOAuth';
 import IntegrationDemo from '@/components/integrations/IntegrationDemo';
 import WebhookMonitor from '@/components/integrations/WebhookMonitor';
-import IntegrationOnboarding from '@/components/integrations/IntegrationOnboarding';
 import GoogleApiTester from '@/components/integrations/GoogleApiTester';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import { GoogleConnectionStatus } from '@/components/integrations/GoogleConnectionStatus';
 import { DynamicApiConnector } from '@/components/integrations/DynamicApiConnector';
 import { ApiRequestHistory } from '@/components/integrations/ApiRequestHistory';
 import { IntegrationValidator } from '@/components/integrations/IntegrationValidator';
+import { QuickStartTour } from '@/components/integrations/QuickStartTour';
+import { QuickStartCard } from '@/components/integrations/QuickStartCard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const IntegrationsHub = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <QuickStartTour />
       
       <div className="flex">
         <Sidebar />
@@ -36,28 +38,25 @@ const IntegrationsHub = () => {
           </div>
 
           {/* Integration Stats */}
-          <IntegrationsStats />
+          <div data-tour="integrations-stats">
+            <IntegrationsStats />
+          </div>
 
           {/* Tabs for different sections */}
           <Tabs defaultValue="catalog" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="catalog">📚 Catálogo</TabsTrigger>
-              <TabsTrigger value="connect">🔌 Minhas Integrações</TabsTrigger>
-              <TabsTrigger value="test">✅ Testar Conexão</TabsTrigger>
-              <TabsTrigger value="monitor">📊 Logs & Webhooks</TabsTrigger>
+              <TabsTrigger value="catalog" data-tour="catalog-tab">📚 Catálogo</TabsTrigger>
+              <TabsTrigger value="connect" data-tour="connect-tab">🔌 Minhas Integrações</TabsTrigger>
+              <TabsTrigger value="test" data-tour="test-tab">✅ Testar Conexão</TabsTrigger>
+              <TabsTrigger value="monitor" data-tour="monitor-tab">📊 Logs & Webhooks</TabsTrigger>
             </TabsList>
 
             {/* Aba 1: Catálogo - Integrações disponíveis e guia */}
             <TabsContent value="catalog" className="mt-6 space-y-6">
-              <div className="space-y-2">
-                <h2 className="h2">Guia de Início Rápido</h2>
-                <p className="text-body-sm">
-                  Aprenda como conectar e configurar suas integrações em minutos
-                </p>
-              </div>
-              <IntegrationOnboarding />
+              {/* Quick Start Card */}
+              <QuickStartCard />
               
-              <div className="mt-8 space-y-2">
+              <div className="space-y-2">
                 <h2 className="h2">Conectar Nova Integração</h2>
                 <p className="text-body-sm">
                   Escolha entre mais de 50 integrações disponíveis
