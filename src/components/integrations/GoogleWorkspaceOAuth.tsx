@@ -20,6 +20,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useGoogleWorkspaceApi, GoogleUserProfile } from '@/hooks/useGoogleWorkspaceApi';
 
 interface OAuthToken {
   id: string;
@@ -37,8 +38,15 @@ const GoogleWorkspaceOAuth = () => {
   const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<'idle' | 'authorizing' | 'complete'>('idle');
   const [autoRefreshing, setAutoRefreshing] = useState(false);
+  const [testingApi, setTestingApi] = useState(false);
+  const [apiTestResult, setApiTestResult] = useState<{
+    success: boolean;
+    profile?: GoogleUserProfile;
+    error?: string;
+  } | null>(null);
   const { user } = useAuth();
   const { toast } = useToast();
+  const { getUserProfile, loading: apiLoading } = useGoogleWorkspaceApi();
 
   useEffect(() => {
     checkConnectionStatus();
@@ -363,6 +371,80 @@ const GoogleWorkspaceOAuth = () => {
     return Math.max(0, Math.round(100 - (elapsed / totalLife) * 100));
   };
 
+  /**
+   * Testa a integração OAuth chamando a API do Google
+   * 
+   * Faz uma chamada ao endpoint: https://www.googleapis.com/oauth2/v1/userinfo
+   * usando o access_token armazenado no banco de dados.
+   * 
+   * Exemplos de respostas:
+   * 
+   * ✅ Sucesso (200):
+   * {
+   *   "id": "1234567890",
+   *   "email": "usuario@empresa.com",
+   *   "verified_email": true,
+   *   "name": "João Silva",
+   *   "given_name": "João",
+   *   "family_name": "Silva",
+   *   "picture": "https://lh3.googleusercontent.com/...",
+   *   "locale": "pt-BR",
+   *   "hd": "empresa.com"
+   * }
+   * 
+   * ❌ Token inválido ou expirado (401):
+   * {
+   *   "error": {
+   *     "code": 401,
+   *     "message": "Invalid Credentials",
+   *     "status": "UNAUTHENTICATED"
+   *   }
+   * }
+   * 
+   * ❌ Permissões insuficientes (403):
+   * {
+   *   "error": {
+   *     "code": 403,
+   *     "message": "Request had insufficient authentication scopes",
+   *     "status": "PERMISSION_DENIED"
+   *   }
+   * }
+   * 
+   * ❌ Token não encontrado no banco:
+   * { "error": "Token not found or expired" }
+   */
+  const handleTestApiConnection = async () => {
+    setTestingApi(true);
+    setApiTestResult(null);
+
+    try {
+      const profile = await getUserProfile();
+      
+      if (profile) {
+        setApiTestResult({
+          success: true,
+          profile: profile
+        });
+        toast({
+          title: '✅ Teste bem-sucedido!',
+          description: 'Token válido e comunicação com Google API confirmada.',
+        });
+      } else {
+        setApiTestResult({
+          success: false,
+          error: 'Não foi possível obter o perfil. Verifique as permissões.'
+        });
+      }
+    } catch (err: any) {
+      setApiTestResult({
+        success: false,
+        error: err.message || 'Erro desconhecido ao testar a API'
+      });
+    } finally {
+      setTestingApi(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -430,6 +512,115 @@ const GoogleWorkspaceOAuth = () => {
                 {new Date(tokenData.expires_at).toLocaleString('pt-BR')}
               </div>
             </div>
+
+            {/* Bloco de teste da API */}
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  Testar Integração OAuth
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Verifica se o token está válido chamando a API do Google
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  onClick={handleTestApiConnection}
+                  disabled={testingApi || apiLoading}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  {testingApi || apiLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                      Testando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-3 w-3" />
+                      Testar Conexão
+                    </>
+                  )}
+                </Button>
+
+                {apiTestResult && (
+                  <Alert variant={apiTestResult.success ? 'default' : 'destructive'} className="border-2">
+                    <div className="flex items-start gap-2">
+                      {apiTestResult.success ? (
+                        <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                      ) : (
+                        <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                      )}
+                      <div className="flex-1 space-y-2">
+                        <AlertTitle className="text-xs font-semibold">
+                          {apiTestResult.success ? '✅ Token Válido' : '❌ Falha'}
+                        </AlertTitle>
+                        
+                        {apiTestResult.success && apiTestResult.profile ? (
+                          <div className="space-y-1.5 text-xs">
+                            <AlertDescription className="font-medium text-foreground">
+                              Dados retornados:
+                            </AlertDescription>
+                            <div className="bg-background/50 rounded p-2 space-y-1.5 font-mono text-[10px]">
+                              <div className="flex items-center gap-1.5">
+                                <User className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-muted-foreground">ID:</span>
+                                <Badge variant="secondary" className="font-mono text-[9px] h-4 px-1">
+                                  {apiTestResult.profile.id}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground">Nome:</span>
+                                <span className="text-foreground font-medium">
+                                  {apiTestResult.profile.name}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-muted-foreground">Email:</span>
+                                <span className="text-foreground font-medium">
+                                  {apiTestResult.profile.email}
+                                </span>
+                                {apiTestResult.profile.verified_email && (
+                                  <Badge variant="outline" className="text-green-600 border-green-600 text-[9px] h-4 px-1">
+                                    <CheckCircle className="h-2 w-2 mr-0.5" />
+                                    Verificado
+                                  </Badge>
+                                )}
+                              </div>
+                              {apiTestResult.profile.hd && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-muted-foreground">Domínio:</span>
+                                  <span className="text-foreground font-medium">
+                                    {apiTestResult.profile.hd}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="pt-1 text-[10px] text-muted-foreground">
+                              <strong>Endpoint:</strong> googleapis.com/oauth2/v1/userinfo
+                            </div>
+                          </div>
+                        ) : (
+                          <AlertDescription className="space-y-1.5 text-xs">
+                            <div className="font-medium">
+                              {apiTestResult.error}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground space-y-0.5 mt-2 border-t pt-1.5">
+                              <div><strong>Erros comuns:</strong></div>
+                              <div>• <strong>401:</strong> Token expirado ou inválido</div>
+                              <div>• <strong>403:</strong> Permissões insuficientes</div>
+                              <div>• <strong>Token not found:</strong> Reconecte</div>
+                            </div>
+                          </AlertDescription>
+                        )}
+                      </div>
+                    </div>
+                  </Alert>
+                )}
+              </CardContent>
+            </Card>
 
             <div className="flex gap-2">
               <Button onClick={handleRefreshToken} variant="outline" size="sm" className="flex-1">
