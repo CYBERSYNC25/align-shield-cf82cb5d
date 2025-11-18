@@ -5,16 +5,24 @@ import {
   FileText, 
   Users, 
   AlertCircle, 
-  Building, 
+  Building2, 
   Database, 
   Settings,
   ChevronRight,
   Home,
-  TrendingUp
+  TrendingUp,
+  ClipboardCheck,
+  Scale,
+  AlertTriangle,
+  FileCheck2,
+  UserCheck,
+  ShieldCheck,
+  Target,
+  Activity
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface SidebarItem {
   id: string;
@@ -33,69 +41,96 @@ const sidebarItems: SidebarItem[] = [
     href: '/'
   },
   {
-    id: 'controls',
-    label: 'Controles & Frameworks',
-    icon: Shield,
-    href: '/controls'
+    id: 'compliance',
+    label: 'Compliance',
+    icon: ShieldCheck,
+    children: [
+      {
+        id: 'controls',
+        label: 'Controles & Frameworks',
+        icon: Shield,
+        href: '/controls'
+      },
+      {
+        id: 'readiness',
+        label: 'Prontidão',
+        icon: Target,
+        href: '/readiness',
+        badge: 'Novo'
+      },
+      {
+        id: 'audit',
+        label: 'Auditorias',
+        icon: ClipboardCheck,
+        href: '/audit'
+      }
+    ]
   },
   {
-    id: 'integrations',
-    label: 'Hub de Integrações',
+    id: 'governance',
+    label: 'Governança',
+    icon: Scale,
+    children: [
+      {
+        id: 'policies',
+        label: 'Políticas & Treinamentos',
+        icon: FileText,
+        href: '/policies',
+        badge: 'Novo'
+      },
+      {
+        id: 'access-reviews',
+        label: 'Revisões de Acesso',
+        icon: UserCheck,
+        href: '/access-reviews',
+        badge: 3
+      }
+    ]
+  },
+  {
+    id: 'risk-management',
+    label: 'Gestão de Riscos',
+    icon: AlertTriangle,
+    children: [
+      {
+        id: 'risks',
+        label: 'Riscos & Fornecedores',
+        icon: AlertCircle,
+        href: '/risks'
+      },
+      {
+        id: 'incidents',
+        label: 'Incidentes & Continuidade',
+        icon: Building2,
+        href: '/incidents'
+      }
+    ]
+  },
+  {
+    id: 'data',
+    label: 'Integrações & Dados',
     icon: Database,
-    href: '/integrations',
-    badge: 12
-  },
-  {
-    id: 'readiness',
-    label: 'Prontidão para Certificação',
-    icon: TrendingUp,
-    href: '/readiness',
-    badge: 'Novo'
-  },
-  {
-    id: 'policies',
-    label: 'Políticas & Treinamentos',
-    icon: FileText,
-    href: '/policies',
-    badge: 'Novo'
-  },
-  {
-    id: 'access-reviews',
-    label: 'Revisões de Acesso',
-    icon: Users,
-    href: '/access-reviews',
-    badge: 3
-  },
-  {
-    id: 'risks',
-    label: 'Riscos & Fornecedores',
-    icon: AlertCircle,
-    href: '/risks'
-  },
-  {
-    id: 'incidents',
-    label: 'Incidentes & Continuidade',
-    icon: Building,
-    href: '/incidents'
-  },
-  {
-    id: 'audit',
-    label: 'Auditorias Contínuas',
-    icon: Shield,
-    href: '/audit'
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics & Insights',
-    icon: TrendingUp,
-    href: '/analytics',
-    badge: 'Novo'
-  },
-  {
-    id: 'reports',
-    label: 'Relatórios & Exportações',
-    icon: BarChart3,
-    href: '/reports'
+    children: [
+      {
+        id: 'integrations',
+        label: 'Hub de Integrações',
+        icon: Database,
+        href: '/integrations'
+      },
+      {
+        id: 'analytics',
+        label: 'Analytics',
+        icon: Activity,
+        href: '/analytics',
+        badge: 'Novo'
+      },
+      {
+        id: 'reports',
+        label: 'Relatórios',
+        icon: BarChart3,
+        href: '/reports'
+      }
+    ]
   },
   {
     id: 'settings',
@@ -108,6 +143,26 @@ const sidebarItems: SidebarItem[] = [
 const Sidebar = () => {
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  // Auto-expand group containing active route
+  useEffect(() => {
+    const findParentWithActiveChild = (items: SidebarItem[]): string | null => {
+      for (const item of items) {
+        if (item.children) {
+          const hasActiveChild = item.children.some(
+            child => child.href === location.pathname
+          );
+          if (hasActiveChild) return item.id;
+        }
+      }
+      return null;
+    };
+
+    const activeParent = findParentWithActiveChild(sidebarItems);
+    if (activeParent && !expandedItems.includes(activeParent)) {
+      setExpandedItems(prev => [...prev, activeParent]);
+    }
+  }, [location.pathname]);
 
   const toggleExpanded = (itemId: string) => {
     setExpandedItems(prev => 
