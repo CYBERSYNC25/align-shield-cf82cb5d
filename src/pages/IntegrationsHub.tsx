@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Cloud, HardDrive, FileText, WifiOff, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
+import { ConnectAwsModal } from '@/components/integrations/ConnectAwsModal';
 
 interface IntegrationCard {
   id: string;
@@ -55,12 +56,19 @@ const integrations: IntegrationCard[] = [
 ];
 
 const IntegrationsHub = () => {
-  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+  const [isAwsModalOpen, setIsAwsModalOpen] = useState(false);
 
   const handleConnect = (integrationId: string) => {
-    setSelectedIntegration(integrationId);
-    // Aqui virá a lógica de conexão
-    console.log('Conectar:', integrationId);
+    if (integrationId === 'aws') {
+      setIsAwsModalOpen(true);
+    } else {
+      console.log('Conectar:', integrationId);
+    }
+  };
+
+  const handleAwsSuccess = () => {
+    // Atualizar lista de integrações após sucesso
+    console.log('AWS conectada com sucesso!');
   };
 
   return (
@@ -232,6 +240,13 @@ const IntegrationsHub = () => {
           </Card>
         </main>
       </div>
+
+      {/* AWS Connection Modal */}
+      <ConnectAwsModal
+        open={isAwsModalOpen}
+        onOpenChange={setIsAwsModalOpen}
+        onSuccess={handleAwsSuccess}
+      />
     </div>
   );
 };
