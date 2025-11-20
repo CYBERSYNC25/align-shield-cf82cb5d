@@ -3,9 +3,11 @@ import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Cloud, HardDrive, FileText, WifiOff, CheckCircle2 } from 'lucide-react';
+import { Cloud, FileText, WifiOff, CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { ConnectAwsModal } from '@/components/integrations/ConnectAwsModal';
+import { GoogleIntegrationCard } from '@/components/integrations/GoogleIntegrationCard';
+import { AzureIntegrationCard } from '@/components/integrations/AzureIntegrationCard';
 
 interface IntegrationCard {
   id: string;
@@ -18,31 +20,13 @@ interface IntegrationCard {
   lastSync?: string;
 }
 
-const integrations: IntegrationCard[] = [
-  {
-    id: 'aws',
-    name: 'AWS Cloud',
-    description: 'Coleta automática de usuários IAM e S3 buckets',
-    provider: 'AWS',
-    icon: <Cloud className="h-8 w-8" />,
-    status: 'available',
-    isConnected: true,
-    lastSync: '2024-01-15 14:30',
-  },
+const comingSoonIntegrations: IntegrationCard[] = [
   {
     id: 'mikrotik',
     name: 'MikroTik',
     description: 'Gerenciamento de roteadores e configurações de rede',
     provider: 'MIKROTIK',
     icon: <WifiOff className="h-8 w-8" />,
-    status: 'coming_soon',
-  },
-  {
-    id: 'google_drive',
-    name: 'Google Drive',
-    description: 'Sincronização de documentos e políticas',
-    provider: 'GOOGLE',
-    icon: <HardDrive className="h-8 w-8" />,
     status: 'coming_soon',
   },
   {
@@ -58,16 +42,7 @@ const integrations: IntegrationCard[] = [
 const IntegrationsHub = () => {
   const [isAwsModalOpen, setIsAwsModalOpen] = useState(false);
 
-  const handleConnect = (integrationId: string) => {
-    if (integrationId === 'aws') {
-      setIsAwsModalOpen(true);
-    } else {
-      console.log('Conectar:', integrationId);
-    }
-  };
-
   const handleAwsSuccess = () => {
-    // Atualizar lista de integrações após sucesso
     console.log('AWS conectada com sucesso!');
   };
 
@@ -94,8 +69,10 @@ const IntegrationsHub = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">1</div>
-                <p className="text-xs text-muted-foreground mt-1">AWS Cloud conectada</p>
+                <div className="text-2xl font-bold">3</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Google, Azure e AWS disponíveis
+                </p>
               </CardContent>
             </Card>
 
@@ -107,7 +84,7 @@ const IntegrationsHub = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">Agora</div>
-                <p className="text-xs text-muted-foreground mt-1">AWS Cloud</p>
+                <p className="text-xs text-muted-foreground mt-1">Sistema atualizado</p>
               </CardContent>
             </Card>
 
@@ -124,88 +101,67 @@ const IntegrationsHub = () => {
             </Card>
           </div>
 
-          {/* Integration Cards Grid */}
+          {/* Main Integrations Grid - Google, Azure, AWS */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Serviços Disponíveis</h2>
+            <h2 className="text-xl font-semibold mb-4">Integrações Principais</h2>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {integrations.map((integration) => (
-                <Card
-                  key={integration.id}
-                  className={`transition-all duration-200 ${
-                    integration.id === 'aws'
-                      ? 'border-primary shadow-lg hover:shadow-xl'
-                      : 'hover:shadow-md'
-                  } ${
-                    integration.status === 'coming_soon' ? 'opacity-75' : ''
-                  }`}
-                >
+              {/* Google Workspace */}
+              <GoogleIntegrationCard />
+
+              {/* Azure AD */}
+              <AzureIntegrationCard />
+
+              {/* AWS Cloud */}
+              <Card className="transition-all duration-200 border-primary shadow-lg hover:shadow-xl">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                      <Cloud className="h-8 w-8" />
+                    </div>
+                    <Badge variant="default" className="bg-success text-success-foreground">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Disponível
+                    </Badge>
+                  </div>
+                  <CardTitle className="mt-4">AWS Cloud</CardTitle>
+                  <CardDescription>
+                    Coleta automática de usuários IAM e S3 buckets
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-2">
+                  <Button className="w-full" onClick={() => setIsAwsModalOpen(true)}>
+                    Conectar
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Configure via Cross-Account Role
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Coming Soon Integrations */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Em Breve</h2>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {comingSoonIntegrations.map((integration) => (
+                <Card key={integration.id} className="transition-all duration-200 opacity-75 hover:shadow-md">
                   <CardHeader>
                     <div className="flex items-start justify-between">
-                      <div
-                        className={`p-3 rounded-lg ${
-                          integration.id === 'aws'
-                            ? 'bg-primary/10 text-primary'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
+                      <div className="p-3 rounded-lg bg-muted text-muted-foreground">
                         {integration.icon}
                       </div>
-                      <div className="flex flex-col gap-2">
-                        {integration.isConnected && (
-                          <Badge variant="default" className="bg-success text-success-foreground">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Conectado
-                          </Badge>
-                        )}
-                        {integration.status === 'coming_soon' && (
-                          <Badge variant="secondary">Em Breve</Badge>
-                        )}
-                      </div>
+                      <Badge variant="secondary">Em Breve</Badge>
                     </div>
                     <CardTitle className="mt-4">{integration.name}</CardTitle>
                     <CardDescription>{integration.description}</CardDescription>
                   </CardHeader>
 
                   <CardContent>
-                    {integration.isConnected && integration.lastSync && (
-                      <div className="mb-4 p-3 bg-success-bg rounded-lg border border-success/20">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                          <span className="text-sm text-success font-medium">
-                            Última sincronização
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {integration.lastSync}
-                        </p>
-                      </div>
-                    )}
-
-                    {integration.status === 'available' && !integration.isConnected && (
-                      <Button
-                        className="w-full"
-                        onClick={() => handleConnect(integration.id)}
-                      >
-                        Conectar
-                      </Button>
-                    )}
-
-                    {integration.isConnected && (
-                      <div className="space-y-2">
-                        <Button variant="outline" className="w-full">
-                          Configurar
-                        </Button>
-                        <Button variant="ghost" className="w-full text-danger hover:text-danger">
-                          Desconectar
-                        </Button>
-                      </div>
-                    )}
-
-                    {integration.status === 'coming_soon' && (
-                      <Button variant="secondary" className="w-full" disabled>
-                        Em breve
-                      </Button>
-                    )}
+                    <Button variant="secondary" className="w-full" disabled>
+                      Em breve
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
