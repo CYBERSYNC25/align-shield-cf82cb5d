@@ -84,7 +84,7 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
       }
 
       // Inserir integração no Supabase
-      const { error: insertError } = await supabase
+      const { data: insertedIntegration, error: insertError } = await supabase
         .from('integrations')
         .insert({
           user_id: user.id,
@@ -95,17 +95,50 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
           },
           status: 'active',
           last_sync_at: null,
-        });
+        })
+        .select()
+        .single();
 
-      if (insertError) {
-        throw insertError;
+      if (insertError || !insertedIntegration) {
+        throw insertError || new Error('Erro ao salvar integração');
       }
 
-      toast({
-        title: 'Integração AWS salva com sucesso!',
-        description: `${data.name} foi configurada e está pronta para uso.`,
-        variant: 'default',
-      });
+      // Testar a conexão chamando a edge function
+      const { data: testResult, error: testError } = await supabase.functions.invoke(
+        'aws-test-connection',
+        {
+          body: { integration_id: insertedIntegration.id }
+        }
+      );
+
+      if (testError) {
+        console.error('Erro ao testar conexão:', testError);
+        toast({
+          title: 'Integração salva com aviso',
+          description: `${data.name} foi salva, mas não foi possível validar a conexão. Teste manualmente depois.`,
+          variant: 'default',
+        });
+      } else if (!testResult?.success) {
+        // Teste falhou
+        toast({
+          title: 'Conexão AWS não validada',
+          description: testResult?.error || 'Não foi possível conectar à AWS com as credenciais fornecidas.',
+          variant: 'destructive',
+        });
+        
+        // Mesmo com erro, a integração foi salva
+        toast({
+          title: 'Integração salva',
+          description: `${data.name} foi salva. Verifique as credenciais e tente novamente.`,
+        });
+      } else {
+        // Sucesso total!
+        toast({
+          title: 'Integração AWS validada com sucesso! ✓',
+          description: `${data.name} foi configurada e testada. ${testResult.user_count || 0} usuários IAM encontrados.`,
+          variant: 'default',
+        });
+      }
 
       reset();
       onOpenChange(false);
