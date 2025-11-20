@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useAzureConnection } from '@/hooks/useAzureConnection';
@@ -65,11 +66,30 @@ export const AzureConnectionStatus = () => {
     );
   }
 
-  const handleConnect = () => {
-    toast({
-      title: "Iniciando fluxo OAuth...",
-      description: "Você será redirecionado para a Microsoft em instantes.",
-    });
+  const handleConnect = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          scopes: 'openid profile email offline_access User.Read',
+          redirectTo: window.location.href,
+        },
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao conectar",
+          description: error.message || "Não foi possível iniciar o fluxo de autenticação com a Microsoft.",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro inesperado",
+        description: "Ocorreu um erro ao tentar conectar com a Microsoft. Tente novamente.",
+      });
+    }
   };
 
   if (!connectionStatus?.connected) {
