@@ -690,6 +690,42 @@ export type Database = {
         }
         Relationships: []
       }
+      integrations: {
+        Row: {
+          configuration: Json | null
+          created_at: string
+          id: string
+          last_sync_at: string | null
+          name: string
+          provider: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          configuration?: Json | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          name: string
+          provider: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          configuration?: Json | null
+          created_at?: string
+          id?: string
+          last_sync_at?: string | null
+          name?: string
+          provider?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           action_label: string | null
