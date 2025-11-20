@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, CheckCircle2, XCircle, Copy, Check } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const awsConnectionSchema = z.object({
   name: z
@@ -75,26 +76,45 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
     setIsLoading(true);
 
     try {
-      // Aqui virá a integração com Supabase
-      console.log('Dados da conexão AWS:', data);
+      // Obter usuário autenticado
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        throw new Error('Usuário não autenticado');
+      }
 
-      // Simular delay de API
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Inserir integração no Supabase
+      const { error: insertError } = await supabase
+        .from('integrations')
+        .insert({
+          user_id: user.id,
+          provider: 'AWS',
+          name: data.name,
+          configuration: {
+            role_arn: data.roleArn,
+          },
+          status: 'active',
+          last_sync_at: null,
+        });
+
+      if (insertError) {
+        throw insertError;
+      }
 
       toast({
-        title: 'Conexão AWS configurada!',
-        description: `${data.name} foi conectada com sucesso.`,
+        title: 'Integração AWS salva com sucesso!',
+        description: `${data.name} foi configurada e está pronta para uso.`,
         variant: 'default',
       });
 
       reset();
       onOpenChange(false);
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao conectar AWS:', error);
       toast({
-        title: 'Erro ao conectar',
-        description: 'Não foi possível estabelecer conexão com a AWS.',
+        title: 'Erro ao salvar integração',
+        description: error.message || 'Não foi possível salvar a conexão com a AWS.',
         variant: 'destructive',
       });
     } finally {
