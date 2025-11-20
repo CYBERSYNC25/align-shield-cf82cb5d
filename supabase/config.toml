@@ -59,3 +59,6 @@ verify_jwt = true
 
 [functions.azure-oauth-revoke]
 verify_jwt = true
+
+[functions.aws-test-connection]
+verify_jwt = true
