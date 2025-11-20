@@ -1,166 +1,235 @@
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
-import AvailableIntegrations from '@/components/integrations/AvailableIntegrations';
-import ConnectedIntegrations from '@/components/integrations/ConnectedIntegrations';
-import IntegrationsStats from '@/components/integrations/IntegrationsStats';
-import SecretsManagement from '@/components/integrations/SecretsManagement';
-import GoogleWorkspaceOAuth from '@/components/integrations/GoogleWorkspaceOAuth';
-import IntegrationDemo from '@/components/integrations/IntegrationDemo';
-import WebhookMonitor from '@/components/integrations/WebhookMonitor';
-import GoogleApiTester from '@/components/integrations/GoogleApiTester';
-import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
-import { GoogleConnectionStatus } from '@/components/integrations/GoogleConnectionStatus';
-import { GoogleOAuthValidator } from '@/components/integrations/GoogleOAuthValidator';
-import { DynamicApiConnector } from '@/components/integrations/DynamicApiConnector';
-import { ApiRequestHistory } from '@/components/integrations/ApiRequestHistory';
-import { IntegrationValidator } from '@/components/integrations/IntegrationValidator';
-import { ApiIntegrationFlow } from '@/components/integrations/ApiIntegrationFlow';
-import { QuickStartTour } from '@/components/integrations/QuickStartTour';
-import { QuickStartCard } from '@/components/integrations/QuickStartCard';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Cloud, HardDrive, FileText, WifiOff, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+
+interface IntegrationCard {
+  id: string;
+  name: string;
+  description: string;
+  provider: string;
+  icon: React.ReactNode;
+  status: 'available' | 'coming_soon';
+  isConnected?: boolean;
+  lastSync?: string;
+}
+
+const integrations: IntegrationCard[] = [
+  {
+    id: 'aws',
+    name: 'AWS Cloud',
+    description: 'Coleta automática de usuários IAM e S3 buckets',
+    provider: 'AWS',
+    icon: <Cloud className="h-8 w-8" />,
+    status: 'available',
+    isConnected: true,
+    lastSync: '2024-01-15 14:30',
+  },
+  {
+    id: 'mikrotik',
+    name: 'MikroTik',
+    description: 'Gerenciamento de roteadores e configurações de rede',
+    provider: 'MIKROTIK',
+    icon: <WifiOff className="h-8 w-8" />,
+    status: 'coming_soon',
+  },
+  {
+    id: 'google_drive',
+    name: 'Google Drive',
+    description: 'Sincronização de documentos e políticas',
+    provider: 'GOOGLE',
+    icon: <HardDrive className="h-8 w-8" />,
+    status: 'coming_soon',
+  },
+  {
+    id: 'jira',
+    name: 'Jira',
+    description: 'Integração com tickets e gestão de tarefas',
+    provider: 'JIRA',
+    icon: <FileText className="h-8 w-8" />,
+    status: 'coming_soon',
+  },
+];
 
 const IntegrationsHub = () => {
+  const [selectedIntegration, setSelectedIntegration] = useState<string | null>(null);
+
+  const handleConnect = (integrationId: string) => {
+    setSelectedIntegration(integrationId);
+    // Aqui virá a lógica de conexão
+    console.log('Conectar:', integrationId);
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <QuickStartTour />
-      
-      <div className="flex">
-        <Sidebar />
-        
-        <main className="flex-1 p-6 space-y-6 overflow-auto">
-          {/* Page Header */}
-          <div className="space-y-2">
-            <h1 className="h1">
-              Hub de Integrações
-            </h1>
-            <p className="text-body-sm">
-              Conecte suas ferramentas para automatizar coleta de evidências e monitoramento contínuo de compliance
+    <div className="min-h-screen flex w-full bg-background">
+      <Sidebar />
+      <div className="flex-1 flex flex-col">
+        <Header />
+        <main className="flex-1 p-6 space-y-6">
+          {/* Header Section */}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Integrações</h1>
+            <p className="text-muted-foreground mt-2">
+              Conecte suas ferramentas e automatize a coleta de evidências de compliance
             </p>
           </div>
 
-          {/* Integration Stats */}
-          <div data-tour="integrations-stats">
-            <IntegrationsStats />
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Integrações Ativas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">1</div>
+                <p className="text-xs text-muted-foreground mt-1">AWS Cloud conectada</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Última Sincronização
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">Agora</div>
+                <p className="text-xs text-muted-foreground mt-1">AWS Cloud</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Evidências Coletadas
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">247</div>
+                <p className="text-xs text-muted-foreground mt-1">Este mês</p>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Tabs for different sections */}
-          <Tabs defaultValue="catalog" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="catalog" data-tour="catalog-tab">📚 Catálogo</TabsTrigger>
-              <TabsTrigger value="connect" data-tour="connect-tab">🔌 Minhas Integrações</TabsTrigger>
-              <TabsTrigger value="apis" data-tour="apis-tab">🔗 Conectar APIs</TabsTrigger>
-              <TabsTrigger value="test" data-tour="test-tab">✅ Testar Conexão</TabsTrigger>
-              <TabsTrigger value="monitor" data-tour="monitor-tab">📊 Logs & Webhooks</TabsTrigger>
-            </TabsList>
+          {/* Integration Cards Grid */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Serviços Disponíveis</h2>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {integrations.map((integration) => (
+                <Card
+                  key={integration.id}
+                  className={`transition-all duration-200 ${
+                    integration.id === 'aws'
+                      ? 'border-primary shadow-lg hover:shadow-xl'
+                      : 'hover:shadow-md'
+                  } ${
+                    integration.status === 'coming_soon' ? 'opacity-75' : ''
+                  }`}
+                >
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div
+                        className={`p-3 rounded-lg ${
+                          integration.id === 'aws'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {integration.icon}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {integration.isConnected && (
+                          <Badge variant="default" className="bg-success text-success-foreground">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Conectado
+                          </Badge>
+                        )}
+                        {integration.status === 'coming_soon' && (
+                          <Badge variant="secondary">Em Breve</Badge>
+                        )}
+                      </div>
+                    </div>
+                    <CardTitle className="mt-4">{integration.name}</CardTitle>
+                    <CardDescription>{integration.description}</CardDescription>
+                  </CardHeader>
 
-            {/* Aba 1: Catálogo - Integrações disponíveis e guia */}
-            <TabsContent value="catalog" className="mt-6 space-y-6">
-              {/* Quick Start Card */}
-              <QuickStartCard />
-              
-              <div className="space-y-2">
-                <h2 className="h2">Conectar Nova Integração</h2>
-                <p className="text-body-sm">
-                  Escolha entre mais de 50 integrações disponíveis
-                </p>
-              </div>
-              <AvailableIntegrations />
-            </TabsContent>
+                  <CardContent>
+                    {integration.isConnected && integration.lastSync && (
+                      <div className="mb-4 p-3 bg-success-bg rounded-lg border border-success/20">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-success animate-pulse" />
+                          <span className="text-sm text-success font-medium">
+                            Última sincronização
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {integration.lastSync}
+                        </p>
+                      </div>
+                    )}
 
-            {/* Aba 2: Conectar - OAuth, integrações conectadas */}
-            <TabsContent value="connect" className="mt-6 space-y-6">
-              <div className="space-y-2">
-                <h2 className="h2">Suas Integrações Ativas</h2>
-                <p className="text-body-sm">
-                  Gerencie e monitore todas as suas conexões em um só lugar
-                </p>
-              </div>
-              <ConnectedIntegrations />
-              
-              <div className="mt-8 space-y-2">
-                <h2 className="h2">Configuração Google Workspace</h2>
-                <p className="text-body-sm">
-                  Configure autenticação OAuth 2.0 para integração completa
-                </p>
-              </div>
-              <GoogleConnectionStatus />
-              <div className="mt-6">
-                <GoogleWorkspaceOAuth />
-              </div>
-            </TabsContent>
+                    {integration.status === 'available' && !integration.isConnected && (
+                      <Button
+                        className="w-full"
+                        onClick={() => handleConnect(integration.id)}
+                      >
+                        Conectar
+                      </Button>
+                    )}
 
-            {/* Aba 3: APIs - Fluxo dinâmico para conectar APIs externas */}
-            <TabsContent value="apis" className="mt-6 space-y-6">
-              <ApiIntegrationFlow />
-            </TabsContent>
+                    {integration.isConnected && (
+                      <div className="space-y-2">
+                        <Button variant="outline" className="w-full">
+                          Configurar
+                        </Button>
+                        <Button variant="ghost" className="w-full text-danger hover:text-danger">
+                          Desconectar
+                        </Button>
+                      </div>
+                    )}
 
-            {/* Aba 4: Testar - Validação, API tester, connector */}
-            <TabsContent value="test" className="mt-6 space-y-6">
-              <div className="space-y-2">
-                <h2 className="h2">Validação Completa OAuth Google</h2>
-                <p className="text-body-sm">
-                  Verifique automaticamente se a integração está configurada corretamente
-                </p>
-              </div>
-              <GoogleOAuthValidator />
+                    {integration.status === 'coming_soon' && (
+                      <Button variant="secondary" className="w-full" disabled>
+                        Em breve
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
 
-              <div className="mt-8 space-y-2">
-                <h2 className="h2">Validar Integração</h2>
-                <p className="text-body-sm">
-                  Teste se sua integração OAuth está funcionando corretamente
-                </p>
-              </div>
-              <IntegrationValidator 
-                integrationName="google_workspace"
-                testEndpoint="https://www.googleapis.com/oauth2/v1/userinfo"
-                autoTest={false}
-              />
-              
-              <div className="mt-8 space-y-2">
-                <h2 className="h2">Testar Endpoints da API</h2>
-                <p className="text-body-sm">
-                  Faça requisições de teste para validar permissões e escopos
-                </p>
-              </div>
-              <GoogleApiTester />
-              
-              <div className="mt-8 space-y-2">
-                <h2 className="h2">Conector de API Personalizado</h2>
-                <p className="text-body-sm">
-                  Crie requisições customizadas usando seus tokens OAuth
-                </p>
-              </div>
-              <DynamicApiConnector />
-              
-              <div className="mt-8 space-y-2">
-                <h2 className="h2">Histórico de Requisições</h2>
-                <p className="text-body-sm">
-                  Veja detalhes de todas as chamadas feitas através do conector
-                </p>
-              </div>
-              <ApiRequestHistory />
-            </TabsContent>
-
-            {/* Aba 4: Monitorar - Webhooks, audit logs, status */}
-            <TabsContent value="monitor" className="mt-6 space-y-6">
-              <div className="space-y-2">
-                <h2 className="h2">Monitor de Webhooks em Tempo Real</h2>
-                <p className="text-body-sm">
-                  Acompanhe webhooks recebidos e processados automaticamente
-                </p>
-              </div>
-              <WebhookMonitor />
-              
-              <div className="mt-8 space-y-2">
-                <h2 className="h2">Logs de Auditoria</h2>
-                <p className="text-body-sm">
-                  Histórico completo de todas as ações no sistema de integrações
-                </p>
-              </div>
-              <AuditLogsViewer />
-            </TabsContent>
-          </Tabs>
+          {/* Info Card */}
+          <Card className="bg-muted/50 border-dashed">
+            <CardHeader>
+              <CardTitle className="text-base">🔐 Segurança e Privacidade</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="text-sm text-muted-foreground space-y-2">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-success flex-shrink-0" />
+                  <span>Todas as credenciais são criptografadas end-to-end</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-success flex-shrink-0" />
+                  <span>Dados isolados por usuário com Row Level Security</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-success flex-shrink-0" />
+                  <span>Você pode desconectar integrações a qualquer momento</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-success flex-shrink-0" />
+                  <span>Auditoria completa de todas as ações realizadas</span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
         </main>
       </div>
     </div>
