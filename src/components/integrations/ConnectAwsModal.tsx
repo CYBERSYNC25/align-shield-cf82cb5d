@@ -10,11 +10,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Copy, Check } from 'lucide-react';
 
 const awsConnectionSchema = z.object({
   name: z
@@ -44,7 +50,17 @@ interface ConnectAwsModalProps {
 
 export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const { toast } = useToast();
+
+  const policyJson = {
+    "Version": "2012-10-17",
+    "Statement": [{
+      "Effect": "Allow",
+      "Action": ["iam:ListUsers", "s3:ListAllMyBuckets"],
+      "Resource": "*"
+    }]
+  };
 
   const {
     register,
@@ -83,6 +99,24 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCopyPolicy = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(policyJson, null, 2));
+      setIsCopied(true);
+      toast({
+        title: 'Copiado!',
+        description: 'Política JSON copiada para a área de transferência',
+      });
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch (error) {
+      toast({
+        title: 'Erro ao copiar',
+        description: 'Não foi possível copiar o código',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -149,16 +183,114 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
             )}
           </div>
 
-          {/* Info Card */}
-          <div className="rounded-lg bg-muted/50 p-4 border border-border">
-            <h4 className="text-sm font-medium mb-2">ℹ️ Como obter o Role ARN?</h4>
-            <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-              <li>Acesse o Console AWS IAM</li>
-              <li>Vá em Roles → Criar nova role</li>
-              <li>Selecione "Another AWS account"</li>
-              <li>Copie o ARN gerado após criação</li>
-            </ol>
-          </div>
+          {/* Accordion com Instruções */}
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="instructions" className="border rounded-lg px-4">
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">📖 Como configurar?</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="space-y-4 pt-4">
+                {/* Passo 1 */}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                      1
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Acesse o Console AWS IAM</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Navegue até o serviço IAM no console da AWS
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Passo 2 */}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                      2
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Crie uma nova Role</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Vá em Roles → Create role → Select "Another AWS account"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Passo 3 */}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                      3
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Configure a política de permissões</p>
+                      <p className="text-xs text-muted-foreground mt-1 mb-3">
+                        Crie uma Role com permissão de leitura usando a política JSON abaixo:
+                      </p>
+                      
+                      {/* Code Block */}
+                      <div className="relative">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="absolute top-2 right-2 h-8 px-2"
+                          onClick={handleCopyPolicy}
+                        >
+                          {isCopied ? (
+                            <Check className="h-4 w-4 text-success" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <pre className="bg-muted rounded-lg p-4 text-xs overflow-x-auto border border-border">
+                          <code className="text-foreground">
+{JSON.stringify(policyJson, null, 2)}
+                          </code>
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Passo 4 */}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                      4
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Copie o ARN gerado</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Após criar a role, copie o ARN (Amazon Resource Name) e cole no campo "Cross-Account Role ARN" acima
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Passo 5 */}
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
+                      5
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Salvar e testar conexão</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Clique em "Salvar e Testar Conexão" para validar a configuração
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           <DialogFooter className="gap-2">
             <Button
