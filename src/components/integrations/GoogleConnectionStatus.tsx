@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   CheckCircle2,
   XCircle,
@@ -21,7 +22,8 @@ import {
   RefreshCw,
   Loader2,
   Shield,
-  Zap
+  Zap,
+  Link2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,6 +44,7 @@ export const GoogleConnectionStatus = () => {
   const [timeRemaining, setTimeRemaining] = useState<string>('');
   const [tokenLifePercent, setTokenLifePercent] = useState<number>(100);
   const [autoRefreshing, setAutoRefreshing] = useState(false);
+  const [connecting, setConnecting] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -210,6 +213,52 @@ export const GoogleConnectionStatus = () => {
     }
   };
 
+  /**
+   * Conecta o Google Workspace usando OAuth
+   * 
+   * Inicia o fluxo OAuth com configurações específicas para obter:
+   * - access_token: Token de acesso para fazer requisições à API
+   * - refresh_token: Token para renovar automaticamente (requer access_type: offline)
+   * - Permissões para ler perfil e metadados do Drive
+   */
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          scopes: 'openid profile email https://www.googleapis.com/auth/drive.metadata.readonly',
+          redirectTo: window.location.href,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao conectar",
+          description: error.message || "Não foi possível iniciar o fluxo de autenticação com o Google.",
+        });
+        setConnecting(false);
+      } else {
+        toast({
+          title: "Redirecionando para o Google...",
+          description: "Você será redirecionado em instantes.",
+        });
+      }
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Erro inesperado",
+        description: "Ocorreu um erro ao tentar conectar com o Google. Tente novamente.",
+      });
+      setConnecting(false);
+    }
+  };
+
   // Verifica status ao montar e periodicamente
   useEffect(() => {
     checkStatus();
@@ -330,13 +379,35 @@ export const GoogleConnectionStatus = () => {
         )}
 
         {status === 'disconnected' && (
-          <Alert>
-            <XCircle className="h-4 w-4" />
-            <AlertTitle>Integração não conectada</AlertTitle>
-            <AlertDescription>
-              Conecte sua conta Google Workspace na aba "🔐 OAuth 2.0" para começar a usar os recursos de integração.
-            </AlertDescription>
-          </Alert>
+          <div className="space-y-4">
+            <Alert>
+              <XCircle className="h-4 w-4" />
+              <AlertTitle>Integração não conectada</AlertTitle>
+              <AlertDescription>
+                Conecte sua conta Google Workspace para começar a usar os recursos de integração.
+              </AlertDescription>
+            </Alert>
+            
+            <div className="flex justify-center">
+              <Button 
+                onClick={handleConnect} 
+                disabled={connecting}
+                className="gap-2"
+              >
+                {connecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Conectando...
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="h-4 w-4" />
+                    Conectar Google Workspace
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         )}
 
         {status === 'checking' && (
