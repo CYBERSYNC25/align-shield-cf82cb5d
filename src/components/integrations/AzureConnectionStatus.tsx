@@ -15,8 +15,10 @@ import {
   Shield,
   RefreshCw,
   Unplug,
-  Play
+  Play,
+  Link2
 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -30,6 +32,7 @@ export const AzureConnectionStatus = () => {
     checkConnectionStatus 
   } = useAzureConnection();
 
+  const { toast } = useToast();
   const [connectionStatus, setConnectionStatus] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -62,15 +65,31 @@ export const AzureConnectionStatus = () => {
     );
   }
 
+  const handleConnect = () => {
+    toast({
+      title: "Iniciando fluxo OAuth...",
+      description: "Você será redirecionado para a Microsoft em instantes.",
+    });
+  };
+
   if (!connectionStatus?.connected) {
     return (
       <Card className="p-6">
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Nenhuma conexão Azure AD encontrada. Configure a integração primeiro.
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-4">
+          <Alert>
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Nenhuma conexão Azure AD encontrada. Configure a integração primeiro.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="flex justify-center">
+            <Button onClick={handleConnect} className="gap-2">
+              <Link2 className="h-4 w-4" />
+              Conectar com Microsoft 365
+            </Button>
+          </div>
+        </div>
       </Card>
     );
   }
