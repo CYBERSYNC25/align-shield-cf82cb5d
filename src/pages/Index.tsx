@@ -1,5 +1,6 @@
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
+import Footer from '@/components/layout/Footer';
 import ComplianceScoreCard from '@/components/dashboard/ComplianceScoreCard';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import TasksPanel from '@/components/dashboard/TasksPanel';
@@ -13,11 +14,11 @@ import { TrendingUp, Clock } from 'lucide-react';
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <DashboardOnboarding />
       <Header />
       
-      <div className="flex">
+      <div className="flex flex-1">
         <Sidebar />
         
         <main className="flex-1 p-6 overflow-auto">
@@ -82,6 +83,8 @@ const Index = () => {
           </div>
         </main>
       </div>
+
+      <Footer />
     </div>
   );
 };

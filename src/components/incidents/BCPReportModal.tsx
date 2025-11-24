@@ -63,7 +63,7 @@ RESUMO:
 Este relatório contém análises detalhadas sobre ${reportTypeName.toLowerCase()}.
 Todos os dados foram coletados durante o período especificado.
 
-Para mais informações, consulte o sistema ComplianceSync.
+Para mais informações, consulte o sistema APOC.
       `;
 
       // Create blob and download

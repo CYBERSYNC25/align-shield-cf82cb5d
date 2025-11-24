@@ -287,7 +287,7 @@ const Auth = () => {
             <div className="p-2 bg-primary rounded-lg">
               <Shield className="h-6 w-6 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold text-primary">ComplianceSync</h1>
+            <h1 className="text-2xl font-bold text-primary">APOC</h1>
           </div>
           <CardTitle className="text-2xl">Bem-vindo</CardTitle>
           <CardDescription>
