@@ -18,7 +18,8 @@ import {
   UserCheck,
   ShieldCheck,
   Target,
-  Activity
+  Activity,
+  BookOpen
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -131,6 +132,12 @@ const sidebarItems: SidebarItem[] = [
         href: '/reports'
       }
     ]
+  },
+  {
+    id: 'technical-docs',
+    label: 'Documentação Técnica',
+    icon: BookOpen,
+    href: '/technical-docs'
   },
   {
     id: 'settings',

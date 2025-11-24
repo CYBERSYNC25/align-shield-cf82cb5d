@@ -24,6 +24,7 @@ import FileManagement from "./pages/FileManagement";
 import Notifications from "./pages/Notifications";
 import Tasks from "./pages/Tasks";
 import ComplianceReadiness from "./pages/ComplianceReadiness";
+import TechnicalDocumentation from "./pages/TechnicalDocumentation";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +116,11 @@ const App = () => (
           <Route path="/readiness" element={
             <ProtectedRoute>
               <ComplianceReadiness />
+            </ProtectedRoute>
+          } />
+          <Route path="/technical-docs" element={
+            <ProtectedRoute>
+              <TechnicalDocumentation />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
