@@ -31,13 +31,11 @@ const ComplianceChart = () => {
     }, {} as Record<string, number>);
 
     return [
-      { name: 'Alto', value: riskCounts.high || 0, color: '#ef4444' },
-      { name: 'Médio', value: riskCounts.medium || 0, color: '#f59e0b' },
-      { name: 'Baixo', value: riskCounts.low || 0, color: '#22c55e' }
+      { name: 'Alto', value: riskCounts.high || 0, color: 'hsl(var(--destructive))' },
+      { name: 'Médio', value: riskCounts.medium || 0, color: 'hsl(var(--warning))' },
+      { name: 'Baixo', value: riskCounts.low || 0, color: 'hsl(var(--success))' }
     ].filter(item => item.value > 0);
   }, [risks]);
-
-  const COLORS = ['#ef4444', '#f59e0b', '#22c55e'];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
