@@ -217,8 +217,8 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-foreground">Analytics & Insights</h2>
-          <p className="text-lg text-muted-foreground">
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Analytics & Insights</h2>
+          <p className="text-lg text-slate-600 dark:text-slate-400">
             Visão detalhada da postura de compliance e métricas de segurança
           </p>
         </div>

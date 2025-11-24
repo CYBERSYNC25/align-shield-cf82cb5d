@@ -159,7 +159,9 @@ const TasksPanel = () => {
             <AlertTriangle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Nenhuma tarefa encontrada</p>
             <p className="text-xs text-muted-foreground mt-1">Crie uma nova tarefa para começar</p>
-          </div> : recentTasks.map(task => {})}
+          </div> : recentTasks.map(task => (
+            <TaskItem key={task.id} task={task} onStatusUpdate={handleStatusUpdate} />
+          ))}
         
         {!loading && user && tasks.length > 5 && <div className="pt-3 text-center">
             <Button variant="ghost" className="w-full text-primary" onClick={() => window.location.href = '/tasks'}>
