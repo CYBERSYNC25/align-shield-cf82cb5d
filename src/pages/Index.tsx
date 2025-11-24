@@ -105,57 +105,65 @@ const Index = () => {
       <div className="flex">
         <Sidebar />
         
-        <main className="flex-1 p-6 space-y-8 overflow-auto">
-          {/* Hero Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-2">
-                <h1 className="text-4xl font-bold text-foreground">
-                  Dashboard de Conformidade
-                </h1>
-                <p className="text-lg text-muted-foreground">
-                  Visão geral da postura de segurança e conformidade da organização
-                </p>
+        <main className="flex-1 p-6 overflow-auto">
+          {/* Container com grid consistente */}
+          <div className="grid grid-cols-1 gap-6 lg:gap-8">
+            {/* Hero Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <h1 className="text-4xl font-bold text-foreground">
+                    Dashboard de Conformidade
+                  </h1>
+                  <p className="text-lg text-muted-foreground">
+                    Visão geral da postura de segurança e conformidade da organização
+                  </p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <CreateTaskModal />
+                  <Badge variant="outline" className="status-success">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Postura Melhorada
+                  </Badge>
+                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Atualizado 2 min atrás
+                  </Badge>
+                </div>
               </div>
-              <div className="flex items-center space-x-3">
-                <CreateTaskModal />
-                <Badge variant="outline" className="status-success">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Postura Melhorada
-                </Badge>
-                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Atualizado 2 min atrás
-                </Badge>
+            </div>
+
+            {/* Metrics Overview - Grid Row 1 */}
+            <MetricsGrid />
+
+            {/* Main Dashboard Grid - Grid Row 2 */}
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+              {/* Compliance Score (spans 2 columns) */}
+              <div className="xl:col-span-2 w-full h-full">
+                <ComplianceScoreCard />
+              </div>
+
+              {/* Connection Status */}
+              <div className="w-full h-full">
+                <ConnectionStatus />
+              </div>
+            </div>
+
+            {/* Charts Section - Grid Row 3 */}
+            <div className="w-full">
+              <ComplianceChart />
+            </div>
+
+            {/* Secondary Grid - Grid Row 4 */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="w-full h-full">
+                <TasksPanel />
+              </div>
+              <div className="w-full h-full">
+                <AnalyticsDashboard />
               </div>
             </div>
           </div>
-
-      {/* Main Content */}
-      <div className="flex-1 space-y-6">
-        {/* Metrics Overview */}
-        <MetricsGrid />
-
-        {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Compliance Score (spans 2 columns) */}
-          <div className="xl:col-span-2">
-            <ComplianceScoreCard />
-          </div>
-
-          {/* Connection Status */}
-          <ConnectionStatus />
-        </div>
-
-        {/* Charts Section */}
-        <ComplianceChart />
-
-        {/* Secondary Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TasksPanel />
-          <AnalyticsDashboard />
-        </div>
-      </div>
         </main>
       </div>
     </div>

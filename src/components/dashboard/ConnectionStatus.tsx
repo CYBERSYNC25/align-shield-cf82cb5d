@@ -53,9 +53,9 @@ const ConnectionStatus = () => {
 
   const getStatusIcon = (connected: boolean) => {
     return connected ? (
-      <Wifi className="h-4 w-4 text-green-500" />
+      <Wifi className="h-4 w-4 text-success" />
     ) : (
-      <WifiOff className="h-4 w-4 text-red-500" />
+      <WifiOff className="h-4 w-4 text-destructive" />
     );
   };
 
