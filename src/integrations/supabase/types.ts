@@ -338,6 +338,33 @@ export type Database = {
           },
         ]
       }
+      device_logs: {
+        Row: {
+          cpu_usage: number
+          created_at: string | null
+          device_id: string
+          id: string
+          router_name: string
+          version: string
+        }
+        Insert: {
+          cpu_usage: number
+          created_at?: string | null
+          device_id: string
+          id?: string
+          router_name: string
+          version: string
+        }
+        Update: {
+          cpu_usage?: number
+          created_at?: string | null
+          device_id?: string
+          id?: string
+          router_name?: string
+          version?: string
+        }
+        Relationships: []
+      }
       evidence: {
         Row: {
           audit_id: string | null
