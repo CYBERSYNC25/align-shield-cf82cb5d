@@ -3,11 +3,12 @@ import Sidebar from '@/components/layout/Sidebar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Cloud, FileText, WifiOff, CheckCircle2 } from 'lucide-react';
+import { Cloud, FileText, CheckCircle2, WifiOff } from 'lucide-react';
 import { useState } from 'react';
 import { ConnectAwsModal } from '@/components/integrations/ConnectAwsModal';
 import { GoogleIntegrationCard } from '@/components/integrations/GoogleIntegrationCard';
 import { AzureIntegrationCard } from '@/components/integrations/AzureIntegrationCard';
+import { MikroTikAgentModal } from '@/components/integrations/MikroTikAgentModal';
 
 interface IntegrationCard {
   id: string;
@@ -22,14 +23,6 @@ interface IntegrationCard {
 
 const comingSoonIntegrations: IntegrationCard[] = [
   {
-    id: 'mikrotik',
-    name: 'MikroTik',
-    description: 'Gerenciamento de roteadores e configurações de rede',
-    provider: 'MIKROTIK',
-    icon: <WifiOff className="h-8 w-8" />,
-    status: 'coming_soon',
-  },
-  {
     id: 'jira',
     name: 'Jira',
     description: 'Integração com tickets e gestão de tarefas',
@@ -41,6 +34,7 @@ const comingSoonIntegrations: IntegrationCard[] = [
 
 const IntegrationsHub = () => {
   const [isAwsModalOpen, setIsAwsModalOpen] = useState(false);
+  const [isMikroTikModalOpen, setIsMikroTikModalOpen] = useState(false);
 
   const handleAwsSuccess = () => {
     console.log('AWS conectada com sucesso!');
@@ -101,7 +95,7 @@ const IntegrationsHub = () => {
             </Card>
           </div>
 
-          {/* Main Integrations Grid - Google, Azure, AWS */}
+          {/* Main Integrations Grid - Google, Azure, AWS, MikroTik */}
           <div>
             <h2 className="text-xl font-semibold mb-4">Integrações Principais</h2>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -135,6 +129,34 @@ const IntegrationsHub = () => {
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
                     Configure via Cross-Account Role
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* MikroTik Agent */}
+              <Card className="transition-all duration-200 border-primary shadow-lg hover:shadow-xl">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                      <WifiOff className="h-8 w-8" />
+                    </div>
+                    <Badge variant="default" className="bg-success text-success-foreground">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Disponível
+                    </Badge>
+                  </div>
+                  <CardTitle className="mt-4">MikroTik</CardTitle>
+                  <CardDescription>
+                    Monitoramento de roteadores via agente local
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="space-y-2">
+                  <Button className="w-full" onClick={() => setIsMikroTikModalOpen(true)}>
+                    Instalar Agente
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Baixe e configure o APOC Agent
                   </p>
                 </CardContent>
               </Card>
@@ -202,6 +224,12 @@ const IntegrationsHub = () => {
         open={isAwsModalOpen}
         onOpenChange={setIsAwsModalOpen}
         onSuccess={handleAwsSuccess}
+      />
+
+      {/* MikroTik Agent Modal */}
+      <MikroTikAgentModal
+        open={isMikroTikModalOpen}
+        onOpenChange={setIsMikroTikModalOpen}
       />
     </div>
   );
