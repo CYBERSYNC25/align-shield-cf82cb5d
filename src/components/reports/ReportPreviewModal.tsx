@@ -64,7 +64,7 @@ ESTATÍSTICAS:
 - Total de Páginas: ${report.pages}
 - Tamanho: ${report.size}
 
-Este é um relatório completo gerado pelo sistema ComplianceSync.
+Este é um relatório completo gerado pelo sistema APOC.
 Para mais informações, acesse o painel de controle.
       `;
 

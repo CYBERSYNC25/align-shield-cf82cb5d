@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Settings, User, ChevronDown, Shield, LogOut } from 'lucide-react';
+import { Search, Settings, User, ChevronDown, Shield, LogOut, ShieldCheck } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,6 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
-import complianceSyncLogo from '@/assets/compliance-sync-logo.png';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -42,22 +41,15 @@ const Header = () => {
       {/* Logo & Brand */}
       <div className="flex items-center space-x-4 flex-1">
         <div className="flex items-center space-x-3 hover-glow rounded-lg p-2 transition-all duration-200">
-          <div className="relative">
-            <img 
-              src={complianceSyncLogo} 
-              alt="ComplianceSync" 
-              className="h-9 w-9 rounded-lg shadow-sm"
-            />
-            <div className="absolute -top-1 -right-1">
-              <Shield className="h-4 w-4 text-success drop-shadow-sm" />
-            </div>
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
+            <ShieldCheck className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground bg-gradient-primary bg-clip-text text-transparent">
-              ComplianceSync
+            <h1 className="text-2xl font-bold text-foreground">
+              APOC
             </h1>
             <p className="text-xs text-muted-foreground font-medium">
-              Conformidade & Segurança Contínua
+              Automated Platform for Online Compliance
             </p>
           </div>
         </div>
