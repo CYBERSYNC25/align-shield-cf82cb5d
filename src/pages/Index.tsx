@@ -11,11 +11,26 @@ import NetworkMonitoring from '@/components/dashboard/NetworkMonitoring';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import DashboardOnboarding from '@/components/dashboard/DashboardOnboarding';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { TrendingUp, Clock, FileText } from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const Index = () => {
+  const handleExportReport = () => {
+    window.print();
+  };
+
+  const currentDate = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Print Header - Only visible when printing */}
+      <div className="print-header hidden print:block">
+        <h1>Relatório de Status APOC</h1>
+        <p>{currentDate}</p>
+      </div>
+
       <DashboardOnboarding />
       <Header />
       
@@ -37,8 +52,16 @@ const Index = () => {
                     Visão geral da postura de segurança e conformidade da organização
                   </p>
                 </div>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 print-hide">
                   <CreateTaskModal />
+                  <Button 
+                    variant="outline" 
+                    onClick={handleExportReport}
+                    className="gap-2"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Exportar Relatório
+                  </Button>
                   <Badge variant="outline" className="bg-success/10 text-success border-success/20">
                     <TrendingUp className="h-3 w-3 mr-1" />
                     Postura Melhorada
@@ -91,6 +114,11 @@ const Index = () => {
       </div>
 
       <Footer />
+
+      {/* Print Footer - Only visible when printing */}
+      <div className="print-footer hidden print:block">
+        <p>Gerado automaticamente pela plataforma APOC Compliance</p>
+      </div>
     </div>
   );
 };
