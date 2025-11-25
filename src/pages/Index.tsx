@@ -45,7 +45,7 @@ const Index = () => {
             <div className="col-span-full">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="space-y-2">
-                  <h1 className="text-4xl font-bold text-slate-900 dark:text-white">
+                  <h1 className="text-4xl font-bold text-foreground">
                     APOC Dashboard
                   </h1>
                   <p className="text-lg text-muted-foreground">
