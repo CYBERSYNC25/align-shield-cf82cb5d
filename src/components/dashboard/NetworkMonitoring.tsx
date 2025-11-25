@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Activity, Cpu, Router } from 'lucide-react';
+import { Activity, Cpu, Router, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
 
 interface DeviceLog {
@@ -21,10 +22,21 @@ interface ChartData {
   fullTime: Date;
 }
 
+const OFFLINE_THRESHOLD_SECONDS = 90;
+
 const NetworkMonitoring = () => {
   const [logs, setLogs] = useState<DeviceLog[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [latestLogTimestamp, setLatestLogTimestamp] = useState<Date | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Calculate online status based on latest log timestamp
+  const isOnline = useMemo(() => {
+    if (!latestLogTimestamp) return false;
+    const secondsSinceLastLog = (currentTime.getTime() - latestLogTimestamp.getTime()) / 1000;
+    return secondsSinceLastLog < OFFLINE_THRESHOLD_SECONDS;
+  }, [latestLogTimestamp, currentTime]);
 
   const fetchLogs = async () => {
     try {
@@ -45,6 +57,12 @@ const NetworkMonitoring = () => {
       if (data) {
         setLogs(data);
         
+        // Set latest log timestamp for online/offline detection
+        if (data.length > 0) {
+          const latest = data[data.length - 1];
+          setLatestLogTimestamp(new Date(latest.created_at));
+        }
+        
         // Transform data for chart
         const transformed = data.map((log) => ({
           time: format(new Date(log.created_at), 'HH:mm:ss'),
@@ -64,8 +82,13 @@ const NetworkMonitoring = () => {
   useEffect(() => {
     fetchLogs();
     
-    // Refresh every 10 seconds
-    const interval = setInterval(fetchLogs, 10000);
+    // Refresh data every 10 seconds
+    const dataInterval = setInterval(fetchLogs, 10000);
+    
+    // Update current time every second for accurate online/offline status
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
     
     // Subscribe to real-time changes
     const channel = supabase
@@ -85,7 +108,8 @@ const NetworkMonitoring = () => {
       .subscribe();
 
     return () => {
-      clearInterval(interval);
+      clearInterval(dataInterval);
+      clearInterval(timeInterval);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -110,16 +134,47 @@ const NetworkMonitoring = () => {
               </p>
             </div>
           </div>
-          {latestLog && (
-            <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-              <Router className="h-3 w-3 mr-1" />
-              {latestLog.router_name}
-            </Badge>
-          )}
+          
+          <div className="flex items-center gap-2">
+            {/* Online/Offline Status Badge */}
+            {isOnline ? (
+              <Badge 
+                className="bg-success/10 text-success border-success/20 animate-pulse"
+              >
+                <span className="mr-1.5 inline-block w-2 h-2 rounded-full bg-success animate-ping" />
+                Online
+              </Badge>
+            ) : (
+              <Badge 
+                variant="destructive"
+                className="bg-destructive/10 text-destructive border-destructive/20"
+              >
+                <span className="mr-1.5 inline-block w-2 h-2 rounded-full bg-destructive" />
+                Offline
+              </Badge>
+            )}
+            
+            {latestLog && (
+              <Badge variant="outline" className="bg-muted/50 hidden sm:flex">
+                <Router className="h-3 w-3 mr-1" />
+                {latestLog.router_name}
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
       
       <CardContent>
+        {/* Offline Warning Alert */}
+        {!isOnline && !loading && (
+          <Alert variant="default" className="mb-4 border-warning/50 bg-warning/10">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertDescription className="text-warning">
+              O agente parou de enviar dados. Verifique se o computador está ligado e conectado à internet.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {loading ? (
           <div className="h-64 flex items-center justify-center">
             <div className="text-muted-foreground">Carregando dados...</div>
@@ -217,12 +272,17 @@ const NetworkMonitoring = () => {
             {/* Device info */}
             {latestLog && (
               <div className="mt-4 pt-4 border-t border-border/50">
-                <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center justify-between text-xs flex-wrap gap-2">
                   <span className="text-muted-foreground">
                     Dispositivo: <span className="text-foreground font-medium">{latestLog.device_id.substring(0, 12)}...</span>
                   </span>
                   <span className="text-muted-foreground">
                     Versão: <span className="text-foreground font-medium">{latestLog.version}</span>
+                  </span>
+                  <span className="text-muted-foreground">
+                    Último sinal: <span className="text-foreground font-medium">
+                      {latestLogTimestamp ? format(latestLogTimestamp, 'HH:mm:ss') : '-'}
+                    </span>
                   </span>
                   <span className="text-muted-foreground">
                     {logs.length} registros
