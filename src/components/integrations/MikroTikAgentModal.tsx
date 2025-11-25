@@ -3,51 +3,50 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Copy, Download } from 'lucide-react';
+import { Copy, Download, Check } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MikroTikAgentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+const SUPABASE_URL = 'https://ofbyxnpprwwuieabwhdo.supabase.co';
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mYnl4bnBwcnd3dWllYWJ3aGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MDY4NTEsImV4cCI6MjA3MzE4Mjg1MX0.aHH2NWUQZnvV6FALdBIP5SB02YbrE8u12lXI1DtIbiw';
+
 export const MikroTikAgentModal = ({ open, onOpenChange }: MikroTikAgentModalProps) => {
-  const [agentToken, setAgentToken] = useState<string>('');
+  const { user } = useAuth();
+  const [copiedToken, setCopiedToken] = useState(false);
+  const [copiedConfig, setCopiedConfig] = useState(false);
 
-  useEffect(() => {
-    const generateToken = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Use user ID as the agent token
-        setAgentToken(user.id);
-      } else {
-        // Generate a random UUID if no user
-        setAgentToken(crypto.randomUUID());
-      }
-    };
-    
-    if (open) {
-      generateToken();
-    }
-  }, [open]);
+  const agentToken = user?.id || 'faça-login-para-obter-seu-token';
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(agentToken);
-    toast.success('Token copiado para a área de transferência!');
-  };
-
-  const configExample = `[MIKROTIK]
+  const configContent = `[MIKROTIK]
 ip = 192.168.88.1
 user = admin
 password = sua_senha
 
 [APOC]
-api_url = https://ofbyxnpprwwuieabwhdo.supabase.co/functions/v1/ingest-metrics
+api_url = ${SUPABASE_URL}/functions/v1/ingest-metrics
 token = ${agentToken}
-anon_key = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mYnl4bnBwcnd3dWllYWJ3aGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MDY4NTEsImV4cCI6MjA3MzE4Mjg1MX0.aHH2NWUQZnvV6FALdBIP5SB02YbrE8u12lXI1DtIbiw
+anon_key = ${ANON_KEY}
 intervalo_segundos = 5`;
+
+  const copyToken = async () => {
+    await navigator.clipboard.writeText(agentToken);
+    setCopiedToken(true);
+    toast.success('Token copiado para a área de transferência!');
+    setTimeout(() => setCopiedToken(false), 2000);
+  };
+
+  const copyConfig = async () => {
+    await navigator.clipboard.writeText(configContent);
+    setCopiedConfig(true);
+    toast.success('Configuração copiada para a área de transferência!');
+    setTimeout(() => setCopiedConfig(false), 2000);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,11 +106,16 @@ intervalo_segundos = 5`;
                       type="button"
                       variant="outline"
                       size="icon"
-                      onClick={copyToClipboard}
+                      onClick={copyToken}
                     >
-                      <Copy className="h-4 w-4" />
+                      {copiedToken ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                     </Button>
                   </div>
+                  {!user && (
+                    <p className="text-xs text-destructive">
+                      ⚠️ Faça login para obter seu token pessoal
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -127,18 +131,30 @@ intervalo_segundos = 5`;
                 <div>
                   <h3 className="font-semibold">Configurar o config.ini</h3>
                   <p className="text-sm text-muted-foreground">
-                    Edite o arquivo config.ini com suas informações
+                    O arquivo já está preenchido com seus dados. Basta copiar!
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label>Modelo de Configuração</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Sua Configuração Personalizada</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={copyConfig}
+                      className="gap-2"
+                    >
+                      {copiedConfig ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                      Copiar Configuração
+                    </Button>
+                  </div>
                   <div className="relative">
-                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs font-mono">
-                      <code>{configExample}</code>
+                    <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-xs font-mono border">
+                      <code>{configContent}</code>
                     </pre>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    ⚠️ Substitua o IP, usuário e senha do MikroTik pelos valores corretos da sua rede
+                    ⚠️ Substitua apenas o IP, usuário e senha do MikroTik pelos valores corretos da sua rede
                   </p>
                 </div>
               </div>
