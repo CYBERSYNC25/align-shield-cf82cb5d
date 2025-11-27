@@ -22,10 +22,14 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useGoogleOAuthValidation, ValidationResult, CheckStatus } from '@/hooks/useGoogleOAuthValidation';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export const GoogleOAuthValidator = () => {
   const { validateConfiguration, validation, loading, getStatusColor, getStatusIcon, getOverallStatusColor } = useGoogleOAuthValidation();
   const [expandedChecks, setExpandedChecks] = useState<Set<string>>(new Set());
+  const [connectingOAuth, setConnectingOAuth] = useState(false);
+  const { toast } = useToast();
 
   const toggleCheck = (checkName: string) => {
     const newExpanded = new Set(expandedChecks);
@@ -54,6 +58,46 @@ export const GoogleOAuthValidator = () => {
       case 'warning': return 'Atenção';
       case 'manual': return 'Manual';
       default: return 'Desconhecido';
+    }
+  };
+
+  // Verifica se secrets e redirect URI estão OK
+  const isReadyToConnect = () => {
+    if (!validation) return false;
+    
+    const secretsCheck = validation.results.find(r => 
+      r.check.includes('Secrets') || r.check.includes('GOOGLE_CLIENT')
+    );
+    const redirectCheck = validation.results.find(r => 
+      r.check.includes('Redirect URI')
+    );
+    
+    return secretsCheck?.status === 'success' && redirectCheck?.status === 'success';
+  };
+
+  const handleConnectGoogle = async () => {
+    setConnectingOAuth(true);
+    
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          scopes: 'https://www.googleapis.com/auth/admin.directory.user.readonly https://www.googleapis.com/auth/drive.metadata.readonly',
+          redirectTo: `${window.location.origin}/integrations`
+        }
+      });
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error('Erro ao conectar:', error);
+      toast({
+        title: 'Erro na Conexão',
+        description: error instanceof Error ? error.message : 'Não foi possível iniciar a conexão com o Google',
+        variant: 'destructive'
+      });
+      setConnectingOAuth(false);
     }
   };
 
@@ -146,6 +190,30 @@ export const GoogleOAuthValidator = () => {
                 <div className="text-xs text-muted-foreground">Manual</div>
               </div>
             </div>
+
+            {/* Botão de Conexão */}
+            {isReadyToConnect() && (
+              <div className="flex justify-center">
+                <Button 
+                  onClick={handleConnectGoogle}
+                  disabled={connectingOAuth}
+                  size="lg"
+                  className="w-full max-w-md"
+                >
+                  {connectingOAuth ? (
+                    <>
+                      <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
+                      Conectando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Conectar Conta Google
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
 
             <Separator />
 
