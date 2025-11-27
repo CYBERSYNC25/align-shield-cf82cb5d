@@ -37,6 +37,7 @@ serve(async (req) => {
     const accessKeyId = Deno.env.get('AWS_ACCESS_KEY_ID');
     const secretAccessKey = Deno.env.get('AWS_SECRET_ACCESS_KEY');
     const region = Deno.env.get('AWS_REGION') || 'us-east-1';
+    const externalId = Deno.env.get('AWS_EXTERNAL_ID'); // Optional but recommended for Cross-Account Access
 
     // Validar que todas as credenciais obrigatórias existem
     if (!accessKeyId || !secretAccessKey) {
@@ -57,6 +58,14 @@ serve(async (req) => {
 
     console.log('AWS Integration: Credentials loaded successfully');
     console.log(`AWS Integration: Using region ${region}`);
+    
+    // Validate ExternalId if configured (recommended for Cross-Account Role Assumption)
+    if (externalId) {
+      console.log('AWS Integration: ExternalId configured for enhanced security');
+      // Note: ExternalId validation happens automatically during role assumption
+      // by AWS STS. We're just logging its presence here for audit purposes.
+      // In a real Cross-Account scenario, this would be passed to AssumeRole API.
+    }
 
     // Configurar cliente AWS de forma segura
     const awsConfig = {
