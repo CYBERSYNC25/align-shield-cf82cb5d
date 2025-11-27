@@ -110,14 +110,20 @@ async function getAccessToken(supabase: any, userId: string): Promise<string | n
 }
 
 /**
- * Faz uma requisição HTTP à API do Google com tratamento completo de erros
+ * Faz uma requisição HTTP à API do Google com tratamento completo de erros e retry automático
  * @param url - URL completa da API
  * @param accessToken - Token OAuth 2.0
  * @param method - Método HTTP (GET, POST, etc)
+ * @param retryCount - Tentativas restantes (padrão: 3)
  * @returns Response data ou lança erro descritivo
  */
-async function callGoogleAPI(url: string, accessToken: string, method: string = 'GET'): Promise<any> {
-  console.log(`[API Call] ${method} ${url}`);
+async function callGoogleAPI(
+  url: string, 
+  accessToken: string, 
+  method: string = 'GET',
+  retryCount: number = 3
+): Promise<any> {
+  console.log(`[API Call] ${method} ${url} (retries left: ${retryCount})`);
 
   const response = await fetch(url, {
     method,
@@ -159,9 +165,21 @@ async function callGoogleAPI(url: string, accessToken: string, method: string = 
           break;
         
         case 429:
+          // Rate limit - implement exponential backoff retry
+          if (retryCount > 0) {
+            const waitTime = Math.pow(2, 3 - retryCount) * 1000; // 1s, 2s, 4s
+            console.warn(`[API Error] 429 Rate Limit - Retrying in ${waitTime}ms (${retryCount} attempts left)`);
+            
+            // Wait with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+            
+            // Retry the request
+            return callGoogleAPI(url, accessToken, method, retryCount - 1);
+          }
+          
           errorCode = 'RATE_LIMIT';
-          errorMessage = '⏳ Limite de requisições atingido. Aguarde alguns minutos e tente novamente.';
-          console.error('[API Error] 429 Rate Limit - Too many requests');
+          errorMessage = '⏳ Limite de requisições atingido após 3 tentativas. Aguarde alguns minutos.';
+          console.error('[API Error] 429 Rate Limit - Max retries exceeded');
           break;
         
         case 500:

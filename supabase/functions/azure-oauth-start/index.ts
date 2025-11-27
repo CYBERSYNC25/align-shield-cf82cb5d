@@ -69,6 +69,17 @@ serve(async (req) => {
     authUrl.searchParams.set('scope', scopeString);
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('response_mode', 'query');
+    
+    // Add admin consent prompt for administrative scopes
+    const adminScopes = ['Directory.Read.All', 'User.Read.All', 'Group.Read.All', 'AuditLog.Read.All'];
+    const requiresAdminConsent = scopes?.some(scope => 
+      adminScopes.some(adminScope => scope.includes(adminScope))
+    );
+    
+    if (requiresAdminConsent) {
+      authUrl.searchParams.set('prompt', 'admin_consent');
+      console.log('Admin consent required for requested scopes');
+    }
 
     console.log('Azure OAuth flow initiated for user:', user.id);
 
