@@ -82,9 +82,13 @@ export const GoogleOAuthValidator = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
+          redirectTo: window.location.origin + '/integrations',
           scopes: 'https://www.googleapis.com/auth/admin.directory.user.readonly https://www.googleapis.com/auth/drive.metadata.readonly',
-          redirectTo: `${window.location.origin}/integrations`
-        }
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        },
       });
 
       if (error) {
