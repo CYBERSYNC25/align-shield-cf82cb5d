@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Settings, User, ChevronDown, Shield, LogOut, ShieldCheck } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import { ModeToggle } from '@/components/theme/ModeToggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -75,6 +76,9 @@ const Header = () => {
       <div className="flex items-center space-x-3 flex-1 justify-end">
         {/* Notifications */}
         <NotificationCenter />
+
+        {/* Theme Toggle */}
+        <ModeToggle />
 
         {/* Settings */}
         <Button variant="ghost" size="icon" className="hover-scale">
