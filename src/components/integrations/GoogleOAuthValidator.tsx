@@ -77,13 +77,13 @@ export const GoogleOAuthValidator = () => {
 
   const handleConnectGoogle = async () => {
     setConnectingOAuth(true);
-    
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: window.location.origin + '/integrations',
-          scopes: 'openid email profile',
+          scopes: 'openid profile email',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -99,7 +99,7 @@ export const GoogleOAuthValidator = () => {
       toast({
         title: 'Erro na Conexão',
         description: error instanceof Error ? error.message : 'Não foi possível iniciar a conexão com o Google',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       setConnectingOAuth(false);
     }
