@@ -83,7 +83,7 @@ export const GoogleOAuthValidator = () => {
         provider: 'google',
         options: {
           redirectTo: window.location.origin + '/integrations',
-          scopes: 'openid email profile https://www.googleapis.com/auth/drive.metadata.readonly',
+          scopes: 'openid email profile',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
