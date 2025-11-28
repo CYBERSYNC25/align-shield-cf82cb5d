@@ -386,6 +386,13 @@ Todas as cores devem ser HSL para suporte total a temas
   .status-info {
     @apply bg-info/10 text-info border border-info/20 rounded-full;
   }
+  /* Background patterns for modern SaaS look */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
 }
 
 /* ============================================
