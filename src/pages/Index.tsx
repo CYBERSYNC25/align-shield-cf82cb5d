@@ -9,7 +9,6 @@ import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 import ComplianceChart from '@/components/dashboard/ComplianceChart';
 import NetworkMonitoring from '@/components/dashboard/NetworkMonitoring';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
-import DashboardOnboarding from '@/components/dashboard/DashboardOnboarding';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, Clock, FileText } from 'lucide-react';
@@ -31,7 +30,6 @@ const Index = () => {
         <p>{currentDate}</p>
       </div>
 
-      <DashboardOnboarding />
       <Header />
       
       <div className="flex flex-1">
