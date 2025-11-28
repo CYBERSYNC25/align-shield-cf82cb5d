@@ -273,31 +273,35 @@ const Auth = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-dashboard flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-dashboard flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="p-2 bg-primary rounded-lg">
+    <div className="relative min-h-screen bg-background flex items-center justify-center p-4">
+      {/* Decorative Background Pattern */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.05]" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-success/5" />
+      
+      <Card className="relative w-full max-w-md bg-card border-border shadow-xl">
+        <CardHeader className="space-y-3 text-center px-8 pt-8 pb-6">
+          <div className="flex items-center justify-center space-x-2 mb-2">
+            <div className="p-2 bg-primary rounded-lg shadow-md">
               <Shield className="h-6 w-6 text-primary-foreground" />
             </div>
             <h1 className="text-2xl font-bold text-primary">APOC</h1>
           </div>
-          <CardTitle className="text-2xl">Bem-vindo</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl text-card-foreground">Bem-vindo</CardTitle>
+          <CardDescription className="text-muted-foreground">
             Faça login ou crie sua conta para acessar a plataforma de compliance
           </CardDescription>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="px-8 pb-8">
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 bg-muted">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Cadastro</TabsTrigger>
             </TabsList>
@@ -305,13 +309,13 @@ const Auth = () => {
             <TabsContent value="login">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
+                  <Label htmlFor="login-email" className="text-foreground">Email</Label>
                   <Input 
                     id="login-email"
                     name="email"
                     type="email" 
                     placeholder="seu@email.com"
-                    className={loginErrors.email ? 'border-destructive' : ''}
+                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${loginErrors.email ? 'border-destructive' : ''}`}
                     required 
                   />
                   {loginErrors.email && (
@@ -323,7 +327,7 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="login-password">Senha</Label>
+                    <Label htmlFor="login-password" className="text-foreground">Senha</Label>
                     <ForgotPasswordModal />
                   </div>
                   <Input 
@@ -331,7 +335,7 @@ const Auth = () => {
                     name="password"
                     type="password" 
                     placeholder="••••••••"
-                    className={loginErrors.password ? 'border-destructive' : ''}
+                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${loginErrors.password ? 'border-destructive' : ''}`}
                     required 
                   />
                   {loginErrors.password && (
@@ -359,13 +363,13 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Nome Completo</Label>
+                  <Label htmlFor="signup-name" className="text-foreground">Nome Completo</Label>
                   <Input 
                     id="signup-name"
                     name="displayName"
                     type="text" 
                     placeholder="João Silva"
-                    className={signupErrors.displayName ? 'border-destructive' : ''}
+                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.displayName ? 'border-destructive' : ''}`}
                     required 
                   />
                   {signupErrors.displayName && (
@@ -377,7 +381,7 @@ const Auth = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-organization">
+                  <Label htmlFor="signup-organization" className="text-foreground">
                     <Building2 className="inline h-4 w-4 mr-1" />
                     Organização
                   </Label>
@@ -386,7 +390,7 @@ const Auth = () => {
                     name="organization"
                     type="text" 
                     placeholder="Nome da sua empresa"
-                    className={signupErrors.organization ? 'border-destructive' : ''}
+                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.organization ? 'border-destructive' : ''}`}
                     required 
                   />
                   {signupErrors.organization && (
@@ -398,13 +402,13 @@ const Auth = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" className="text-foreground">Email</Label>
                   <Input 
                     id="signup-email"
                     name="email"
                     type="email" 
                     placeholder="seu@email.com"
-                    className={signupErrors.email ? 'border-destructive' : ''}
+                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.email ? 'border-destructive' : ''}`}
                     required 
                   />
                   {signupErrors.email && (
@@ -416,7 +420,7 @@ const Auth = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Senha</Label>
+                  <Label htmlFor="signup-password" className="text-foreground">Senha</Label>
                   <Input 
                     id="signup-password"
                     name="password"
@@ -424,7 +428,7 @@ const Auth = () => {
                     placeholder="••••••••"
                     value={signupPassword}
                     onChange={(e) => handlePasswordChange(e.target.value)}
-                    className={signupErrors.password ? 'border-destructive' : ''}
+                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.password ? 'border-destructive' : ''}`}
                     required 
                   />
                   {signupErrors.password && (
@@ -470,13 +474,13 @@ const Auth = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password">Confirmar Senha</Label>
+                  <Label htmlFor="signup-confirm-password" className="text-foreground">Confirmar Senha</Label>
                   <Input 
                     id="signup-confirm-password"
                     name="confirmPassword"
                     type="password" 
                     placeholder="••••••••"
-                    className={signupErrors.confirmPassword ? 'border-destructive' : ''}
+                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.confirmPassword ? 'border-destructive' : ''}`}
                     required 
                   />
                   {signupErrors.confirmPassword && (
