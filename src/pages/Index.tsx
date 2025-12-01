@@ -9,6 +9,7 @@ import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 import ComplianceChart from '@/components/dashboard/ComplianceChart';
 import NetworkMonitoring from '@/components/dashboard/NetworkMonitoring';
 import AutomatedControls from '@/components/dashboard/AutomatedControls';
+import ComplianceHub from '@/components/dashboard/ComplianceHub';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,11 @@ const Index = () => {
                   </Badge>
                 </div>
               </div>
+            </div>
+
+            {/* Compliance Hub - Full Width */}
+            <div className="col-span-full">
+              <ComplianceHub />
             </div>
 
             {/* Metrics Grid - Full Width */}
