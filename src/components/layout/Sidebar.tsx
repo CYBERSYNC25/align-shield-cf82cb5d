@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Target,
   Activity,
-  BookOpen
+  BookOpen,
+  Server
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -117,6 +118,13 @@ const sidebarItems: SidebarItem[] = [
         label: 'Hub de Integrações',
         icon: Database,
         href: '/integrations'
+      },
+      {
+        id: 'assets',
+        label: 'Inventário de Ativos',
+        icon: Server,
+        href: '/assets',
+        badge: 'Novo'
       },
       {
         id: 'analytics',
