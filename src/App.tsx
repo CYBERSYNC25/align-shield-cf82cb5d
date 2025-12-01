@@ -26,6 +26,7 @@ import Tasks from "./pages/Tasks";
 import ComplianceReadiness from "./pages/ComplianceReadiness";
 import TechnicalDocumentation from "./pages/TechnicalDocumentation";
 import AssetInventory from "./pages/AssetInventory";
+import PolicyDocuments from "./pages/PolicyDocuments";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +128,11 @@ const App = () => (
           <Route path="/assets" element={
             <ProtectedRoute>
               <AssetInventory />
+            </ProtectedRoute>
+          } />
+          <Route path="/policy-documents" element={
+            <ProtectedRoute>
+              <PolicyDocuments />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

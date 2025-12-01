@@ -81,6 +81,13 @@ const sidebarItems: SidebarItem[] = [
         badge: 'Novo'
       },
       {
+        id: 'policy-documents',
+        label: 'Políticas e Documentos',
+        icon: FileCheck2,
+        href: '/policy-documents',
+        badge: 'Novo'
+      },
+      {
         id: 'access-reviews',
         label: 'Revisões de Acesso',
         icon: UserCheck,
