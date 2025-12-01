@@ -6,6 +6,7 @@ import { Activity, Cpu, Router, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { format } from 'date-fns';
+import { useNetworkAlerts } from '@/hooks/useNetworkAlerts';
 
 interface DeviceLog {
   id: string;
@@ -37,6 +38,9 @@ const NetworkMonitoring = () => {
     const secondsSinceLastLog = (currentTime.getTime() - latestLogTimestamp.getTime()) / 1000;
     return secondsSinceLastLog < OFFLINE_THRESHOLD_SECONDS;
   }, [latestLogTimestamp, currentTime]);
+
+  // Monitoramento automático de alertas (Online ↔ Offline)
+  useNetworkAlerts(isOnline);
 
   const fetchLogs = async () => {
     try {
