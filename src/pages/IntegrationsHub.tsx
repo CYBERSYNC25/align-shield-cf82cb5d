@@ -5,7 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Cloud, FileText, CheckCircle2, WifiOff } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useSearchParams } from 'react-router-dom';
 import { ConnectAwsModal } from '@/components/integrations/ConnectAwsModal';
 import { GoogleIntegrationCard } from '@/components/integrations/GoogleIntegrationCard';
 import { AzureIntegrationCard } from '@/components/integrations/AzureIntegrationCard';
@@ -36,6 +38,23 @@ const comingSoonIntegrations: IntegrationCard[] = [
 const IntegrationsHub = () => {
   const [isAwsModalOpen, setIsAwsModalOpen] = useState(false);
   const [isMikroTikModalOpen, setIsMikroTikModalOpen] = useState(false);
+  const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Check for Azure OAuth success
+  useEffect(() => {
+    const azureConnected = searchParams.get('azure_connected');
+    if (azureConnected === 'true') {
+      toast({
+        title: '🟢 Conectado ao Azure AD',
+        description: 'Permissão de leitura de diretório confirmada.',
+        variant: 'default',
+      });
+      // Remove the query param
+      searchParams.delete('azure_connected');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, toast]);
 
   const handleAwsSuccess = () => {
     console.log('AWS conectada com sucesso!');

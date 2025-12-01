@@ -36,6 +36,10 @@ serve(async (req) => {
       throw new Error('Credenciais obrigatórias faltando');
     }
 
+    // Default scopes include User.Read.All and Directory.Read.All for full directory access
+    const defaultScopes = ['User.Read.All', 'Directory.Read.All'];
+    const requestedScopes = scopes || defaultScopes;
+
     // Store credentials securely (encrypted in metadata)
     const state = crypto.randomUUID();
     const redirect_uri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/azure-oauth-callback`;
@@ -53,7 +57,7 @@ serve(async (req) => {
           tenant_id,
           client_id,
           client_secret,
-          scopes: scopes || ['User.Read.All'],
+          scopes: requestedScopes,
           redirect_uri
         }
       });
@@ -61,7 +65,7 @@ serve(async (req) => {
     if (insertError) throw insertError;
 
     // Construct Azure OAuth authorization URL
-    const scopeString = (scopes || ['User.Read.All']).join(' ');
+    const scopeString = requestedScopes.join(' ');
     const authUrl = new URL(`https://login.microsoftonline.com/${tenant_id}/oauth2/v2.0/authorize`);
     authUrl.searchParams.set('client_id', client_id);
     authUrl.searchParams.set('response_type', 'code');
@@ -70,16 +74,9 @@ serve(async (req) => {
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('response_mode', 'query');
     
-    // Add admin consent prompt for administrative scopes
-    const adminScopes = ['Directory.Read.All', 'User.Read.All', 'Group.Read.All', 'AuditLog.Read.All'];
-    const requiresAdminConsent = scopes?.some(scope => 
-      adminScopes.some(adminScope => scope.includes(adminScope))
-    );
-    
-    if (requiresAdminConsent) {
-      authUrl.searchParams.set('prompt', 'admin_consent');
-      console.log('Admin consent required for requested scopes');
-    }
+    // Always request admin consent to ensure full directory read permissions
+    authUrl.searchParams.set('prompt', 'admin_consent');
+    console.log('Admin consent prompt added for directory permissions');
 
     console.log('Azure OAuth flow initiated for user:', user.id);
 

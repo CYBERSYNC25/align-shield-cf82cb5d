@@ -124,7 +124,7 @@ serve(async (req) => {
 
     console.log('Azure OAuth completed successfully for user:', user_id);
 
-    // Redirect to success page
+    // Redirect to success page with query param to trigger toast
     return new Response(
       `
       <!DOCTYPE html>
@@ -139,12 +139,12 @@ serve(async (req) => {
       <body>
         <div class="success">✓</div>
         <h1>Autenticação Concluída!</h1>
-        <p>Sua integração com Azure AD foi configurada com sucesso.</p>
+        <p>Conectado ao Azure AD. Permissão de leitura de diretório confirmada.</p>
         <p>Você já pode fechar esta janela.</p>
         <script>
           setTimeout(() => {
             window.close();
-            window.location.href = '/integrations-hub';
+            window.location.href = '/integrations-hub?azure_connected=true';
           }, 2000);
         </script>
       </body>

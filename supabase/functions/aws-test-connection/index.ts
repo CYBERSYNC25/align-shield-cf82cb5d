@@ -172,6 +172,9 @@ serve(async (req) => {
 
       console.log(`Listados ${userCount} usuários IAM com sucesso`);
 
+      // Extract account ID from ARN (format: arn:aws:iam::123456789012:role/RoleName)
+      const accountId = roleArn.split(':')[4];
+
       // Atualizar status da integração
       await supabase
         .from('integrations')
@@ -185,11 +188,13 @@ serve(async (req) => {
         JSON.stringify({ 
           success: true, 
           message: 'Conexão validada com sucesso! Acesso IAM confirmado.',
+          accountId,
           user_count: userCount,
           test_summary: {
             role_assumed: true,
             iam_access: true,
-            users_listed: userCount
+            users_listed: userCount,
+            account_id: accountId
           }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
