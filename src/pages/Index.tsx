@@ -8,6 +8,7 @@ import ConnectionStatus from '@/components/dashboard/ConnectionStatus';
 import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 import ComplianceChart from '@/components/dashboard/ComplianceChart';
 import NetworkMonitoring from '@/components/dashboard/NetworkMonitoring';
+import AutomatedControls from '@/components/dashboard/AutomatedControls';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -85,6 +86,11 @@ const Index = () => {
             {/* Connection Status - 4 columns on large screens */}
             <div className="col-span-full lg:col-span-4">
               <ConnectionStatus />
+            </div>
+
+            {/* Automated Controls - Full Width */}
+            <div className="col-span-full">
+              <AutomatedControls />
             </div>
 
             {/* Network Monitoring - Full Width */}
