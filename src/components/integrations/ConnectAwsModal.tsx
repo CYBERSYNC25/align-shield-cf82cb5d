@@ -133,9 +133,10 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
         });
       } else {
         // Sucesso total!
+        const accountId = testResult.accountId || 'N/A';
         toast({
           title: 'Integração AWS validada com sucesso! ✓',
-          description: `${data.name} foi configurada e testada. ${testResult.user_count || 0} usuários IAM encontrados.`,
+          description: `${data.name} foi configurada e testada. Account ID: ${accountId}. ${testResult.user_count || 0} usuários IAM encontrados.`,
           variant: 'default',
         });
       }

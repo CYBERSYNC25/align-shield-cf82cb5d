@@ -54,15 +54,15 @@ const API_PROVIDERS: ApiProvider[] = [
         required: true
       },
       {
-        id: 'Group.Read.All',
-        name: 'Ler todos os grupos',
-        description: 'Permite ler informações de grupos',
-        required: false
-      },
-      {
         id: 'Directory.Read.All',
         name: 'Ler diretório',
         description: 'Permite ler dados do diretório organizacional',
+        required: true
+      },
+      {
+        id: 'Group.Read.All',
+        name: 'Ler todos os grupos',
+        description: 'Permite ler informações de grupos',
         required: false
       }
     ],
