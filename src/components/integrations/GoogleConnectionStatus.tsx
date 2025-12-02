@@ -228,7 +228,7 @@ export const GoogleConnectionStatus = () => {
         provider: 'google',
         options: {
           scopes: 'openid profile email https://www.googleapis.com/auth/drive.metadata.readonly',
-          redirectTo: window.location.href,
+          redirectTo: `${window.location.origin}/integrations`,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
