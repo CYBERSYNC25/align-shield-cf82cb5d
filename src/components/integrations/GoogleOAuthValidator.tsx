@@ -19,17 +19,98 @@ import {
   Info,
   RefreshCw,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Search,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useGoogleOAuthValidation, ValidationResult, CheckStatus } from '@/hooks/useGoogleOAuthValidation';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface DiagnosticResult {
+  success: boolean;
+  diagnostic: boolean;
+  timestamp: string;
+  configuration: {
+    clientIdConfigured: boolean;
+    clientIdPreview: string;
+    clientIdLength: number;
+    clientIdEndsCorrectly: boolean;
+    clientSecretConfigured: boolean;
+    clientSecretLength: number;
+    supabaseUrlConfigured: boolean;
+    redirectUri: string;
+    scopes: string[];
+  };
+  testAuthUrl: string;
+  instructions: string;
+}
+
 export const GoogleOAuthValidator = () => {
   const { validateConfiguration, validation, loading, getStatusColor, getStatusIcon, getOverallStatusColor } = useGoogleOAuthValidation();
   const [expandedChecks, setExpandedChecks] = useState<Set<string>>(new Set());
   const [connectingOAuth, setConnectingOAuth] = useState(false);
+  const [diagnostic, setDiagnostic] = useState<DiagnosticResult | null>(null);
+  const [loadingDiagnostic, setLoadingDiagnostic] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   const { toast } = useToast();
+
+  const runDiagnostic = async () => {
+    setLoadingDiagnostic(true);
+    setDiagnostic(null);
+
+    try {
+      const response = await fetch(
+        'https://ofbyxnpprwwuieabwhdo.supabase.co/functions/v1/google-oauth-start?diagnostic=true',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const data = await response.json();
+      
+      if (data.diagnostic) {
+        setDiagnostic(data);
+        toast({
+          title: 'Diagnóstico Concluído',
+          description: 'Verifique as informações abaixo e compare com o Google Cloud Console',
+        });
+      } else {
+        throw new Error(data.error || 'Resposta inesperada');
+      }
+    } catch (error) {
+      console.error('Diagnostic error:', error);
+      toast({
+        title: 'Erro no Diagnóstico',
+        description: error instanceof Error ? error.message : 'Não foi possível executar o diagnóstico',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingDiagnostic(false);
+    }
+  };
+
+  const copyTestUrl = async () => {
+    if (diagnostic?.testAuthUrl) {
+      await navigator.clipboard.writeText(diagnostic.testAuthUrl);
+      setCopiedUrl(true);
+      toast({
+        title: 'URL Copiada',
+        description: 'Cole em uma aba anônima para testar manualmente',
+      });
+      setTimeout(() => setCopiedUrl(false), 2000);
+    }
+  };
+
+  const openTestUrl = () => {
+    if (diagnostic?.testAuthUrl && diagnostic.testAuthUrl !== 'NOT_AVAILABLE') {
+      window.open(diagnostic.testAuthUrl, '_blank');
+    }
+  };
 
   const toggleCheck = (checkName: string) => {
     const newExpanded = new Set(expandedChecks);
@@ -139,6 +220,134 @@ export const GoogleOAuthValidator = () => {
       </CardHeader>
 
       <CardContent>
+        {/* Botão de Diagnóstico */}
+        <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h4 className="font-medium flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Diagnóstico de Client ID
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Verifica se o Client ID configurado corresponde ao do Google Cloud Console
+              </p>
+            </div>
+            <Button
+              onClick={runDiagnostic}
+              disabled={loadingDiagnostic}
+              variant="outline"
+              size="sm"
+            >
+              {loadingDiagnostic ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Verificando...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Executar Diagnóstico
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Resultado do Diagnóstico */}
+          {diagnostic && (
+            <div className="space-y-3 mt-4 p-3 bg-background rounded border">
+              <div className="text-sm font-medium">Resultado do Diagnóstico:</div>
+              
+              <div className="grid gap-2 text-sm">
+                <div className="flex justify-between items-center p-2 bg-muted rounded">
+                  <span className="font-medium">Client ID Preview:</span>
+                  <code className="bg-background px-2 py-1 rounded text-xs">
+                    {diagnostic.configuration.clientIdPreview}
+                  </code>
+                </div>
+                
+                <div className="flex justify-between items-center p-2 bg-muted rounded">
+                  <span className="font-medium">Tamanho do Client ID:</span>
+                  <span>{diagnostic.configuration.clientIdLength} caracteres</span>
+                </div>
+                
+                <div className="flex justify-between items-center p-2 bg-muted rounded">
+                  <span className="font-medium">Formato correto:</span>
+                  {diagnostic.configuration.clientIdEndsCorrectly ? (
+                    <Badge variant="default" className="bg-green-600">✓ Válido</Badge>
+                  ) : (
+                    <Badge variant="destructive">✗ Inválido</Badge>
+                  )}
+                </div>
+                
+                <div className="flex justify-between items-center p-2 bg-muted rounded">
+                  <span className="font-medium">Client Secret:</span>
+                  {diagnostic.configuration.clientSecretConfigured ? (
+                    <Badge variant="default" className="bg-green-600">✓ Configurado ({diagnostic.configuration.clientSecretLength} chars)</Badge>
+                  ) : (
+                    <Badge variant="destructive">✗ Não configurado</Badge>
+                  )}
+                </div>
+                
+                <div className="p-2 bg-muted rounded">
+                  <span className="font-medium">Redirect URI:</span>
+                  <code className="block mt-1 text-xs bg-background p-2 rounded break-all">
+                    {diagnostic.configuration.redirectUri}
+                  </code>
+                </div>
+              </div>
+
+              {/* Botões para testar URL manualmente */}
+              {diagnostic.testAuthUrl !== 'NOT_AVAILABLE' && (
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={copyTestUrl}
+                    className="flex-1"
+                  >
+                    {copiedUrl ? (
+                      <>
+                        <Check className="mr-2 h-4 w-4" />
+                        Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="mr-2 h-4 w-4" />
+                        Copiar URL de Teste
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={openTestUrl}
+                    className="flex-1"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Testar no Navegador
+                  </Button>
+                </div>
+              )}
+
+              <Alert className="mt-3">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-xs">
+                  <strong>Compare</strong> o "Client ID Preview" acima com o Client ID no 
+                  <a 
+                    href="https://console.cloud.google.com/apis/credentials" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline mx-1"
+                  >
+                    Google Cloud Console
+                  </a>
+                  - eles devem começar igual!
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+        </div>
+
         {!validation && !loading && (
           <Alert>
             <Info className="h-4 w-4" />
