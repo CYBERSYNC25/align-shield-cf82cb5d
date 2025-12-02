@@ -61,12 +61,21 @@ export const GoogleOAuthValidator = () => {
     setDiagnostic(null);
 
     try {
+      // Get the current session for auth header
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        throw new Error('Você precisa estar logado para executar o diagnóstico');
+      }
+
       const response = await fetch(
         'https://ofbyxnpprwwuieabwhdo.supabase.co/functions/v1/google-oauth-start?diagnostic=true',
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mYnl4bnBwcnd3dWllYWJ3aGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MDY4NTEsImV4cCI6MjA3MzE4Mjg1MX0.aHH2NWUQZnvV6FALdBIP5SB02YbrE8u12lXI1DtIbiw',
           },
         }
       );
