@@ -90,40 +90,38 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
 
       // Try to fetch users (may fail without Admin SDK permissions)
       let users: WorkspaceUser[] = [];
-      let usersError: string | null = null;
       
       try {
         const usersResponse = await supabase.functions.invoke('google-workspace-sync', {
           body: { action: 'list_users', params: { maxResults: 100 } },
         });
         
-        if (usersResponse.data?.success) {
-          users = usersResponse.data.data.users || [];
-        } else if (usersResponse.data?.code === 'FORBIDDEN') {
-          usersError = 'Sem permissão para listar usuários (requer Admin SDK)';
+        // Check both data.success and handle error responses
+        if (usersResponse.data?.success && usersResponse.data?.data?.users) {
+          users = usersResponse.data.data.users;
         }
+        // Silently ignore 403/permission errors - expected for personal accounts
       } catch (err) {
-        console.log('Users fetch error (expected without Admin SDK):', err);
-        usersError = 'API Admin Directory não disponível';
+        // Expected error for personal Gmail accounts - silently ignore
+        console.log('Users fetch skipped (Admin SDK not available)');
       }
 
       // Try to fetch groups (may fail without Admin SDK permissions)
       let groups: WorkspaceGroup[] = [];
-      let groupsError: string | null = null;
       
       try {
         const groupsResponse = await supabase.functions.invoke('google-workspace-sync', {
           body: { action: 'list_groups', params: { maxResults: 100 } },
         });
         
-        if (groupsResponse.data?.success) {
-          groups = groupsResponse.data.data.groups || [];
-        } else if (groupsResponse.data?.code === 'FORBIDDEN') {
-          groupsError = 'Sem permissão para listar grupos (requer Admin SDK)';
+        // Check both data.success and handle error responses
+        if (groupsResponse.data?.success && groupsResponse.data?.data?.groups) {
+          groups = groupsResponse.data.data.groups;
         }
+        // Silently ignore 403/permission errors - expected for personal accounts
       } catch (err) {
-        console.log('Groups fetch error (expected without Admin SDK):', err);
-        groupsError = 'API Admin Directory não disponível';
+        // Expected error for personal Gmail accounts - silently ignore
+        console.log('Groups fetch skipped (Admin SDK not available)');
       }
 
       setData({
