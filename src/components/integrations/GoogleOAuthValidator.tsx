@@ -182,8 +182,8 @@ export const GoogleOAuthValidator = () => {
         throw new Error('URL de autorização não retornada pelo servidor');
       }
 
-      // Redirecionar para a página de consentimento do Google
-      window.location.href = data.authUrl;
+      // Abrir em nova aba para evitar bloqueio em iframes (preview do Lovable)
+      window.open(data.authUrl, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('Erro ao conectar:', error);
       toast({
