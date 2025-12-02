@@ -79,21 +79,21 @@ export const GoogleOAuthValidator = () => {
     setConnectingOAuth(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/integrations',
-          scopes: 'openid profile email',
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
+      // Usar edge function customizada em vez de Supabase Auth nativo
+      const { data, error } = await supabase.functions.invoke('google-oauth-start', {
+        body: {}
       });
 
       if (error) {
         throw error;
       }
+
+      if (!data?.authUrl) {
+        throw new Error('URL de autorização não retornada pelo servidor');
+      }
+
+      // Redirecionar para a página de consentimento do Google
+      window.location.href = data.authUrl;
     } catch (error) {
       console.error('Erro ao conectar:', error);
       toast({
