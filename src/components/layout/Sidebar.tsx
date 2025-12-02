@@ -18,9 +18,7 @@ import {
   UserCheck,
   ShieldCheck,
   Target,
-  Activity,
-  Server,
-  MonitorDot
+  Activity
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -127,24 +125,10 @@ const sidebarItems: SidebarItem[] = [
         href: '/integrations'
       },
       {
-        id: 'assets',
-        label: 'Inventário de Ativos',
-        icon: Server,
-        href: '/assets',
-        badge: 'Novo'
-      },
-      {
         id: 'analytics',
         label: 'Analytics',
         icon: Activity,
         href: '/analytics',
-        badge: 'Novo'
-      },
-      {
-        id: 'api-monitor',
-        label: 'API Monitor',
-        icon: MonitorDot,
-        href: '/api-monitor',
         badge: 'Novo'
       },
       {

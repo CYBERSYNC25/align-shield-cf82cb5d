@@ -25,9 +25,7 @@ import Notifications from "./pages/Notifications";
 import Tasks from "./pages/Tasks";
 import ComplianceReadiness from "./pages/ComplianceReadiness";
 
-import AssetInventory from "./pages/AssetInventory";
 import PolicyDocuments from "./pages/PolicyDocuments";
-import ApiMonitor from "./pages/ApiMonitor";
 
 const queryClient = new QueryClient();
 
@@ -121,19 +119,9 @@ const App = () => (
               <ComplianceReadiness />
             </ProtectedRoute>
           } />
-          <Route path="/assets" element={
-            <ProtectedRoute>
-              <AssetInventory />
-            </ProtectedRoute>
-          } />
           <Route path="/policy-documents" element={
             <ProtectedRoute>
               <PolicyDocuments />
-            </ProtectedRoute>
-          } />
-          <Route path="/api-monitor" element={
-            <ProtectedRoute>
-              <ApiMonitor />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
