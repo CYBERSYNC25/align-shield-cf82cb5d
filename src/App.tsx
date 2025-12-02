@@ -27,6 +27,7 @@ import ComplianceReadiness from "./pages/ComplianceReadiness";
 
 import AssetInventory from "./pages/AssetInventory";
 import PolicyDocuments from "./pages/PolicyDocuments";
+import ApiMonitor from "./pages/ApiMonitor";
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,11 @@ const App = () => (
           <Route path="/policy-documents" element={
             <ProtectedRoute>
               <PolicyDocuments />
+            </ProtectedRoute>
+          } />
+          <Route path="/api-monitor" element={
+            <ProtectedRoute>
+              <ApiMonitor />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
