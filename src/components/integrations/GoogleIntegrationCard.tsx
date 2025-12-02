@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, HardDrive } from 'lucide-react';
+import { CheckCircle2, HardDrive, Eye, Settings } from 'lucide-react';
 import { GoogleOAuthValidator } from './GoogleOAuthValidator';
+import { GoogleWorkspaceResourcesModal } from './GoogleWorkspaceResourcesModal';
 import { formatRelativeTime } from '@/lib/utils';
 import {
   Dialog,
@@ -20,6 +21,7 @@ interface GoogleIntegrationCardProps {
 
 export const GoogleIntegrationCard = ({ isConnected = false, lastSync = null }: GoogleIntegrationCardProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isResourcesModalOpen, setIsResourcesModalOpen] = useState(false);
 
   if (isConnected) {
     return (
@@ -42,14 +44,33 @@ export const GoogleIntegrationCard = ({ isConnected = false, lastSync = null }: 
           </CardHeader>
 
           <CardContent className="space-y-2">
-            <Button variant="outline" className="w-full" onClick={() => setIsModalOpen(true)}>
-              Gerenciar
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="default" 
+                className="flex-1 gap-2" 
+                onClick={() => setIsResourcesModalOpen(true)}
+              >
+                <Eye className="h-4 w-4" />
+                Ver Recursos
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setIsModalOpen(true)}
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground text-center">
               Última sync: {formatRelativeTime(lastSync)}
             </p>
           </CardContent>
         </Card>
+
+        <GoogleWorkspaceResourcesModal 
+          open={isResourcesModalOpen} 
+          onOpenChange={setIsResourcesModalOpen} 
+        />
 
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
