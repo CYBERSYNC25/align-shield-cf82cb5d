@@ -4,7 +4,7 @@ import Footer from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Cloud, FileText, CheckCircle2, WifiOff } from 'lucide-react';
+import { Cloud, FileText, CheckCircle2, WifiOff, HardDrive, Activity, Clock, Database } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'react-router-dom';
@@ -12,6 +12,9 @@ import { ConnectAwsModal } from '@/components/integrations/ConnectAwsModal';
 import { GoogleIntegrationCard } from '@/components/integrations/GoogleIntegrationCard';
 import { AzureIntegrationCard } from '@/components/integrations/AzureIntegrationCard';
 import { MikroTikAgentModal } from '@/components/integrations/MikroTikAgentModal';
+import { useIntegrationStatus } from '@/hooks/useIntegrationStatus';
+import { formatRelativeTime } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface IntegrationCard {
   id: string;
@@ -20,8 +23,6 @@ interface IntegrationCard {
   provider: string;
   icon: React.ReactNode;
   status: 'available' | 'coming_soon';
-  isConnected?: boolean;
-  lastSync?: string;
 }
 
 const comingSoonIntegrations: IntegrationCard[] = [
@@ -40,6 +41,14 @@ const IntegrationsHub = () => {
   const [isMikroTikModalOpen, setIsMikroTikModalOpen] = useState(false);
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { aws, google, azure, mikrotik, loading, refetch } = useIntegrationStatus();
+
+  // Calculate stats
+  const connectedCount = [aws.connected, google.connected, azure.connected, mikrotik.connected].filter(Boolean).length;
+  
+  const lastSyncDate = [aws.lastSync, google.lastSync, azure.lastSync, mikrotik.lastSync]
+    .filter((d): d is Date => d !== null)
+    .sort((a, b) => b.getTime() - a.getTime())[0] || null;
 
   // Check for Azure OAuth success
   useEffect(() => {
@@ -50,15 +59,19 @@ const IntegrationsHub = () => {
         description: 'Permissão de leitura de diretório confirmada.',
         variant: 'default',
       });
-      // Remove the query param
       searchParams.delete('azure_connected');
       setSearchParams(searchParams, { replace: true });
+      refetch();
     }
-  }, [searchParams, setSearchParams, toast]);
+  }, [searchParams, setSearchParams, toast, refetch]);
 
   const handleAwsSuccess = () => {
     console.log('AWS conectada com sucesso!');
+    refetch();
   };
+
+  // Separate connected and available integrations
+  const hasConnectedIntegrations = aws.connected || google.connected || azure.connected || mikrotik.connected;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -68,10 +81,9 @@ const IntegrationsHub = () => {
         <Sidebar />
         
         <main className="flex-1 p-6 overflow-auto">
-          {/* Grid Layout Container */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            {/* Header Section - Full Width */}
+            {/* Header Section */}
             <div className="col-span-full">
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold text-foreground tracking-tight">
@@ -83,19 +95,26 @@ const IntegrationsHub = () => {
               </div>
             </div>
 
-            {/* Stats Cards - 3 columns */}
+            {/* Stats Cards */}
             <div className="col-span-full lg:col-span-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Activity className="h-4 w-4" />
                     Integrações Ativas
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">3</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Google, Azure e AWS disponíveis
-                  </p>
+                  {loading ? (
+                    <Skeleton className="h-8 w-16" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-foreground">{connectedCount}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        de 4 disponíveis
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -103,13 +122,24 @@ const IntegrationsHub = () => {
             <div className="col-span-full lg:col-span-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
                     Última Sincronização
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-foreground">Agora</div>
-                  <p className="text-xs text-muted-foreground mt-1">Sistema atualizado</p>
+                  {loading ? (
+                    <Skeleton className="h-8 w-24" />
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold text-foreground">
+                        {lastSyncDate ? formatRelativeTime(lastSyncDate) : 'Nenhuma'}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {connectedCount > 0 ? 'Sistema sincronizado' : 'Nenhuma integração ativa'}
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -117,7 +147,8 @@ const IntegrationsHub = () => {
             <div className="col-span-full lg:col-span-4">
               <Card>
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                    <Database className="h-4 w-4" />
                     Evidências Coletadas
                   </CardTitle>
                 </CardHeader>
@@ -128,75 +159,175 @@ const IntegrationsHub = () => {
               </Card>
             </div>
 
-            {/* Main Integrations Section - Full Width */}
+            {/* Connected Integrations Section */}
+            {hasConnectedIntegrations && (
+              <div className="col-span-full">
+                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  Integrações Conectadas
+                </h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {/* Google Workspace - Connected */}
+                  {google.connected && (
+                    <GoogleIntegrationCard 
+                      isConnected={true} 
+                      lastSync={google.lastSync} 
+                    />
+                  )}
+
+                  {/* Azure AD - Connected */}
+                  {azure.connected && (
+                    <AzureIntegrationCard 
+                      isConnected={true} 
+                      lastSync={azure.lastSync} 
+                    />
+                  )}
+
+                  {/* AWS Cloud - Connected */}
+                  {aws.connected && (
+                    <Card className="transition-all duration-200 border-green-500/50 ring-1 ring-green-500/20 shadow-lg hover:shadow-xl">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="p-3 rounded-lg bg-green-500/10 text-green-600">
+                            <Cloud className="h-8 w-8" />
+                          </div>
+                          <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
+                            <span className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse" />
+                            Conectado
+                          </Badge>
+                        </div>
+                        <CardTitle className="mt-4 text-foreground">AWS Cloud</CardTitle>
+                        <CardDescription>
+                          {aws.accountId ? `Account: ${aws.accountId}` : 'Coleta automática de usuários IAM e S3 buckets'}
+                        </CardDescription>
+                      </CardHeader>
+
+                      <CardContent className="space-y-2">
+                        <Button variant="outline" className="w-full" onClick={() => setIsAwsModalOpen(true)}>
+                          Gerenciar
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">
+                          Última sync: {formatRelativeTime(aws.lastSync)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* MikroTik - Connected */}
+                  {mikrotik.connected && (
+                    <Card className="transition-all duration-200 border-green-500/50 ring-1 ring-green-500/20 shadow-lg hover:shadow-xl">
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="p-3 rounded-lg bg-green-500/10 text-green-600">
+                            <WifiOff className="h-8 w-8" />
+                          </div>
+                          <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
+                            <span className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse" />
+                            Conectado
+                          </Badge>
+                        </div>
+                        <CardTitle className="mt-4 text-foreground">MikroTik</CardTitle>
+                        <CardDescription>
+                          {mikrotik.deviceCount 
+                            ? `${mikrotik.deviceCount} ${mikrotik.deviceCount === 1 ? 'dispositivo' : 'dispositivos'} ativo${mikrotik.deviceCount === 1 ? '' : 's'}`
+                            : 'Monitoramento de roteadores via agente local'
+                          }
+                        </CardDescription>
+                      </CardHeader>
+
+                      <CardContent className="space-y-2">
+                        <Button variant="outline" className="w-full" onClick={() => setIsMikroTikModalOpen(true)}>
+                          Gerenciar
+                        </Button>
+                        <p className="text-xs text-muted-foreground text-center">
+                          Última sync: {formatRelativeTime(mikrotik.lastSync)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Available Integrations Section */}
             <div className="col-span-full">
-              <h2 className="text-xl font-semibold text-foreground mb-4">Integrações Principais</h2>
+              <h2 className="text-xl font-semibold text-foreground mb-4">
+                {hasConnectedIntegrations ? 'Disponíveis para Conectar' : 'Integrações Disponíveis'}
+              </h2>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {/* Google Workspace */}
-                <GoogleIntegrationCard />
+                {/* Google Workspace - Available */}
+                {!google.connected && (
+                  <GoogleIntegrationCard isConnected={false} lastSync={null} />
+                )}
 
-                {/* Azure AD */}
-                <AzureIntegrationCard />
+                {/* Azure AD - Available */}
+                {!azure.connected && (
+                  <AzureIntegrationCard isConnected={false} lastSync={null} />
+                )}
 
-                {/* AWS Cloud */}
-                <Card className="transition-all duration-200 border-primary shadow-lg hover:shadow-xl">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                        <Cloud className="h-8 w-8" />
+                {/* AWS Cloud - Available */}
+                {!aws.connected && (
+                  <Card className="transition-all duration-200 border-primary/50 shadow-lg hover:shadow-xl">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                          <Cloud className="h-8 w-8" />
+                        </div>
+                        <Badge variant="default" className="bg-success text-success-foreground">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Disponível
+                        </Badge>
                       </div>
-                      <Badge variant="default" className="bg-success text-success-foreground">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Disponível
-                      </Badge>
-                    </div>
-                    <CardTitle className="mt-4 text-foreground">AWS Cloud</CardTitle>
-                    <CardDescription>
-                      Coleta automática de usuários IAM e S3 buckets
-                    </CardDescription>
-                  </CardHeader>
+                      <CardTitle className="mt-4 text-foreground">AWS Cloud</CardTitle>
+                      <CardDescription>
+                        Coleta automática de usuários IAM e S3 buckets
+                      </CardDescription>
+                    </CardHeader>
 
-                  <CardContent className="space-y-2">
-                    <Button className="w-full" onClick={() => setIsAwsModalOpen(true)}>
-                      Conectar
-                    </Button>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Configure via Cross-Account Role
-                    </p>
-                  </CardContent>
-                </Card>
+                    <CardContent className="space-y-2">
+                      <Button className="w-full" onClick={() => setIsAwsModalOpen(true)}>
+                        Conectar
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Configure via Cross-Account Role
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
 
-                {/* MikroTik Agent */}
-                <Card className="transition-all duration-200 border-primary shadow-lg hover:shadow-xl">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="p-3 rounded-lg bg-primary/10 text-primary">
-                        <WifiOff className="h-8 w-8" />
+                {/* MikroTik Agent - Available */}
+                {!mikrotik.connected && (
+                  <Card className="transition-all duration-200 border-primary/50 shadow-lg hover:shadow-xl">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                          <WifiOff className="h-8 w-8" />
+                        </div>
+                        <Badge variant="default" className="bg-success text-success-foreground">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Disponível
+                        </Badge>
                       </div>
-                      <Badge variant="default" className="bg-success text-success-foreground">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Disponível
-                      </Badge>
-                    </div>
-                    <CardTitle className="mt-4 text-foreground">MikroTik</CardTitle>
-                    <CardDescription>
-                      Monitoramento de roteadores via agente local
-                    </CardDescription>
-                  </CardHeader>
+                      <CardTitle className="mt-4 text-foreground">MikroTik</CardTitle>
+                      <CardDescription>
+                        Monitoramento de roteadores via agente local
+                      </CardDescription>
+                    </CardHeader>
 
-                  <CardContent className="space-y-2">
-                    <Button className="w-full" onClick={() => setIsMikroTikModalOpen(true)}>
-                      Instalar Agente
-                    </Button>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Baixe e configure o APOC Agent
-                    </p>
-                  </CardContent>
-                </Card>
+                    <CardContent className="space-y-2">
+                      <Button className="w-full" onClick={() => setIsMikroTikModalOpen(true)}>
+                        Instalar Agente
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Baixe e configure o APOC Agent
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </div>
 
-            {/* Coming Soon Integrations - Full Width */}
+            {/* Coming Soon Integrations */}
             <div className="col-span-full">
               <h2 className="text-xl font-semibold text-foreground mb-4">Em Breve</h2>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -223,7 +354,7 @@ const IntegrationsHub = () => {
               </div>
             </div>
 
-            {/* Info Card - Full Width */}
+            {/* Info Card */}
             <div className="col-span-full">
               <Card className="bg-muted/50 border-dashed">
                 <CardHeader>
