@@ -44,13 +44,69 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Google OAuth Start: Initiating OAuth flow');
+    // Verificar se é modo diagnóstico
+    const url = new URL(req.url);
+    const isDiagnostic = url.searchParams.get('diagnostic') === 'true';
+    
+    console.log('Google OAuth Start: Initiating OAuth flow', { diagnostic: isDiagnostic });
 
     // ✅ Buscar credenciais dos Supabase Secrets
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+    // Modo diagnóstico - retorna informações sem autenticação
+    if (isDiagnostic) {
+      console.log('Google OAuth Diagnostic: Running diagnostic check');
+      
+      const redirectUri = supabaseUrl ? `${supabaseUrl}/functions/v1/google-oauth-callback` : 'NOT_CONFIGURED';
+      const scopes = ['openid', 'profile', 'email'];
+      
+      // Construir URL de teste (mesmo que inválida)
+      let testAuthUrl = 'NOT_AVAILABLE';
+      if (clientId && supabaseUrl) {
+        const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+        authUrl.searchParams.set('client_id', clientId);
+        authUrl.searchParams.set('redirect_uri', redirectUri);
+        authUrl.searchParams.set('response_type', 'code');
+        authUrl.searchParams.set('scope', scopes.join(' '));
+        authUrl.searchParams.set('state', 'diagnostic_test');
+        authUrl.searchParams.set('access_type', 'offline');
+        authUrl.searchParams.set('prompt', 'consent');
+        testAuthUrl = authUrl.toString();
+      }
+      
+      const diagnosticResult = {
+        success: true,
+        diagnostic: true,
+        timestamp: new Date().toISOString(),
+        configuration: {
+          clientIdConfigured: !!clientId,
+          clientIdPreview: clientId ? `${clientId.substring(0, 25)}...` : 'NOT_SET',
+          clientIdLength: clientId?.length || 0,
+          clientIdEndsCorrectly: clientId?.endsWith('.apps.googleusercontent.com') || false,
+          clientSecretConfigured: !!clientSecret,
+          clientSecretLength: clientSecret?.length || 0,
+          supabaseUrlConfigured: !!supabaseUrl,
+          redirectUri: redirectUri,
+          scopes: scopes
+        },
+        testAuthUrl: testAuthUrl,
+        instructions: 'Compare o clientIdPreview com o Client ID no Google Cloud Console'
+      };
+      
+      console.log('Google OAuth Diagnostic: Result', {
+        clientIdPreview: diagnosticResult.configuration.clientIdPreview,
+        clientIdLength: diagnosticResult.configuration.clientIdLength,
+        clientIdEndsCorrectly: diagnosticResult.configuration.clientIdEndsCorrectly
+      });
+      
+      return new Response(
+        JSON.stringify(diagnosticResult),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Validar credenciais
     if (!clientId || !clientSecret) {
