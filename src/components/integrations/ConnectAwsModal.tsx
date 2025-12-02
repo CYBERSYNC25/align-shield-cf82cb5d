@@ -16,11 +16,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle2, XCircle, Copy, Check } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Copy, Check, AlertTriangle, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const awsConnectionSchema = z.object({
@@ -38,10 +39,22 @@ const awsConnectionSchema = z.object({
     })
     .refine((val) => val.includes(':role/'), {
       message: 'ARN deve conter :role/',
+    })
+    .refine((val) => /^arn:aws:iam::\d{12}:role\/[\w+=,.@-]+$/.test(val), {
+      message: 'Formato de ARN inválido. Use: arn:aws:iam::123456789012:role/NomeDaRole',
     }),
 });
 
 type AwsConnectionFormData = z.infer<typeof awsConnectionSchema>;
+
+interface ConnectionError {
+  error: string;
+  error_code?: string;
+  step?: string;
+  recommendation?: string;
+  details?: string;
+  aws_request_id?: string;
+}
 
 interface ConnectAwsModalProps {
   open: boolean;
@@ -52,6 +65,7 @@ interface ConnectAwsModalProps {
 export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [connectionError, setConnectionError] = useState<ConnectionError | null>(null);
   const { toast } = useToast();
 
   const policyJson = {
@@ -74,13 +88,14 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
 
   const onSubmit = async (data: AwsConnectionFormData) => {
     setIsLoading(true);
+    setConnectionError(null);
 
     try {
       // Obter usuário autenticado
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
-        throw new Error('Usuário não autenticado');
+        throw new Error('Usuário não autenticado. Faça login novamente.');
       }
 
       // Inserir integração no Supabase
@@ -93,15 +108,18 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
           configuration: {
             role_arn: data.roleArn,
           },
-          status: 'active',
+          status: 'pending',
           last_sync_at: null,
         })
         .select()
         .single();
 
       if (insertError || !insertedIntegration) {
-        throw insertError || new Error('Erro ao salvar integração');
+        console.error('Erro ao inserir integração:', insertError);
+        throw new Error(insertError?.message || 'Erro ao salvar integração no banco de dados');
       }
+
+      console.log('Integração criada, testando conexão...', insertedIntegration.id);
 
       // Testar a conexão chamando a edge function
       const { data: testResult, error: testError } = await supabase.functions.invoke(
@@ -111,41 +129,77 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
         }
       );
 
+      console.log('Resultado do teste:', testResult, 'Erro:', testError);
+
       if (testError) {
-        console.error('Erro ao testar conexão:', testError);
-        toast({
-          title: 'Integração salva com aviso',
-          description: `${data.name} foi salva, mas não foi possível validar a conexão. Teste manualmente depois.`,
-          variant: 'default',
+        // Erro de comunicação com a Edge Function
+        console.error('Erro ao chamar Edge Function:', testError);
+        
+        setConnectionError({
+          error: 'Não foi possível conectar ao servidor de teste',
+          error_code: 'EDGE_FUNCTION_ERROR',
+          recommendation: 'Verifique sua conexão com a internet e tente novamente.',
+          details: testError.message
         });
-      } else if (!testResult?.success) {
-        // Teste falhou
+
+        // Atualizar status para erro
+        await supabase
+          .from('integrations')
+          .update({ status: 'error' })
+          .eq('id', insertedIntegration.id);
+
         toast({
-          title: 'Conexão AWS não validada',
-          description: testResult?.error || 'Não foi possível conectar à AWS com as credenciais fornecidas.',
+          title: 'Integração salva com erro',
+          description: `${data.name} foi salva, mas a validação falhou. Veja os detalhes abaixo.`,
           variant: 'destructive',
         });
-        
-        // Mesmo com erro, a integração foi salva
-        toast({
-          title: 'Integração salva',
-          description: `${data.name} foi salva. Verifique as credenciais e tente novamente.`,
-        });
-      } else {
-        // Sucesso total!
-        const accountId = testResult.accountId || 'N/A';
-        toast({
-          title: 'Integração AWS validada com sucesso! ✓',
-          description: `${data.name} foi configurada e testada. Account ID: ${accountId}. ${testResult.user_count || 0} usuários IAM encontrados.`,
-          variant: 'default',
-        });
+        return;
       }
 
+      if (!testResult?.success) {
+        // Teste retornou erro da AWS
+        console.error('Teste AWS falhou:', testResult);
+        
+        setConnectionError({
+          error: testResult?.error || 'Erro desconhecido',
+          error_code: testResult?.error_code,
+          step: testResult?.step,
+          recommendation: testResult?.recommendation,
+          details: testResult?.details,
+          aws_request_id: testResult?.aws_request_id
+        });
+
+        toast({
+          title: 'Conexão AWS não validada',
+          description: 'A integração foi salva, mas houve um erro ao validar. Veja os detalhes abaixo.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Sucesso total!
+      const accountId = testResult.accountId || 'N/A';
+      const userCount = testResult.user_count || 0;
+      
+      toast({
+        title: 'Integração AWS validada com sucesso!',
+        description: `${data.name} foi configurada e testada. Account ID: ${accountId}. ${userCount} usuários IAM encontrados.`,
+      });
+
       reset();
+      setConnectionError(null);
       onOpenChange(false);
       onSuccess?.();
+
     } catch (error: any) {
       console.error('Erro ao conectar AWS:', error);
+      
+      setConnectionError({
+        error: error.message || 'Erro inesperado ao processar a requisição',
+        error_code: 'CLIENT_ERROR',
+        recommendation: 'Verifique os dados inseridos e tente novamente.'
+      });
+
       toast({
         title: 'Erro ao salvar integração',
         description: error.message || 'Não foi possível salvar a conexão com a AWS.',
@@ -177,13 +231,31 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
   const handleClose = () => {
     if (!isLoading) {
       reset();
+      setConnectionError(null);
       onOpenChange(false);
     }
   };
 
+  const getStepLabel = (step?: string): string => {
+    const stepLabels: Record<string, string> = {
+      'validation': 'Validação de dados',
+      'auth': 'Autenticação',
+      'server_config': 'Configuração do servidor',
+      'fetch_integration': 'Busca da integração',
+      'validate_provider': 'Validação do provider',
+      'extract_role_arn': 'Extração do Role ARN',
+      'validate_arn': 'Validação do ARN',
+      'check_system_credentials': 'Verificação de credenciais do sistema',
+      'assume_role': 'AssumeRole (STS)',
+      'iam_list_users': 'Teste de permissões IAM',
+      'server': 'Processamento do servidor'
+    };
+    return stepLabels[step || ''] || step || 'Desconhecido';
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl">Conectar conta AWS</DialogTitle>
           <DialogDescription>
@@ -192,6 +264,51 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4">
+          {/* Alerta de Erro Detalhado */}
+          {connectionError && (
+            <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle className="font-semibold">
+                Erro na conexão AWS
+                {connectionError.error_code && (
+                  <span className="ml-2 text-xs font-mono bg-destructive/20 px-2 py-0.5 rounded">
+                    {connectionError.error_code}
+                  </span>
+                )}
+              </AlertTitle>
+              <AlertDescription className="mt-2 space-y-2">
+                <p className="text-sm font-medium">{connectionError.error}</p>
+                
+                {connectionError.step && (
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Etapa:</strong> {getStepLabel(connectionError.step)}
+                  </p>
+                )}
+                
+                {connectionError.details && (
+                  <p className="text-xs font-mono bg-background/50 p-2 rounded border border-border break-all">
+                    {connectionError.details}
+                  </p>
+                )}
+                
+                {connectionError.recommendation && (
+                  <div className="flex items-start gap-2 mt-3 p-2 bg-warning/10 border border-warning/20 rounded">
+                    <Info className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-foreground">
+                      <strong>Recomendação:</strong> {connectionError.recommendation}
+                    </p>
+                  </div>
+                )}
+
+                {connectionError.aws_request_id && (
+                  <p className="text-xs text-muted-foreground">
+                    <strong>AWS Request ID:</strong> {connectionError.aws_request_id}
+                  </p>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Nome da Conexão */}
           <div className="space-y-2">
             <Label htmlFor="name" className="text-sm font-medium">
@@ -202,10 +319,10 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
               placeholder="Ex: AWS Produção"
               {...register('name')}
               disabled={isLoading}
-              className={errors.name ? 'border-danger focus-visible:ring-danger' : ''}
+              className={errors.name ? 'border-destructive focus-visible:ring-destructive' : ''}
             />
             {errors.name && (
-              <div className="flex items-center gap-2 text-sm text-danger">
+              <div className="flex items-center gap-2 text-sm text-destructive">
                 <XCircle className="h-4 w-4" />
                 <span>{errors.name.message}</span>
               </div>
@@ -222,10 +339,10 @@ export const ConnectAwsModal = ({ open, onOpenChange, onSuccess }: ConnectAwsMod
               placeholder="arn:aws:iam::123456789012:role/ComplianceRole"
               {...register('roleArn')}
               disabled={isLoading}
-              className={errors.roleArn ? 'border-danger focus-visible:ring-danger' : ''}
+              className={errors.roleArn ? 'border-destructive focus-visible:ring-destructive' : ''}
             />
             {errors.roleArn && (
-              <div className="flex items-center gap-2 text-sm text-danger">
+              <div className="flex items-center gap-2 text-sm text-destructive">
                 <XCircle className="h-4 w-4" />
                 <span>{errors.roleArn.message}</span>
               </div>
