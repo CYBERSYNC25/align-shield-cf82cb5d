@@ -114,13 +114,11 @@ serve(async (req) => {
     // Definir redirect URI (deve corresponder ao configurado no Google Cloud Console)
     const redirectUri = `${supabaseUrl}/functions/v1/google-oauth-callback`;
 
-    // Scopes compatíveis com contas pessoais Gmail
-    // Admin SDK scopes removidos pois requerem Google Workspace
+    // Scopes básicos para testar OAuth (Drive removido temporariamente)
     const scopes = [
       'openid',
       'profile',
-      'email',
-      'https://www.googleapis.com/auth/drive.metadata.readonly'
+      'email'
     ].join(' ');
 
     // Construir URL de autorização do Google
