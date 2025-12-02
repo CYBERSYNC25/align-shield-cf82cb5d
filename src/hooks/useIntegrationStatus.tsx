@@ -53,13 +53,15 @@ export function useIntegrationStatus(): IntegrationStatusResult {
         .eq('user_id', user.id)
         .eq('provider', 'AWS')
         .eq('status', 'active')
-        .maybeSingle();
+        .order('updated_at', { ascending: false })
+        .limit(1);
 
-      if (awsData) {
-        const config = awsData.configuration as Record<string, any> | null;
+      if (awsData && awsData.length > 0) {
+        const firstAws = awsData[0];
+        const config = firstAws.configuration as Record<string, any> | null;
         setAws({
           connected: true,
-          lastSync: awsData.last_sync_at ? new Date(awsData.last_sync_at) : new Date(awsData.updated_at),
+          lastSync: firstAws.last_sync_at ? new Date(firstAws.last_sync_at) : new Date(firstAws.updated_at),
           accountId: config?.account_id || config?.accountId,
         });
       } else {
