@@ -337,7 +337,7 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
                   </Card>
                 )}
 
-                {/* Users Table */}
+              {/* Users Table */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -348,13 +348,16 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
                   <CardContent>
                     {data.users.items.length === 0 ? (
                       <div className="text-center py-4">
-                        <AlertCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Nenhum usuário encontrado
+                        <AlertCircle className="h-8 w-8 mx-auto text-amber-500 mb-2" />
+                        <p className="text-sm font-medium text-foreground">
+                          Recurso não disponível
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          A listagem de usuários requer permissões de Admin Directory
+                        <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
+                          A listagem de usuários requer uma <strong>conta Google Workspace corporativa</strong> com permissões de administrador.
                         </p>
+                        <Badge variant="outline" className="mt-3 text-xs">
+                          Contas Gmail pessoais não possuem este recurso
+                        </Badge>
                       </div>
                     ) : (
                       <Table>
@@ -385,7 +388,7 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
                   </CardContent>
                 </Card>
 
-                {/* Groups Table */}
+              {/* Groups Table */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -396,13 +399,16 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
                   <CardContent>
                     {data.groups.items.length === 0 ? (
                       <div className="text-center py-4">
-                        <AlertCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Nenhum grupo encontrado
+                        <AlertCircle className="h-8 w-8 mx-auto text-amber-500 mb-2" />
+                        <p className="text-sm font-medium text-foreground">
+                          Recurso não disponível
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          A listagem de grupos requer permissões de Admin Directory
+                        <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
+                          A listagem de grupos requer uma <strong>conta Google Workspace corporativa</strong> com permissões de administrador.
                         </p>
+                        <Badge variant="outline" className="mt-3 text-xs">
+                          Contas Gmail pessoais não possuem este recurso
+                        </Badge>
                       </div>
                     ) : (
                       <Table>
