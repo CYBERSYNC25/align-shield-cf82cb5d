@@ -57,10 +57,23 @@ async function signAwsRequest(params: {
 
 async function assumeRole(roleArn: string, sessionName: string, accessKeyId: string, secretAccessKey: string, region: string) {
   const host = `sts.${region}.amazonaws.com`;
-  const qs = new URLSearchParams({ Action: 'AssumeRole', Version: '2011-06-15', RoleArn: roleArn, RoleSessionName: sessionName, DurationSeconds: '900' }).toString();
-  const headers = await signAwsRequest({ method: 'GET', service: 'sts', region, host, path: '/', queryString: qs, body: '', accessKeyId, secretAccessKey });
   
-  const res = await fetch(`https://${host}/?${qs}`, { method: 'GET', headers });
+  // AWS requires query parameters to be sorted alphabetically for signature
+  const params: Record<string, string> = {
+    Action: 'AssumeRole',
+    DurationSeconds: '900',
+    RoleArn: roleArn,
+    RoleSessionName: sessionName,
+    Version: '2011-06-15'
+  };
+  
+  // Sort and encode parameters
+  const sortedKeys = Object.keys(params).sort();
+  const canonicalQs = sortedKeys.map(k => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&');
+  
+  const headers = await signAwsRequest({ method: 'GET', service: 'sts', region, host, path: '/', queryString: canonicalQs, body: '', accessKeyId, secretAccessKey });
+  
+  const res = await fetch(`https://${host}/?${canonicalQs}`, { method: 'GET', headers });
   const text = await res.text();
   
   if (!res.ok) {
