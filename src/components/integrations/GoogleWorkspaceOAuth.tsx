@@ -199,8 +199,9 @@ const GoogleWorkspaceOAuth = () => {
       toast({ title: '✅ URL gerada', description: 'Redirecionando para o Google...' });
       
       setTimeout(() => { 
-        console.log('[OAuth] Redirecionando para Google...');
-        window.location.href = data.authUrl; 
+        console.log('[OAuth] Abrindo Google OAuth em nova aba...');
+        // Usar window.open para evitar bloqueio em iframes (preview do Lovable)
+        window.open(data.authUrl, '_blank', 'noopener,noreferrer'); 
       }, 1000);
     } catch (error) {
       const elapsed = Date.now() - startTime;
