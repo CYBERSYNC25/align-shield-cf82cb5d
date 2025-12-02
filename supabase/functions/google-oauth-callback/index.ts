@@ -34,7 +34,9 @@ const corsHeaders = {
  */
 function validateState(encodedState: string): { userId: string; timestamp: number } | null {
   try {
-    const stateData = JSON.parse(atob(encodedState));
+    // Primeiro decodificar URL encoding, depois decodificar Base64
+    const decodedState = decodeURIComponent(encodedState);
+    const stateData = JSON.parse(atob(decodedState));
     
     // Verificar se o state não está muito antigo (10 minutos)
     const age = Date.now() - stateData.timestamp;
@@ -78,8 +80,8 @@ serve(async (req) => {
       console.error(`Google OAuth Callback: Authorization error: ${error}`);
       
       // Redirecionar de volta para a aplicação com erro
-      const appUrl = Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://') || '';
-      const redirectUrl = `${appUrl.replace('.supabase.co', '.lovable.app')}/integrations?error=${encodeURIComponent(error)}`;
+      const projectRef = Deno.env.get('SUPABASE_URL')?.match(/https:\/\/([^.]+)/)?.[1] || '';
+      const redirectUrl = `https://preview--${projectRef}.lovable.app/integrations?error=${encodeURIComponent(error)}`;
       
       return new Response(null, {
         status: 302,
@@ -188,8 +190,9 @@ serve(async (req) => {
     console.log('Google OAuth Callback: Tokens stored successfully');
 
     // Redirecionar de volta para a aplicação com sucesso
-    const appUrl = Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://') || '';
-    const redirectUrl = `${appUrl.replace('.supabase.co', '.lovable.app')}/integrations?success=google_workspace`;
+    // Usar URL do preview Lovable com prefixo correto
+    const projectRef = Deno.env.get('SUPABASE_URL')?.match(/https:\/\/([^.]+)/)?.[1] || '';
+    const redirectUrl = `https://preview--${projectRef}.lovable.app/integrations?success=google_workspace`;
     
     return new Response(null, {
       status: 302,
@@ -200,9 +203,9 @@ serve(async (req) => {
     console.error('Google OAuth Callback Error:', error);
     
     // Redirecionar para a aplicação com erro
-    const appUrl = Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://') || '';
+    const projectRef = Deno.env.get('SUPABASE_URL')?.match(/https:\/\/([^.]+)/)?.[1] || '';
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const redirectUrl = `${appUrl.replace('.supabase.co', '.lovable.app')}/integrations?error=${encodeURIComponent(errorMessage)}`;
+    const redirectUrl = `https://preview--${projectRef}.lovable.app/integrations?error=${encodeURIComponent(errorMessage)}`;
     
     return new Response(null, {
       status: 302,
