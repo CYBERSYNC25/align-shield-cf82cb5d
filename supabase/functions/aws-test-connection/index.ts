@@ -8,37 +8,111 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Extrai informações detalhadas de erros da AWS SDK
+ */
+function extractAwsError(error: any): { code: string; message: string; requestId?: string } {
+  // AWS SDK v3 error structure
+  const code = error.name || error.Code || error.$metadata?.httpStatusCode?.toString() || 'UnknownError';
+  const message = error.message || error.Message || 'Erro desconhecido da AWS';
+  const requestId = error.$metadata?.requestId;
+  
+  return { code, message, requestId };
+}
+
+/**
+ * Gera recomendação baseada no código de erro da AWS
+ */
+function getErrorRecommendation(errorCode: string, errorMessage: string): string {
+  const recommendations: Record<string, string> = {
+    'AccessDenied': 'Verifique se a role tem uma Trust Policy que permite que a conta AWS do sistema assuma essa role. A Trust Policy deve incluir o ARN do usuário IAM do sistema.',
+    'AccessDeniedException': 'Verifique se a role tem uma Trust Policy que permite que a conta AWS do sistema assuma essa role.',
+    'InvalidClientTokenId': 'As credenciais AWS do sistema (AWS_ACCESS_KEY_ID) são inválidas ou foram revogadas. Contate o administrador.',
+    'SignatureDoesNotMatch': 'A chave secreta AWS (AWS_SECRET_ACCESS_KEY) está incorreta. Contate o administrador.',
+    'MalformedPolicyDocument': 'A role possui uma política mal formada. Verifique a sintaxe JSON da Trust Policy.',
+    'NoSuchEntity': 'A role especificada não existe. Verifique se o ARN está correto e se a role foi criada.',
+    'ExpiredTokenException': 'O token de sessão expirou. Tente novamente.',
+    'RegionDisabledException': 'A região AWS está desabilitada para esta conta.',
+    'ValidationError': 'O ARN fornecido é inválido. Verifique o formato: arn:aws:iam::ACCOUNT_ID:role/ROLE_NAME',
+  };
+
+  // Check for partial matches in error message
+  if (errorMessage.includes('is not authorized to perform: sts:AssumeRole')) {
+    return 'O usuário IAM do sistema não tem permissão para assumir esta role. Verifique a Trust Policy da role e adicione o ARN do sistema como principal confiável.';
+  }
+  
+  if (errorMessage.includes('Role does not exist')) {
+    return 'A role especificada não existe na conta AWS de destino. Verifique se o ARN está correto.';
+  }
+
+  if (errorMessage.includes('not authorized to perform: iam:ListUsers')) {
+    return 'A role não tem permissão para listar usuários IAM. Adicione a permissão "iam:ListUsers" na política da role.';
+  }
+
+  return recommendations[errorCode] || 'Verifique as configurações da role AWS e tente novamente.';
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+  
   try {
-    const { integration_id } = await req.json();
+    const body = await req.json();
+    const { integration_id } = body;
+
+    console.log('[AWS-TEST] Iniciando teste de conexão', { integration_id, timestamp: new Date().toISOString() });
 
     if (!integration_id) {
       return new Response(
-        JSON.stringify({ success: false, error: 'integration_id é obrigatório' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'integration_id é obrigatório',
+          error_code: 'MISSING_INTEGRATION_ID',
+          step: 'validation'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Obter token do usuário autenticado
+    // Verificar autorização
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Não autorizado' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Token de autorização não fornecido',
+          error_code: 'UNAUTHORIZED',
+          step: 'auth'
+        }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Criar cliente Supabase
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[AWS-TEST] Configuração Supabase ausente');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Configuração do servidor incompleta',
+          error_code: 'SERVER_CONFIG_ERROR',
+          step: 'server_config'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Buscar integração no banco
+    console.log('[AWS-TEST] Buscando integração:', integration_id);
     const { data: integration, error: fetchError } = await supabase
       .from('integrations')
       .select('*')
@@ -46,12 +120,14 @@ serve(async (req) => {
       .single();
 
     if (fetchError || !integration) {
-      console.error('Erro ao buscar integração:', fetchError);
+      console.error('[AWS-TEST] Integração não encontrada:', fetchError);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Integração não encontrada',
-          step: 'fetch_integration'
+          error: 'Integração não encontrada no sistema',
+          error_code: 'INTEGRATION_NOT_FOUND',
+          step: 'fetch_integration',
+          details: fetchError?.message
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -62,7 +138,8 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Esta função só funciona com integrações AWS',
+          error: `Provider inválido: ${integration.provider}. Esta função só funciona com integrações AWS.`,
+          error_code: 'INVALID_PROVIDER',
           step: 'validate_provider'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -75,87 +152,140 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Role ARN não encontrado na configuração',
+          error: 'Role ARN não encontrado na configuração da integração',
+          error_code: 'MISSING_ROLE_ARN',
           step: 'extract_role_arn'
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Testando Role ARN:', roleArn);
-
-    // Configurar credenciais AWS (você precisa ter credenciais base configuradas)
-    const AWS_ACCESS_KEY_ID = Deno.env.get('AWS_ACCESS_KEY_ID');
-    const AWS_SECRET_ACCESS_KEY = Deno.env.get('AWS_SECRET_ACCESS_KEY');
-
-    if (!AWS_ACCESS_KEY_ID || !AWS_SECRET_ACCESS_KEY) {
+    // Validar formato do ARN
+    const arnPattern = /^arn:aws:iam::\d{12}:role\/[\w+=,.@-]+$/;
+    if (!arnPattern.test(roleArn)) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Credenciais AWS base não configuradas no servidor',
-          step: 'check_base_credentials',
-          recommendation: 'Configure AWS_ACCESS_KEY_ID e AWS_SECRET_ACCESS_KEY nas secrets do Supabase'
+          error: `Formato de ARN inválido: ${roleArn}`,
+          error_code: 'INVALID_ARN_FORMAT',
+          step: 'validate_arn',
+          recommendation: 'O ARN deve seguir o formato: arn:aws:iam::123456789012:role/NomeDaRole'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[AWS-TEST] Role ARN válido:', roleArn);
+
+    // Verificar credenciais AWS do sistema
+    const AWS_ACCESS_KEY_ID = Deno.env.get('AWS_ACCESS_KEY_ID');
+    const AWS_SECRET_ACCESS_KEY = Deno.env.get('AWS_SECRET_ACCESS_KEY');
+    const AWS_REGION = Deno.env.get('AWS_REGION') || 'us-east-1';
+
+    if (!AWS_ACCESS_KEY_ID) {
+      console.error('[AWS-TEST] AWS_ACCESS_KEY_ID não configurada');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Credenciais AWS do sistema não configuradas (ACCESS_KEY_ID)',
+          error_code: 'MISSING_AWS_ACCESS_KEY',
+          step: 'check_system_credentials',
+          recommendation: 'Configure AWS_ACCESS_KEY_ID nas secrets do Supabase Edge Functions'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    if (!AWS_SECRET_ACCESS_KEY) {
+      console.error('[AWS-TEST] AWS_SECRET_ACCESS_KEY não configurada');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Credenciais AWS do sistema não configuradas (SECRET_ACCESS_KEY)',
+          error_code: 'MISSING_AWS_SECRET_KEY',
+          step: 'check_system_credentials',
+          recommendation: 'Configure AWS_SECRET_ACCESS_KEY nas secrets do Supabase Edge Functions'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[AWS-TEST] Credenciais do sistema verificadas. Região:', AWS_REGION);
+
     // Criar cliente STS para assumir a role
     const stsClient = new STSClient({
-      region: 'us-east-1',
+      region: AWS_REGION,
       credentials: {
         accessKeyId: AWS_ACCESS_KEY_ID,
         secretAccessKey: AWS_SECRET_ACCESS_KEY,
       },
     });
 
+    // Gerar nome de sessão único
+    const sessionName = `apoc-compliance-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+
     // Assumir a role do cliente
     let assumedCredentials;
     try {
+      console.log('[AWS-TEST] Tentando assumir role com sessão:', sessionName);
+      
       const assumeRoleCommand = new AssumeRoleCommand({
         RoleArn: roleArn,
-        RoleSessionName: `compliance-sync-test-${Date.now()}`,
+        RoleSessionName: sessionName,
         DurationSeconds: 900, // 15 minutos
       });
 
       const assumeRoleResponse = await stsClient.send(assumeRoleCommand);
       assumedCredentials = assumeRoleResponse.Credentials;
 
-      if (!assumedCredentials) {
-        throw new Error('Credenciais temporárias não foram retornadas');
+      if (!assumedCredentials || !assumedCredentials.AccessKeyId) {
+        throw new Error('AWS não retornou credenciais temporárias válidas');
       }
 
-      console.log('Role assumida com sucesso');
-    } catch (error: any) {
-      console.error('Erro ao assumir role:', error);
+      console.log('[AWS-TEST] Role assumida com sucesso!');
       
-      let errorMessage = error.message || 'Erro desconhecido';
-      let recommendation = '';
+    } catch (error: any) {
+      const awsError = extractAwsError(error);
+      console.error('[AWS-TEST] Erro ao assumir role:', {
+        code: awsError.code,
+        message: awsError.message,
+        requestId: awsError.requestId,
+        roleArn
+      });
 
-      if (error.name === 'AccessDenied' || errorMessage.includes('AccessDenied')) {
-        errorMessage = 'Acesso negado ao assumir a role';
-        recommendation = 'Verifique se a role tem uma política de confiança (Trust Policy) que permite que sua conta AWS assuma essa role.';
-      } else if (errorMessage.includes('InvalidClientTokenId')) {
-        errorMessage = 'Credenciais AWS inválidas';
-        recommendation = 'Verifique se as credenciais AWS_ACCESS_KEY_ID e AWS_SECRET_ACCESS_KEY estão corretas.';
-      }
+      const recommendation = getErrorRecommendation(awsError.code, awsError.message);
+
+      // Atualizar status para erro
+      await supabase
+        .from('integrations')
+        .update({ 
+          status: 'error',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', integration_id);
 
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: errorMessage,
+          error: awsError.message,
+          error_code: awsError.code,
           step: 'assume_role',
           recommendation,
-          details: error.toString()
+          aws_request_id: awsError.requestId,
+          role_arn: roleArn,
+          details: `Código AWS: ${awsError.code}`
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Usar credenciais temporárias para listar usuários IAM
+    // Usar credenciais temporárias para listar usuários IAM (teste de permissões)
+    let userCount = 0;
     try {
+      console.log('[AWS-TEST] Testando permissões IAM com credenciais temporárias...');
+      
       const iamClient = new IAMClient({
-        region: 'us-east-1',
+        region: AWS_REGION,
         credentials: {
           accessKeyId: assumedCredentials.AccessKeyId!,
           secretAccessKey: assumedCredentials.SecretAccessKey!,
@@ -168,68 +298,83 @@ serve(async (req) => {
       });
 
       const listUsersResponse = await iamClient.send(listUsersCommand);
-      const userCount = listUsersResponse.Users?.length || 0;
+      userCount = listUsersResponse.Users?.length || 0;
 
-      console.log(`Listados ${userCount} usuários IAM com sucesso`);
-
-      // Extract account ID from ARN (format: arn:aws:iam::123456789012:role/RoleName)
-      const accountId = roleArn.split(':')[4];
-
-      // Atualizar status da integração
-      await supabase
-        .from('integrations')
-        .update({ 
-          status: 'active',
-          last_sync_at: new Date().toISOString()
-        })
-        .eq('id', integration_id);
-
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'Conexão validada com sucesso! Acesso IAM confirmado.',
-          accountId,
-          user_count: userCount,
-          test_summary: {
-            role_assumed: true,
-            iam_access: true,
-            users_listed: userCount,
-            account_id: accountId
-          }
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('[AWS-TEST] Listados', userCount, 'usuários IAM com sucesso');
 
     } catch (error: any) {
-      console.error('Erro ao listar usuários IAM:', error);
+      const awsError = extractAwsError(error);
+      console.error('[AWS-TEST] Erro ao listar usuários IAM:', {
+        code: awsError.code,
+        message: awsError.message
+      });
 
-      let errorMessage = error.message || 'Erro desconhecido';
-      let recommendation = '';
-
-      if (error.name === 'AccessDenied' || errorMessage.includes('AccessDenied')) {
-        errorMessage = 'Permissão negada para listar usuários IAM';
-        recommendation = 'Verifique se a role possui a permissão "iam:ListUsers" na política IAM.';
-      }
+      const recommendation = getErrorRecommendation(awsError.code, awsError.message);
 
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: errorMessage,
-          step: 'list_users',
+          error: awsError.message,
+          error_code: awsError.code,
+          step: 'iam_list_users',
           recommendation,
-          details: error.toString()
+          aws_request_id: awsError.requestId,
+          details: `A role foi assumida com sucesso, mas falhou ao testar permissões IAM. Código AWS: ${awsError.code}`
         }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Extrair Account ID do ARN (formato: arn:aws:iam::123456789012:role/RoleName)
+    const accountId = roleArn.split(':')[4];
+    const roleName = roleArn.split('/').pop();
+
+    // Atualizar status da integração para ativo
+    const { error: updateError } = await supabase
+      .from('integrations')
+      .update({ 
+        status: 'active',
+        last_sync_at: new Date().toISOString()
+      })
+      .eq('id', integration_id);
+
+    if (updateError) {
+      console.warn('[AWS-TEST] Aviso: não foi possível atualizar status:', updateError);
+    }
+
+    const duration = Date.now() - startTime;
+    console.log('[AWS-TEST] Teste concluído com sucesso em', duration, 'ms');
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        message: 'Conexão AWS validada com sucesso!',
+        accountId,
+        role_name: roleName,
+        user_count: userCount,
+        region: AWS_REGION,
+        test_duration_ms: duration,
+        test_summary: {
+          role_assumed: true,
+          iam_access: true,
+          users_listed: userCount,
+          account_id: accountId,
+          role_name: roleName
+        }
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
   } catch (error: any) {
-    console.error('Erro geral na função:', error);
+    console.error('[AWS-TEST] Erro geral na função:', error);
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: 'Erro interno do servidor',
-        details: error.message 
+        error: 'Erro interno do servidor ao processar a requisição',
+        error_code: 'INTERNAL_ERROR',
+        step: 'server',
+        details: error.message || error.toString()
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
