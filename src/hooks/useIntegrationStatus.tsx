@@ -9,7 +9,7 @@ interface IntegrationStatus {
 }
 
 interface IntegrationStatusResult {
-  aws: IntegrationStatus & { accountId?: string };
+  aws: IntegrationStatus & { accountId?: string; integrationId?: string };
   google: IntegrationStatus & { expiresAt?: Date };
   azure: IntegrationStatus & { expiresAt?: Date };
   mikrotik: IntegrationStatus & { deviceCount?: number };
@@ -20,7 +20,7 @@ interface IntegrationStatusResult {
 export function useIntegrationStatus(): IntegrationStatusResult {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [aws, setAws] = useState<IntegrationStatus & { accountId?: string }>({
+  const [aws, setAws] = useState<IntegrationStatus & { accountId?: string; integrationId?: string }>({
     connected: false,
     lastSync: null,
   });
@@ -63,6 +63,7 @@ export function useIntegrationStatus(): IntegrationStatusResult {
           connected: true,
           lastSync: firstAws.last_sync_at ? new Date(firstAws.last_sync_at) : new Date(firstAws.updated_at),
           accountId: config?.account_id || config?.accountId,
+          integrationId: firstAws.id,
         });
       } else {
         setAws({ connected: false, lastSync: null });

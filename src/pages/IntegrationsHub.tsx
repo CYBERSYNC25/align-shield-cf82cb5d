@@ -4,7 +4,7 @@ import Footer from '@/components/layout/Footer';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Cloud, FileText, CheckCircle2, WifiOff, HardDrive, Activity, Clock, Database } from 'lucide-react';
+import { Cloud, FileText, CheckCircle2, WifiOff, HardDrive, Activity, Clock, Database, Eye } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useSearchParams } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { ConnectAwsModal } from '@/components/integrations/ConnectAwsModal';
 import { GoogleIntegrationCard } from '@/components/integrations/GoogleIntegrationCard';
 import { AzureIntegrationCard } from '@/components/integrations/AzureIntegrationCard';
 import { MikroTikAgentModal } from '@/components/integrations/MikroTikAgentModal';
+import { AwsResourcesModal } from '@/components/integrations/AwsResourcesModal';
 import { useIntegrationStatus } from '@/hooks/useIntegrationStatus';
 import { formatRelativeTime } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -39,6 +40,7 @@ const comingSoonIntegrations: IntegrationCard[] = [
 const IntegrationsHub = () => {
   const [isAwsModalOpen, setIsAwsModalOpen] = useState(false);
   const [isMikroTikModalOpen, setIsMikroTikModalOpen] = useState(false);
+  const [isAwsResourcesModalOpen, setIsAwsResourcesModalOpen] = useState(false);
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const { aws, google, azure, mikrotik, loading, refetch } = useIntegrationStatus();
@@ -202,7 +204,15 @@ const IntegrationsHub = () => {
                         </CardDescription>
                       </CardHeader>
 
-                      <CardContent className="space-y-2">
+                      <CardContent className="space-y-3">
+                        <Button 
+                          variant="default" 
+                          className="w-full gap-2" 
+                          onClick={() => setIsAwsResourcesModalOpen(true)}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Ver Recursos
+                        </Button>
                         <Button variant="outline" className="w-full" onClick={() => setIsAwsModalOpen(true)}>
                           Gerenciar
                         </Button>
@@ -400,6 +410,16 @@ const IntegrationsHub = () => {
         open={isMikroTikModalOpen}
         onOpenChange={setIsMikroTikModalOpen}
       />
+
+      {/* AWS Resources Modal */}
+      {aws.integrationId && (
+        <AwsResourcesModal
+          open={isAwsResourcesModalOpen}
+          onOpenChange={setIsAwsResourcesModalOpen}
+          integrationId={aws.integrationId}
+          integrationName="AWS Cloud"
+        />
+      )}
     </div>
   );
 };
