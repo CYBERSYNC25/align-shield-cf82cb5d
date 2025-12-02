@@ -24,7 +24,7 @@ import FileManagement from "./pages/FileManagement";
 import Notifications from "./pages/Notifications";
 import Tasks from "./pages/Tasks";
 import ComplianceReadiness from "./pages/ComplianceReadiness";
-import TechnicalDocumentation from "./pages/TechnicalDocumentation";
+
 import AssetInventory from "./pages/AssetInventory";
 import PolicyDocuments from "./pages/PolicyDocuments";
 
@@ -118,11 +118,6 @@ const App = () => (
           <Route path="/readiness" element={
             <ProtectedRoute>
               <ComplianceReadiness />
-            </ProtectedRoute>
-          } />
-          <Route path="/technical-docs" element={
-            <ProtectedRoute>
-              <TechnicalDocumentation />
             </ProtectedRoute>
           } />
           <Route path="/assets" element={

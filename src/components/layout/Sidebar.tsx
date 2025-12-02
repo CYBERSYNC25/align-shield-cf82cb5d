@@ -19,7 +19,6 @@ import {
   ShieldCheck,
   Target,
   Activity,
-  BookOpen,
   Server
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
@@ -147,12 +146,6 @@ const sidebarItems: SidebarItem[] = [
         href: '/reports'
       }
     ]
-  },
-  {
-    id: 'technical-docs',
-    label: 'Documentação Técnica',
-    icon: BookOpen,
-    href: '/technical-docs'
   },
   {
     id: 'settings',
