@@ -253,8 +253,8 @@ serve(async (req) => {
       });
     }
 
-    const config = integration.configuration as { roleArn?: string; externalId?: string; region?: string };
-    const roleArn = config?.roleArn;
+    const config = integration.configuration as { roleArn?: string; role_arn?: string; externalId?: string; region?: string };
+    const roleArn = config?.roleArn || config?.role_arn;
     const region = config?.region || 'us-east-1';
 
     if (!roleArn) {
