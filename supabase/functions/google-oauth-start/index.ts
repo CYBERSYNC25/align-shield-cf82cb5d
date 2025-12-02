@@ -114,16 +114,13 @@ serve(async (req) => {
     // Definir redirect URI (deve corresponder ao configurado no Google Cloud Console)
     const redirectUri = `${supabaseUrl}/functions/v1/google-oauth-callback`;
 
-    // Scopes necessários para Google Workspace
-    // Ajuste conforme as necessidades da sua aplicação
+    // Scopes compatíveis com contas pessoais Gmail
+    // Admin SDK scopes removidos pois requerem Google Workspace
     const scopes = [
-      'https://www.googleapis.com/auth/admin.directory.user.readonly',
-      'https://www.googleapis.com/auth/admin.directory.group.readonly',
-      'https://www.googleapis.com/auth/admin.reports.audit.readonly',
-      'https://www.googleapis.com/auth/drive.metadata.readonly',
       'openid',
       'profile',
-      'email'
+      'email',
+      'https://www.googleapis.com/auth/drive.metadata.readonly'
     ].join(' ');
 
     // Construir URL de autorização do Google
