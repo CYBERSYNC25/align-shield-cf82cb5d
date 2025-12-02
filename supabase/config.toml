@@ -62,3 +62,6 @@ verify_jwt = true
 
 [functions.aws-test-connection]
 verify_jwt = true
+
+[functions.aws-sync-resources]
+verify_jwt = true
