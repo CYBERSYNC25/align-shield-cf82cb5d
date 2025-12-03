@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePolicies } from '@/hooks/usePolicies';
+import { useToast } from '@/hooks/use-toast';
 import { FileText, Plus, AlertCircle } from 'lucide-react';
 import FileUploader from '@/components/common/FileUploader';
 import { policySchema, formatValidationErrors, type PolicyInput } from '@/lib/form-schemas';
@@ -42,6 +43,7 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { createPolicy } = usePolicies();
+  const { toast } = useToast();
 
   // Estado do formulário
   const [formData, setFormData] = useState({
@@ -198,10 +200,25 @@ const CreatePolicyModal = ({ onSuccess }: CreatePolicyModalProps) => {
           file_url: ''
         });
         setErrors({});
+        toast({
+          title: "Política criada",
+          description: "A política foi cadastrada com sucesso.",
+        });
         onSuccess?.();
+      } else {
+        toast({
+          title: "Erro",
+          description: "Falha ao criar a política. Tente novamente.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Erro ao criar política:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

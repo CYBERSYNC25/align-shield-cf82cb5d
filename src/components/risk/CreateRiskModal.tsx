@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useRisks } from '@/hooks/useRisks';
+import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, Plus } from 'lucide-react';
 
 interface CreateRiskModalProps {
@@ -16,6 +17,7 @@ const CreateRiskModal = ({ onSuccess }: CreateRiskModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { createRisk } = useRisks();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -72,10 +74,25 @@ const CreateRiskModal = ({ onSuccess }: CreateRiskModalProps) => {
           controls: [],
           next_review: ''
         });
+        toast({
+          title: "Risco criado",
+          description: "O risco foi cadastrado com sucesso.",
+        });
         onSuccess?.();
+      } else {
+        toast({
+          title: "Erro",
+          description: "Falha ao criar o risco. Tente novamente.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Erro ao criar risco:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

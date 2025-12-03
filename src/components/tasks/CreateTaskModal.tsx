@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useTasks } from '@/hooks/useTasks';
+import { useToast } from '@/hooks/use-toast';
 import { CheckSquare, Plus } from 'lucide-react';
 
 interface CreateTaskModalProps {
@@ -16,6 +17,7 @@ const CreateTaskModal = ({ onSuccess }: CreateTaskModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { createTask } = useTasks();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -45,10 +47,25 @@ const CreateTaskModal = ({ onSuccess }: CreateTaskModalProps) => {
           assigned_to: '',
           due_date: ''
         });
+        toast({
+          title: "Tarefa criada",
+          description: "A tarefa foi cadastrada com sucesso.",
+        });
         onSuccess?.();
+      } else {
+        toast({
+          title: "Erro",
+          description: "Falha ao criar a tarefa. Tente novamente.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Erro ao criar tarefa:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

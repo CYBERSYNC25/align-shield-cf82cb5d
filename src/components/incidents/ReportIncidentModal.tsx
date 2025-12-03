@@ -14,6 +14,7 @@ interface ReportIncidentModalProps {
 
 const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) => {
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -23,25 +24,38 @@ const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) =
     assignedTo: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     
-    // Simulate incident reporting
-    toast({
-      title: "Incidente Reportado",
-      description: `Incidente "${formData.title}" foi registrado com sucesso.`,
-    });
-    
-    // Reset form and close modal
-    setFormData({
-      title: '',
-      description: '',
-      severity: '',
-      impactLevel: '',
-      affectedSystems: '',
-      assignedTo: ''
-    });
-    onOpenChange(false);
+    try {
+      // Simulate incident reporting
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      toast({
+        title: "Incidente Reportado",
+        description: `Incidente "${formData.title}" foi registrado com sucesso.`,
+      });
+      
+      // Reset form and close modal
+      setFormData({
+        title: '',
+        description: '',
+        severity: '',
+        impactLevel: '',
+        affectedSystems: '',
+        assignedTo: ''
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao reportar o incidente. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -127,10 +141,10 @@ const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) =
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button type="submit" className="flex-1">
-              Reportar Incidente
+            <Button type="submit" className="flex-1" disabled={loading}>
+              {loading ? 'Reportando...' : 'Reportar Incidente'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Cancelar
             </Button>
           </div>

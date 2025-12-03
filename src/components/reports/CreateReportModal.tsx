@@ -29,6 +29,7 @@ const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
   const [frameworks, setFrameworks] = useState<string[]>([]);
   const [selectedMetrics, setSelectedMetrics] = useState<string[]>([]);
   const [recipients, setRecipients] = useState('');
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const reportTypes = [
@@ -69,7 +70,7 @@ const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!reportName || !type || !format || selectedMetrics.length === 0) {
       toast({
         title: "Campos Obrigatórios",
@@ -79,11 +80,23 @@ const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
       return;
     }
 
-    toast({
-      title: "Relatório Criado",
-      description: `"${reportName}" foi criado com sucesso!`,
-    });
-    onClose();
+    setLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      toast({
+        title: "Relatório Criado",
+        description: `"${reportName}" foi criado com sucesso!`,
+      });
+      onClose();
+    } catch (error) {
+      toast({
+        title: "Erro",
+        description: "Falha ao criar o relatório. Tente novamente.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getTypeIcon = (typeValue: string) => {
@@ -274,17 +287,17 @@ const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
 
           {/* Action Buttons */}
           <div className="flex justify-between pt-4 border-t">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
             <div className="flex gap-2">
-              <Button variant="outline">
+              <Button variant="outline" disabled={loading}>
                 <Calendar className="h-4 w-4 mr-2" />
                 Criar e Agendar
               </Button>
-              <Button onClick={handleCreate}>
+              <Button onClick={handleCreate} disabled={loading}>
                 <FileText className="h-4 w-4 mr-2" />
-                Criar Relatório
+                {loading ? 'Criando...' : 'Criar Relatório'}
               </Button>
             </div>
           </div>

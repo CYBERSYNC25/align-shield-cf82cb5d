@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useRisks } from '@/hooks/useRisks';
+import { useToast } from '@/hooks/use-toast';
 import { Building2, Plus } from 'lucide-react';
 
 interface CreateVendorModalProps {
@@ -16,6 +17,7 @@ const CreateVendorModal = ({ onSuccess }: CreateVendorModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { createVendor } = useRisks();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -55,10 +57,25 @@ const CreateVendorModal = ({ onSuccess }: CreateVendorModalProps) => {
           status: 'active',
           certifications: []
         });
+        toast({
+          title: "Fornecedor criado",
+          description: "O fornecedor foi cadastrado com sucesso.",
+        });
         onSuccess?.();
+      } else {
+        toast({
+          title: "Erro",
+          description: "Falha ao criar o fornecedor. Tente novamente.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Erro ao criar fornecedor:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

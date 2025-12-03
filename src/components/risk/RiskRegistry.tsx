@@ -105,7 +105,16 @@ const RiskRegistry = () => {
       </div>
 
       <div className="space-y-4 max-h-[500px] overflow-y-auto">
-        {risks.map((risk, index) => (
+        {risks.length === 0 ? (
+          <Card className="bg-surface-elevated border-card-border">
+            <CardContent className="py-12 text-center">
+              <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum risco cadastrado</h3>
+              <p className="text-muted-foreground mb-4">Comece cadastrando seu primeiro risco para monitorar</p>
+              <CreateRiskModal />
+            </CardContent>
+          </Card>
+        ) : risks.map((risk, index) => (
           <Card key={index} className="bg-surface-elevated border-card-border">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">

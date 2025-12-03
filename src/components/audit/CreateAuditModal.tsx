@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAudits } from '@/hooks/useAudits';
+import { useToast } from '@/hooks/use-toast';
 import { FileSearch, Plus } from 'lucide-react';
 
 interface CreateAuditModalProps {
@@ -15,6 +16,7 @@ const CreateAuditModal = ({ onSuccess }: CreateAuditModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { createAudit } = useAudits();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -47,10 +49,25 @@ const CreateAuditModal = ({ onSuccess }: CreateAuditModalProps) => {
           end_date: '',
           status: 'planning'
         });
+        toast({
+          title: "Auditoria criada",
+          description: "A auditoria foi cadastrada com sucesso.",
+        });
         onSuccess?.();
+      } else {
+        toast({
+          title: "Erro",
+          description: "Falha ao criar a auditoria. Tente novamente.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Erro ao criar auditoria:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

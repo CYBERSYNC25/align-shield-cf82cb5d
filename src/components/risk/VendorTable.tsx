@@ -81,6 +81,16 @@ const VendorTable = () => {
     );
   }
 
+  if (vendors.length === 0) {
+    return (
+      <div className="rounded-md border border-card-border bg-surface-elevated p-12 text-center">
+        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum fornecedor cadastrado</h3>
+        <p className="text-muted-foreground">Adicione fornecedores para gerenciar riscos de terceiros</p>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-md border border-card-border bg-surface-elevated">
       <Table>
