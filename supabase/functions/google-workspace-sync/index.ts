@@ -78,7 +78,73 @@ interface WorkspaceGroup {
 }
 
 /**
- * Busca o access_token do banco de dados
+ * Renova o access_token usando o refresh_token
+ * @returns Novo access_token ou null se falhar
+ */
+async function refreshAccessToken(
+  supabase: any, 
+  userId: string, 
+  refreshToken: string
+): Promise<string | null> {
+  console.log('[Token] Tentando renovar access_token...');
+
+  const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
+  const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
+
+  if (!clientId || !clientSecret) {
+    console.error('[Token] Missing Google OAuth credentials for refresh');
+    return null;
+  }
+
+  try {
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Token] Refresh failed:', response.status, errorText);
+      return null;
+    }
+
+    const tokenData = await response.json();
+    const newAccessToken = tokenData.access_token;
+    const expiresIn = tokenData.expires_in || 3600;
+    const newExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+
+    // Atualizar token no banco
+    const { error: updateError } = await supabase
+      .from('integration_oauth_tokens')
+      .update({
+        access_token: newAccessToken,
+        expires_at: newExpiresAt,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .eq('integration_name', 'google_workspace');
+
+    if (updateError) {
+      console.error('[Token] Failed to save refreshed token:', updateError);
+      return null;
+    }
+
+    console.log('[Token] Access token renovado com sucesso!');
+    return newAccessToken;
+  } catch (err) {
+    console.error('[Token] Refresh error:', err);
+    return null;
+  }
+}
+
+/**
+ * Busca o access_token do banco de dados, renovando automaticamente se expirado
  * @returns access_token válido ou null se não encontrado
  */
 async function getAccessToken(supabase: any, userId: string): Promise<string | null> {
@@ -96,13 +162,22 @@ async function getAccessToken(supabase: any, userId: string): Promise<string | n
     return null;
   }
 
-  // Verificar se o token está expirado
+  // Verificar se o token está expirado (com margem de 5 minutos)
   const expiresAt = new Date(data.expires_at);
   const now = new Date();
+  const bufferTime = 5 * 60 * 1000; // 5 minutos
 
-  if (now >= expiresAt) {
-    console.warn('[Token] Token expirado, será necessário renovar');
-    return null;
+  if (now.getTime() >= expiresAt.getTime() - bufferTime) {
+    console.warn('[Token] Token expirado ou expirando em breve, renovando...');
+    
+    if (!data.refresh_token) {
+      console.error('[Token] No refresh_token available');
+      return null;
+    }
+
+    // Tentar renovar o token
+    const newToken = await refreshAccessToken(supabase, userId, data.refresh_token);
+    return newToken;
   }
 
   console.log('[Token] Access token válido encontrado');
