@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useFrameworks } from '@/hooks/useFrameworks';
+import { useToast } from '@/hooks/use-toast';
 import { Shield, Plus } from 'lucide-react';
 
 interface CreateControlModalProps {
@@ -16,6 +17,7 @@ const CreateControlModal = ({ onSuccess }: CreateControlModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { createControl } = useFrameworks();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     code: '',
@@ -63,10 +65,25 @@ const CreateControlModal = ({ onSuccess }: CreateControlModalProps) => {
           next_review: '',
           findings: []
         });
+        toast({
+          title: "Controle criado",
+          description: "O controle foi cadastrado com sucesso.",
+        });
         onSuccess?.();
+      } else {
+        toast({
+          title: "Erro",
+          description: "Falha ao criar o controle. Tente novamente.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Erro ao criar controle:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

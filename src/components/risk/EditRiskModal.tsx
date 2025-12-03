@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useRisks, type Risk } from '@/hooks/useRisks';
+import { useToast } from '@/hooks/use-toast';
 import RiskScoreCalculator from './RiskScoreCalculator';
 
 /**
@@ -111,6 +112,7 @@ const EditRiskModal = ({ risk, onSuccess, trigger }: EditRiskModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { updateRisk, calculateRiskScore, createAuditLog } = useRisks();
+  const { toast } = useToast();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -236,10 +238,19 @@ const EditRiskModal = ({ risk, onSuccess, trigger }: EditRiskModalProps) => {
         });
       }
       
+      toast({
+        title: "Risco atualizado",
+        description: "As alterações foram salvas com sucesso.",
+      });
       setOpen(false);
       onSuccess?.();
     } catch (error) {
       console.error('Failed to update risk:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar o risco. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

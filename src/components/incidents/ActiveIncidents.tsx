@@ -131,7 +131,19 @@ const ActiveIncidents = () => {
       </div>
 
       <div className="space-y-4">
-        {(incidents || []).map((incident, index) => (
+        {!incidents || incidents.length === 0 ? (
+          <Card className="bg-surface-elevated border-card-border">
+            <CardContent className="py-12 text-center">
+              <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">Nenhum incidente ativo</h3>
+              <p className="text-muted-foreground mb-4">Todos os incidentes foram resolvidos ou não há incidentes registrados</p>
+              <Button onClick={() => setShowReportModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Reportar Incidente
+              </Button>
+            </CardContent>
+          </Card>
+        ) : incidents.map((incident, index) => (
           <Card key={index} className="bg-surface-elevated border-card-border">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">

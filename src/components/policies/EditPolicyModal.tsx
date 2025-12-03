@@ -52,6 +52,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { usePolicies } from '@/hooks/usePolicies';
+import { useToast } from '@/hooks/use-toast';
 import { Edit, AlertCircle, GitBranch } from 'lucide-react';
 import FileUploader from '@/components/common/FileUploader';
 import type { Database } from '@/integrations/supabase/types';
@@ -76,6 +77,7 @@ const EditPolicyModal = ({ policy, onSuccess, trigger }: EditPolicyModalProps) =
   const [loading, setLoading] = useState(false);
   const [createNewVersion, setCreateNewVersion] = useState(false);
   const { updatePolicy } = usePolicies();
+  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     name: policy.name,
@@ -203,10 +205,21 @@ const EditPolicyModal = ({ policy, onSuccess, trigger }: EditPolicyModalProps) =
       
       await updatePolicy(policy.id, updateData);
       
+      toast({
+        title: "Política atualizada",
+        description: createNewVersion 
+          ? `Nova versão ${updateData.version} criada com sucesso.`
+          : "As alterações foram salvas com sucesso.",
+      });
       setOpen(false);
       onSuccess?.();
     } catch (error) {
       console.error('Erro ao atualizar política:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar a política. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

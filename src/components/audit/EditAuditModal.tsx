@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useAudits } from '@/hooks/useAudits';
+import { useToast } from '@/hooks/use-toast';
 import type { Database } from '@/integrations/supabase/types';
 
 type Audit = Database['public']['Tables']['audits']['Row'];
@@ -93,6 +94,7 @@ const EditAuditModal = ({ audit, onSuccess, trigger }: EditAuditModalProps) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { updateAudit } = useAudits();
+  const { toast } = useToast();
 
   // Form state
   const [formData, setFormData] = useState({
@@ -182,10 +184,19 @@ const EditAuditModal = ({ audit, onSuccess, trigger }: EditAuditModalProps) => {
         end_date: formData.end_date ? format(formData.end_date, 'yyyy-MM-dd') : null,
       });
       
+      toast({
+        title: "Auditoria atualizada",
+        description: "As alterações foram salvas com sucesso.",
+      });
       setOpen(false);
       onSuccess?.();
     } catch (error) {
       console.error('Failed to update audit:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar a auditoria. Tente novamente.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
