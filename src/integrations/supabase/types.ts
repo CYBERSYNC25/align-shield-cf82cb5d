@@ -155,6 +155,7 @@ export type Database = {
           status: string
           systems: string[] | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           contact_person?: string | null
@@ -170,6 +171,7 @@ export type Database = {
           status: string
           systems?: string[] | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           contact_person?: string | null
@@ -185,6 +187,7 @@ export type Database = {
           status?: string
           systems?: string[] | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -345,6 +348,7 @@ export type Database = {
           device_id: string
           id: string
           router_name: string
+          user_id: string | null
           version: string
         }
         Insert: {
@@ -353,6 +357,7 @@ export type Database = {
           device_id: string
           id?: string
           router_name: string
+          user_id?: string | null
           version: string
         }
         Update: {
@@ -361,6 +366,7 @@ export type Database = {
           device_id?: string
           id?: string
           router_name?: string
+          user_id?: string | null
           version?: string
         }
         Relationships: []
@@ -469,6 +475,7 @@ export type Database = {
           triggers: string[] | null
           updated_at: string
           usage_count: number | null
+          user_id: string | null
         }
         Insert: {
           category: string
@@ -484,6 +491,7 @@ export type Database = {
           triggers?: string[] | null
           updated_at?: string
           usage_count?: number | null
+          user_id?: string | null
         }
         Update: {
           category?: string
@@ -499,6 +507,7 @@ export type Database = {
           triggers?: string[] | null
           updated_at?: string
           usage_count?: number | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -649,6 +658,7 @@ export type Database = {
           status: string
           total_webhooks: number | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -662,6 +672,7 @@ export type Database = {
           status?: string
           total_webhooks?: number | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -675,6 +686,7 @@ export type Database = {
           status?: string
           total_webhooks?: number | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -690,6 +702,7 @@ export type Database = {
           retry_count: number | null
           status: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -702,6 +715,7 @@ export type Database = {
           retry_count?: number | null
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -714,6 +728,7 @@ export type Database = {
           retry_count?: number | null
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
