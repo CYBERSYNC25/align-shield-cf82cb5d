@@ -61,19 +61,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
+  // Função para verificar e atribuir role viewer se necessário
+  const ensureUserHasRole = async (userId: string) => {
+    try {
+      const { data: existingRoles, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Erro ao verificar roles:', error);
+        return;
+      }
+
+      // Se não tem nenhuma role, atribui viewer
+      if (!existingRoles || existingRoles.length === 0) {
+        const { error: insertError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: userId, role: 'viewer' });
+
+        if (insertError) {
+          console.error('Erro ao atribuir role viewer:', insertError);
+        } else {
+          console.log('Role viewer atribuída automaticamente');
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao verificar/atribuir role:', err);
+    }
+  };
+
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Verifica role após carregar sessão
+      if (session?.user) {
+        setTimeout(() => ensureUserHasRole(session.user.id), 0);
+      }
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
+      
+      // Verifica role no login
+      if (event === 'SIGNED_IN' && session?.user) {
+        setTimeout(() => ensureUserHasRole(session.user.id), 0);
+      }
     })
 
     return () => subscription.unsubscribe()
