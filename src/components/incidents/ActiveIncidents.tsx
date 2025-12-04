@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useIncidents } from '@/hooks/useIncidents';
 import { useToast } from '@/hooks/use-toast';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import ReportIncidentModal from './ReportIncidentModal';
 import { 
   Plus, 
@@ -21,6 +22,7 @@ const ActiveIncidents = () => {
   console.log('ActiveIncidents component rendered');
   const { incidents, loading, updateIncidentStatus, escalateIncident } = useIncidents();
   const { toast } = useToast();
+  const { canEditResources } = useUserRoles();
   const [showReportModal, setShowReportModal] = useState(false);
 
   if (loading) {
@@ -234,23 +236,25 @@ const ActiveIncidents = () => {
                   </div>
                 </div>
                 
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleUpdateIncident(incident.id)}
-                  >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Atualizar
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={() => handleEscalateIncident(incident.id)}
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Escalar
-                  </Button>
-                </div>
+                {canEditResources() && (
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleUpdateIncident(incident.id)}
+                    >
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Atualizar
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={() => handleEscalateIncident(incident.id)}
+                    >
+                      <Play className="h-4 w-4 mr-2" />
+                      Escalar
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
