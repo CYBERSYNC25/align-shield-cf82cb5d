@@ -5,6 +5,7 @@ import ReportsStats from '@/components/reports/ReportsStats';
 import ReadyReports from '@/components/reports/ReadyReports';
 import CustomReports from '@/components/reports/CustomReports';
 import ScheduledReports from '@/components/reports/ScheduledReports';
+import ExportPDFButton from '@/components/reports/ExportPDFButton';
 
 const ReportsExports = () => {
   return (
@@ -20,13 +21,16 @@ const ReportsExports = () => {
             
             {/* Page Header - Full Width */}
             <div className="col-span-full">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold text-foreground">
-                  Relatórios & Exportações
-                </h1>
-                <p className="text-muted-foreground">
-                  Relatórios executivos, compliance scorecards e exportações seguras para auditores
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold text-foreground">
+                    Relatórios & Exportações
+                  </h1>
+                  <p className="text-muted-foreground">
+                    Relatórios executivos, compliance scorecards e exportações seguras para auditores
+                  </p>
+                </div>
+                <ExportPDFButton />
               </div>
             </div>
 
