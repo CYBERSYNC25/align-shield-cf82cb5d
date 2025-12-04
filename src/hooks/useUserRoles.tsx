@@ -65,6 +65,7 @@ export const useUserRoles = () => {
   const canManageControls = () => isAdmin() || isComplianceOfficer();
   const canViewAuditLogs = () => isAdmin() || isAuditor();
   const canApproveDocuments = () => isAdmin() || isComplianceOfficer();
+  const canEditResources = () => isAdmin() || isComplianceOfficer();
 
   return {
     roles,
@@ -82,6 +83,7 @@ export const useUserRoles = () => {
     canManageControls,
     canViewAuditLogs,
     canApproveDocuments,
+    canEditResources,
     refresh: loadUserRoles
   };
 };

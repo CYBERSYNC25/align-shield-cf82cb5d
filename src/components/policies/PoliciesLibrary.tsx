@@ -28,10 +28,12 @@ import EditPolicyModal from '@/components/policies/EditPolicyModal';
 import PolicyVersionHistory from '@/components/policies/PolicyVersionHistory';
 import PolicyApprovalWorkflow from '@/components/policies/PolicyApprovalWorkflow';
 import { usePolicies } from '@/hooks/usePolicies';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 const PoliciesLibrary = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const { policies: realPolicies, loading } = usePolicies();
+  const { canEditResources } = useUserRoles();
 
   const policiesData = [
     {
@@ -211,9 +213,11 @@ const PoliciesLibrary = () => {
                           <DropdownMenuItem>
                             <Eye className="h-4 w-4 mr-2" />Visualizar
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />Editar
-                          </DropdownMenuItem>
+                          {canEditResources() && (
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />Editar
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem>
                             <Share2 className="h-4 w-4 mr-2" />Compartilhar
                           </DropdownMenuItem>

@@ -4,6 +4,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, XCircle, Clock, Zap, Link as LinkIcon, Plus, ShieldCheck } from 'lucide-react';
+import { useUserRoles } from '@/hooks/useUserRoles';
 
 interface Framework {
   id: string;
@@ -92,6 +93,8 @@ const getFrameworkControls = (frameworkId: string) => {
 };
 
 const FrameworkDetailsSheet = ({ framework, open, onOpenChange }: FrameworkDetailsSheetProps) => {
+  const { canEditResources } = useUserRoles();
+  
   if (!framework) return null;
 
   const controls = getFrameworkControls(framework.id);
@@ -140,10 +143,12 @@ const FrameworkDetailsSheet = ({ framework, open, onOpenChange }: FrameworkDetai
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-foreground">Controles Detalhados</h3>
-              <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Adicionar Controle
-              </Button>
+              {canEditResources() && (
+                <Button size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Adicionar Controle
+                </Button>
+              )}
             </div>
             
             {controls.length === 0 ? (
@@ -154,13 +159,19 @@ const FrameworkDetailsSheet = ({ framework, open, onOpenChange }: FrameworkDetai
                 </h4>
                 <p className="text-sm text-muted-foreground text-center mb-4">
                   Nenhum controle associado ao framework {framework.name}.
-                  <br />
-                  Clique em "+ Adicionar Controle" para começar.
+                  {canEditResources() && (
+                    <>
+                      <br />
+                      Clique em "+ Adicionar Controle" para começar.
+                    </>
+                  )}
                 </p>
-                <Button size="sm" variant="outline" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Adicionar Primeiro Controle
-                </Button>
+                {canEditResources() && (
+                  <Button size="sm" variant="outline" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Adicionar Primeiro Controle
+                  </Button>
+                )}
               </div>
             ) : (
               <ScrollArea className="h-[calc(100vh-400px)]">
