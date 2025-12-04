@@ -1,11 +1,27 @@
 import { useState, useEffect } from 'react';
-import { useFrameworks } from './useFrameworks';
+import { useFrameworks, FrameworkControl } from './useFrameworks';
 import { useIntegrations } from './useIntegrations';
 import { usePolicies } from './usePolicies';
 import { useRisks } from './useRisks';
 
+export interface CriticalControl {
+  id: string;
+  code: string;
+  title: string;
+  framework: string;
+  frameworkId: string;
+  category: string;
+  description: string;
+  status: 'pending' | 'failed';
+  owner: string;
+  nextReview: string;
+  findings?: string[];
+  priority: 'critical' | 'high' | 'medium';
+}
+
 export interface FrameworkReadiness {
   framework: string;
+  frameworkId: string;
   score: number;
   totalControls: number;
   implementedControls: number;
@@ -15,11 +31,13 @@ export interface FrameworkReadiness {
   gaps: string[];
   recommendations: string[];
   certificationReady: boolean;
+  criticalControls: CriticalControl[];
 }
 
 export interface ReadinessMetrics {
   overallScore: number;
   frameworks: FrameworkReadiness[];
+  criticalControls: CriticalControl[];
   integrations: {
     total: number;
     active: number;
@@ -54,6 +72,9 @@ export const useComplianceReadiness = () => {
   }, [frameworks, controls, integrations, policies, risks, frameworksLoading, integrationsLoading, policiesLoading, risksLoading]);
 
   const calculateReadiness = () => {
+    // Coletar todos os controles críticos (failed e pending)
+    const allCriticalControls: CriticalControl[] = [];
+    
     // Calcular readiness por framework
     const frameworkReadiness: FrameworkReadiness[] = frameworks.map(framework => {
       const frameworkControls = controls.filter(c => c.framework_id === framework.id);
@@ -67,6 +88,26 @@ export const useComplianceReadiness = () => {
       const score = totalControls > 0
         ? Math.round(((implementedControls * 100) + (partialControls * 50)) / totalControls)
         : 0;
+
+      // Identificar controles críticos deste framework
+      const criticalControls: CriticalControl[] = frameworkControls
+        .filter(c => c.status === 'failed' || c.status === 'pending')
+        .map(c => ({
+          id: c.id,
+          code: c.code,
+          title: c.title,
+          framework: framework.name,
+          frameworkId: framework.id,
+          category: c.category,
+          description: c.description,
+          status: c.status as 'pending' | 'failed',
+          owner: c.owner,
+          nextReview: c.next_review,
+          findings: c.findings,
+          priority: c.status === 'failed' ? 'critical' as const : 'high' as const,
+        }));
+      
+      allCriticalControls.push(...criticalControls);
 
       // Identificar gaps
       const gaps: string[] = [];
@@ -93,6 +134,7 @@ export const useComplianceReadiness = () => {
 
       return {
         framework: framework.name,
+        frameworkId: framework.id,
         score,
         totalControls,
         implementedControls,
@@ -102,7 +144,15 @@ export const useComplianceReadiness = () => {
         gaps,
         recommendations,
         certificationReady,
+        criticalControls,
       };
+    });
+
+    // Ordenar controles críticos: failed primeiro, depois pending
+    const sortedCriticalControls = allCriticalControls.sort((a, b) => {
+      if (a.status === 'failed' && b.status !== 'failed') return -1;
+      if (a.status !== 'failed' && b.status === 'failed') return 1;
+      return 0;
     });
 
     // Calcular score geral (média ponderada)
@@ -146,6 +196,7 @@ export const useComplianceReadiness = () => {
     setMetrics({
       overallScore,
       frameworks: frameworkReadiness,
+      criticalControls: sortedCriticalControls,
       integrations: integrationsMetrics,
       policies: policiesMetrics,
       risks: risksMetrics,
