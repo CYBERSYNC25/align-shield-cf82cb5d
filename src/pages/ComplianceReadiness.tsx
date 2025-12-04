@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Footer from '@/components/layout/Footer';
@@ -8,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import {
   CheckCircle,
   AlertTriangle,
-  TrendingUp,
   Target,
   Shield,
   FileCheck,
@@ -16,12 +16,17 @@ import {
   RefreshCw,
   Download,
   Calendar,
+  ArrowRight,
+  Clock,
+  User,
+  ExternalLink,
 } from 'lucide-react';
-import { useComplianceReadiness } from '@/hooks/useComplianceReadiness';
+import { useComplianceReadiness, CriticalControl } from '@/hooks/useComplianceReadiness';
 import { LoadingSpinner } from '@/components/common';
 
 const ComplianceReadiness = () => {
   const { metrics, loading, refresh } = useComplianceReadiness();
+  const navigate = useNavigate();
 
   if (loading || !metrics) {
     return (
@@ -55,7 +60,23 @@ const ComplianceReadiness = () => {
     }
   };
 
+  const getPriorityBadge = (priority: CriticalControl['priority']) => {
+    switch (priority) {
+      case 'critical':
+        return <Badge variant="destructive" className="text-xs">Crítico</Badge>;
+      case 'high':
+        return <Badge className="bg-warning/10 text-warning border-warning/20 text-xs">Alto</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">Médio</Badge>;
+    }
+  };
+
+  const handleGoToControl = (control: CriticalControl) => {
+    navigate(`/controls?framework=${control.frameworkId}&control=${control.id}`);
+  };
+
   const readinessStatus = getReadinessLabel(metrics.readinessLevel);
+  const top3CriticalControls = metrics.criticalControls.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -65,10 +86,9 @@ const ComplianceReadiness = () => {
         <Sidebar />
         
         <main className="flex-1 p-6 overflow-auto">
-          {/* Grid Layout Container */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            {/* Page Header - Full Width */}
+            {/* Page Header */}
             <div className="col-span-full">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="space-y-2">
@@ -76,7 +96,7 @@ const ComplianceReadiness = () => {
                     Prontidão para Certificação
                   </h1>
                   <p className="text-muted-foreground">
-                    Monitore seu progresso e prepare-se para auditoria de compliance
+                    O que você precisa fazer HOJE para aumentar sua conformidade
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -86,102 +106,144 @@ const ComplianceReadiness = () => {
                   </Button>
                   <Button size="sm">
                     <Download className="h-4 w-4 mr-2" />
-                    Relatório Completo
+                    Relatório
                   </Button>
                 </div>
               </div>
             </div>
 
-            {/* Overall Readiness Score - Full Width */}
-            <div className="col-span-full">
-              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Shield className="h-8 w-8 text-primary" />
-                        <div>
-                          <h2 className="text-2xl font-bold text-foreground">
-                            Pontuação Geral de Conformidade
-                          </h2>
-                          <p className="text-sm text-muted-foreground">
-                            Baseado em controles, evidências, políticas e integrações
-                          </p>
-                        </div>
-                      </div>
+            {/* Overall Score Card */}
+            <div className="col-span-full lg:col-span-4">
+              <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 h-full">
+                <CardContent className="pt-6 flex flex-col justify-center h-full">
+                  <div className="text-center space-y-4">
+                    <Shield className="h-12 w-12 text-primary mx-auto" />
+                    <div className={`text-6xl font-bold ${getReadinessColor(metrics.overallScore)}`}>
+                      {metrics.overallScore}%
                     </div>
-                    <div className="text-right space-y-2">
-                      <div className={`text-6xl font-bold ${getReadinessColor(metrics.overallScore)}`}>
-                        {metrics.overallScore}%
-                      </div>
-                      <Badge variant="secondary" className={readinessStatus.color}>
-                        {readinessStatus.label}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-6 space-y-4">
-                    <Progress value={metrics.overallScore} className="h-4" />
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center p-3 bg-background/50 rounded-lg">
-                        <div className="text-2xl font-bold text-foreground">
-                          {metrics.frameworks.length}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Frameworks</div>
-                      </div>
-                      <div className="text-center p-3 bg-background/50 rounded-lg">
-                        <div className="text-2xl font-bold text-foreground">
-                          {metrics.integrations.active}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Integrações Ativas</div>
-                      </div>
-                      <div className="text-center p-3 bg-background/50 rounded-lg">
-                        <div className="text-2xl font-bold text-foreground">
-                          {metrics.policies.approved}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Políticas Aprovadas</div>
-                      </div>
-                      <div className="text-center p-3 bg-background/50 rounded-lg">
-                        <div className="flex items-center justify-center gap-1 text-2xl font-bold text-foreground">
-                          <Calendar className="h-5 w-5" />
-                          {metrics.estimatedDaysToReady}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Dias até Pronto</div>
-                      </div>
+                    <Badge variant="secondary" className={readinessStatus.color}>
+                      {readinessStatus.label}
+                    </Badge>
+                    <Progress value={metrics.overallScore} className="h-3" />
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      <span>~{metrics.estimatedDaysToReady} dias para 100%</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Framework Breakdown Section - Full Width */}
+            {/* Critical Actions - What to do TODAY */}
+            <div className="col-span-full lg:col-span-8">
+              <Card className="bg-destructive/5 border-destructive/20 h-full">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-foreground">
+                    <AlertTriangle className="h-5 w-5 text-destructive" />
+                    Ações Prioritárias para Hoje
+                    {top3CriticalControls.length > 0 && (
+                      <Badge variant="destructive" className="ml-2">
+                        {metrics.criticalControls.length} pendentes
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {top3CriticalControls.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <CheckCircle className="h-12 w-12 text-success mx-auto mb-3" />
+                      <p className="font-medium text-foreground">Todos os controles estão em dia!</p>
+                      <p className="text-sm">Continue monitorando para manter a conformidade.</p>
+                    </div>
+                  ) : (
+                    top3CriticalControls.map((control, index) => (
+                      <div 
+                        key={control.id}
+                        className="bg-background/80 rounded-lg p-4 border border-border hover:border-primary/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">
+                                {control.code}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {control.framework}
+                              </Badge>
+                              {getPriorityBadge(control.priority)}
+                            </div>
+                            <h4 className="font-semibold text-foreground">{control.title}</h4>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {control.description}
+                            </p>
+                            {control.findings && control.findings.length > 0 && (
+                              <div className="flex items-start gap-2 text-xs text-destructive">
+                                <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                <span>{control.findings[0]}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {control.owner}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Prazo: {control.nextReview}
+                              </span>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleGoToControl(control)}
+                            className="flex-shrink-0"
+                          >
+                            Resolver
+                            <ArrowRight className="h-4 w-4 ml-1" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {metrics.criticalControls.length > 3 && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-muted-foreground"
+                      onClick={() => navigate('/controls')}
+                    >
+                      Ver todos os {metrics.criticalControls.length} controles pendentes
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Framework Cards */}
             <div className="col-span-full">
-              <h2 className="text-xl font-semibold text-foreground mb-4">
-                Prontidão por Framework
+              <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+                <FileCheck className="h-5 w-5" />
+                Status por Framework
               </h2>
             </div>
             
-            {/* Framework Cards - 2 columns on lg */}
-            {metrics.frameworks.map((framework, index) => (
-              <div key={index} className="col-span-full lg:col-span-6">
-                <Card className="bg-surface-elevated border-card-border h-full">
+            {metrics.frameworks.map((framework) => (
+              <div key={framework.frameworkId} className="col-span-full md:col-span-6 xl:col-span-4">
+                <Card className="bg-surface-elevated border-card-border h-full hover:border-primary/30 transition-colors">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base font-semibold flex items-center gap-2 text-foreground">
-                        <FileCheck className="h-4 w-4" />
+                      <CardTitle className="text-base font-semibold text-foreground">
                         {framework.framework}
                       </CardTitle>
                       {framework.certificationReady ? (
-                        <Badge variant="secondary" className="gap-1 bg-success/10 text-success border-success/20">
+                        <Badge className="gap-1 bg-success/10 text-success border-success/20">
                           <CheckCircle className="h-3 w-3" />
                           Pronto
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="gap-1">
-                          <AlertTriangle className="h-3 w-3" />
+                        <span className={`text-2xl font-bold ${getReadinessColor(framework.score)}`}>
                           {framework.score}%
-                        </Badge>
+                        </span>
                       )}
                     </div>
                   </CardHeader>
@@ -192,7 +254,7 @@ const ComplianceReadiness = () => {
                     <div className="grid grid-cols-3 gap-2 text-sm">
                       <div className="text-center p-2 bg-success/10 rounded">
                         <div className="font-bold text-success">{framework.implementedControls}</div>
-                        <div className="text-xs text-muted-foreground">Implementado</div>
+                        <div className="text-xs text-muted-foreground">OK</div>
                       </div>
                       <div className="text-center p-2 bg-warning/10 rounded">
                         <div className="font-bold text-warning">{framework.partialControls}</div>
@@ -204,27 +266,25 @@ const ComplianceReadiness = () => {
                       </div>
                     </div>
 
-                    {framework.gaps.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground">Gaps Identificados:</div>
-                        {framework.gaps.map((gap, idx) => (
-                          <div key={idx} className="flex items-start gap-2 text-xs">
-                            <AlertCircle className="h-3 w-3 text-warning mt-0.5 flex-shrink-0" />
-                            <span className="text-muted-foreground">{gap}</span>
+                    {/* Quick Actions for this framework */}
+                    {framework.criticalControls.length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-border">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          Próxima ação:
+                        </div>
+                        <div 
+                          className="flex items-center justify-between p-2 bg-muted/50 rounded cursor-pointer hover:bg-muted transition-colors"
+                          onClick={() => handleGoToControl(framework.criticalControls[0])}
+                        >
+                          <div className="flex items-center gap-2 text-sm">
+                            <Target className="h-4 w-4 text-primary" />
+                            <span className="font-mono text-xs">{framework.criticalControls[0].code}</span>
+                            <span className="text-foreground truncate max-w-[150px]">
+                              {framework.criticalControls[0].title}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {framework.recommendations.length > 0 && (
-                      <div className="space-y-2">
-                        <div className="text-xs font-medium text-muted-foreground">Recomendações:</div>
-                        {framework.recommendations.slice(0, 2).map((rec, idx) => (
-                          <div key={idx} className="flex items-start gap-2 text-xs">
-                            <Target className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
-                            <span className="text-muted-foreground">{rec}</span>
-                          </div>
-                        ))}
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -232,78 +292,30 @@ const ComplianceReadiness = () => {
               </div>
             ))}
 
-            {/* Key Metrics - 3 columns on md */}
-            <div className="col-span-full md:col-span-4">
-              <Card className="bg-surface-elevated border-card-border h-full">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-foreground">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    Integrações
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total</span>
-                    <span className="font-semibold text-foreground">{metrics.integrations.total}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Ativas</span>
-                    <span className="font-semibold text-success">{metrics.integrations.active}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Coletando Evidências</span>
-                    <span className="font-semibold text-primary">{metrics.integrations.collectingEvidence}</span>
-                  </div>
+            {/* Quick Stats Row */}
+            <div className="col-span-full grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="bg-surface-elevated border-card-border">
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="text-2xl font-bold text-foreground">{metrics.frameworks.length}</div>
+                  <div className="text-xs text-muted-foreground">Frameworks</div>
                 </CardContent>
               </Card>
-            </div>
-
-            <div className="col-span-full md:col-span-4">
-              <Card className="bg-surface-elevated border-card-border h-full">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-foreground">
-                    <FileCheck className="h-4 w-4 text-primary" />
-                    Políticas
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total</span>
-                    <span className="font-semibold text-foreground">{metrics.policies.total}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Aprovadas</span>
-                    <span className="font-semibold text-success">{metrics.policies.approved}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Pendentes</span>
-                    <span className="font-semibold text-warning">{metrics.policies.pending}</span>
-                  </div>
+              <Card className="bg-surface-elevated border-card-border">
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="text-2xl font-bold text-success">{metrics.integrations.active}</div>
+                  <div className="text-xs text-muted-foreground">Integrações Ativas</div>
                 </CardContent>
               </Card>
-            </div>
-
-            <div className="col-span-full md:col-span-4">
-              <Card className="bg-surface-elevated border-card-border h-full">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2 text-foreground">
-                    <Shield className="h-4 w-4 text-primary" />
-                    Riscos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total</span>
-                    <span className="font-semibold text-foreground">{metrics.risks.total}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Alto/Crítico</span>
-                    <span className="font-semibold text-destructive">{metrics.risks.high}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Mitigados</span>
-                    <span className="font-semibold text-success">{metrics.risks.mitigated}</span>
-                  </div>
+              <Card className="bg-surface-elevated border-card-border">
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="text-2xl font-bold text-primary">{metrics.policies.approved}</div>
+                  <div className="text-xs text-muted-foreground">Políticas Aprovadas</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-surface-elevated border-card-border">
+                <CardContent className="pt-4 pb-4 text-center">
+                  <div className="text-2xl font-bold text-destructive">{metrics.risks.high}</div>
+                  <div className="text-xs text-muted-foreground">Riscos Alto/Crítico</div>
                 </CardContent>
               </Card>
             </div>
