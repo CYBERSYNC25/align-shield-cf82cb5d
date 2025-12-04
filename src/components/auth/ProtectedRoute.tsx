@@ -1,6 +1,7 @@
-import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
+import { ReactNode, useEffect, useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 interface ProtectedRouteProps {
@@ -8,9 +9,28 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const { isViewer, loading: rolesLoading, roles } = useUserRoles();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [hasRedirected, setHasRedirected] = useState(false);
 
-  if (loading) {
+  // Redirect based on role after authentication
+  useEffect(() => {
+    if (user && !rolesLoading && roles.length > 0 && !hasRedirected) {
+      // Only redirect if user is on root path (just logged in)
+      if (location.pathname === '/') {
+        if (isViewer()) {
+          navigate('/compliance-readiness', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+        setHasRedirected(true);
+      }
+    }
+  }, [user, rolesLoading, roles, isViewer, location.pathname, navigate, hasRedirected]);
+
+  if (authLoading || (user && rolesLoading)) {
     return (
       <div className="min-h-screen bg-gradient-dashboard flex items-center justify-center">
         <LoadingSpinner size="lg" />
