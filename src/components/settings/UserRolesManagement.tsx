@@ -7,10 +7,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRoles } from '@/hooks/useUserRoles';
-import { Shield, UserPlus, Trash2, UserX, ShieldAlert } from 'lucide-react';
+import { Shield, UserPlus, Trash2, UserX, ShieldAlert, Mail } from 'lucide-react';
 import { useAuditLogs } from '@/hooks/useAuditLogs';
 import MasterUserDeletionModal from './MasterUserDeletionModal';
-
+import { UserInviteModal } from './UserInviteModal';
 interface UserWithRoles {
   id: string;
   email: string;
@@ -47,6 +47,7 @@ export default function UserRolesManagement() {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [masterDeletionModalOpen, setMasterDeletionModalOpen] = useState(false);
   const [selectedUserForDeletion, setSelectedUserForDeletion] = useState<{id: string, email: string} | null>(null);
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
   useEffect(() => {
     if (isAdmin() || isMasterUser()) {
@@ -242,13 +243,21 @@ export default function UserRolesManagement() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Shield className="w-5 h-5" />
-          Gestão de Permissões
-        </CardTitle>
-        <CardDescription>
-          Gerencie funções e permissões dos usuários
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Gestão de Permissões
+            </CardTitle>
+            <CardDescription>
+              Gerencie funções e permissões dos usuários
+            </CardDescription>
+          </div>
+          <Button onClick={() => setInviteModalOpen(true)}>
+            <Mail className="w-4 h-4 mr-2" />
+            Convidar Usuário
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Assign Role Section */}
@@ -390,6 +399,13 @@ export default function UserRolesManagement() {
           setSelectedUserForDeletion(null);
           loadUsers();
         }}
+      />
+
+      {/* User Invite Modal */}
+      <UserInviteModal
+        open={inviteModalOpen}
+        onOpenChange={setInviteModalOpen}
+        onInviteSent={loadUsers}
       />
     </Card>
   );
