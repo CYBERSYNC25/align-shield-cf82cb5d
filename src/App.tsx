@@ -24,8 +24,8 @@ import FileManagement from "./pages/FileManagement";
 import Notifications from "./pages/Notifications";
 import Tasks from "./pages/Tasks";
 import ComplianceReadiness from "./pages/ComplianceReadiness";
-
 import PolicyDocuments from "./pages/PolicyDocuments";
+import Welcome from "./pages/Welcome";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +38,7 @@ const App = () => (
           <Toaster />
           <Sonner />
         <Routes>
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/" element={
             <ProtectedRoute>
