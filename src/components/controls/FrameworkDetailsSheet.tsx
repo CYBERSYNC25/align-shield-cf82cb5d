@@ -2,7 +2,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckCircle2, XCircle, Clock, Zap, Link as LinkIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2, XCircle, Clock, Zap, Link as LinkIcon, Plus, ShieldCheck } from 'lucide-react';
 
 interface Framework {
   id: string;
@@ -137,55 +138,79 @@ const FrameworkDetailsSheet = ({ framework, open, onOpenChange }: FrameworkDetai
 
           {/* Controls List */}
           <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-foreground">Controles Detalhados</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">Controles Detalhados</h3>
+              <Button size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Adicionar Controle
+              </Button>
+            </div>
             
-            <ScrollArea className="h-[calc(100vh-400px)]">
-              <div className="space-y-3 pr-4">
-                {controls.map((control) => (
-                  <div
-                    key={control.id}
-                    className="border border-border rounded-lg p-4 space-y-2 bg-surface-elevated hover:border-primary/30 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs font-mono">
-                            {control.code}
-                          </Badge>
-                          {control.automated && (
-                            <Badge variant="secondary" className="text-xs flex items-center gap-1">
-                              <Zap className="h-3 w-3" />
-                              Auto
+            {controls.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 border border-dashed border-border rounded-lg bg-muted/20">
+                <ShieldCheck className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <h4 className="text-lg font-medium text-foreground mb-2">
+                  Nenhum controle associado
+                </h4>
+                <p className="text-sm text-muted-foreground text-center mb-4">
+                  Nenhum controle associado ao framework {framework.name}.
+                  <br />
+                  Clique em "+ Adicionar Controle" para começar.
+                </p>
+                <Button size="sm" variant="outline" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Adicionar Primeiro Controle
+                </Button>
+              </div>
+            ) : (
+              <ScrollArea className="h-[calc(100vh-400px)]">
+                <div className="space-y-3 pr-4">
+                  {controls.map((control) => (
+                    <div
+                      key={control.id}
+                      className="border border-border rounded-lg p-4 space-y-2 bg-surface-elevated hover:border-primary/30 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs font-mono">
+                              {control.code}
                             </Badge>
+                            {control.automated && (
+                              <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                <Zap className="h-3 w-3" />
+                                Auto
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm font-medium text-foreground">{control.title}</div>
+                          <div className="text-xs text-muted-foreground">{control.category}</div>
+                        </div>
+                        
+                        <div>
+                          {control.status === 'implemented' && (
+                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          )}
+                          {control.status === 'partial' && (
+                            <Clock className="h-5 w-5 text-warning" />
+                          )}
+                          {control.status === 'missing' && (
+                            <XCircle className="h-5 w-5 text-danger" />
                           )}
                         </div>
-                        <div className="text-sm font-medium text-foreground">{control.title}</div>
-                        <div className="text-xs text-muted-foreground">{control.category}</div>
                       </div>
-                      
-                      <div>
-                        {control.status === 'implemented' && (
-                          <CheckCircle2 className="h-5 w-5 text-success" />
-                        )}
-                        {control.status === 'partial' && (
-                          <Clock className="h-5 w-5 text-warning" />
-                        )}
-                        {control.status === 'missing' && (
-                          <XCircle className="h-5 w-5 text-danger" />
-                        )}
-                      </div>
-                    </div>
 
-                    {control.evidence && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
-                        <LinkIcon className="h-3 w-3" />
-                        <span>Evidência: <span className="text-foreground font-medium">{control.evidence}</span></span>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
+                      {control.evidence && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
+                          <LinkIcon className="h-3 w-3" />
+                          <span>Evidência: <span className="text-foreground font-medium">{control.evidence}</span></span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
           </div>
         </div>
       </SheetContent>
