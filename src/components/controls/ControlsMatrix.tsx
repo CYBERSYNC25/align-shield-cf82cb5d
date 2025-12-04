@@ -316,9 +316,33 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
 
         <TabsContent value="list" className="space-y-4">
           {filteredControls.length === 0 ? (
-            <Card className="bg-surface-elevated border-card-border">
-              <CardContent className="py-8 text-center text-muted-foreground">
-                Nenhum controle encontrado com os filtros aplicados.
+            <Card className="bg-surface-elevated border-card-border border-dashed">
+              <CardContent className="py-12 flex flex-col items-center justify-center">
+                <div className="h-12 w-12 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                  <Filter className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-medium text-foreground mb-2">
+                  Nenhum controle encontrado
+                </h3>
+                <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
+                  {selectedFramework !== 'all' 
+                    ? `Nenhum controle associado ao framework ${selectedFramework}. Clique em "+ Adicionar Controle" para criar um novo.`
+                    : 'Nenhum controle corresponde aos filtros selecionados. Tente ajustar os filtros ou adicione um novo controle.'}
+                </p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="gap-2"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedFramework('all');
+                    setSelectedStatus('all');
+                    setSelectedCategory('all');
+                  }}
+                >
+                  <Search className="h-4 w-4" />
+                  Limpar Filtros
+                </Button>
               </CardContent>
             </Card>
           ) : (
