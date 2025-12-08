@@ -28,4 +28,8 @@ export const queryKeys = {
   // Evidence Mapping
   evidenceMapping: ['evidence-mapping'] as const,
   evidenceMappingByControl: (controlId: string) => ['evidence-mapping', controlId] as const,
+  
+  // Profiles (Responsáveis)
+  profiles: ['profiles'] as const,
+  profileById: (userId: string) => ['profiles', userId] as const,
 };
