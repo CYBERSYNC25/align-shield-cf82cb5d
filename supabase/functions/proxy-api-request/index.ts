@@ -1,22 +1,13 @@
 /**
- * Proxy API Request - Dynamic Integration Connector
+ * Proxy API Request - Dynamic Integration Connector (SECURED)
  * 
- * Este edge function atua como proxy seguro para requisições a APIs externas,
- * utilizando tokens OAuth armazenados de forma isolada por usuário.
+ * Acts as a secure proxy for external API requests using stored OAuth tokens.
+ * Now supports encrypted token decryption.
  * 
- * FLUXO:
- * 1. Usuário autenticado envia requisição com: integration_name, endpoint, method, headers, body
- * 2. Function busca token válido do usuário na tabela integration_oauth_tokens
- * 3. Renova token automaticamente se expirado (se houver refresh_token)
- * 4. Faz requisição para API externa usando o token
- * 5. Salva histórico da requisição na tabela integration_webhooks
- * 6. Retorna resposta formatada ao frontend
- * 
- * SEGURANÇA:
- * - Tokens nunca são expostos ao frontend
- * - Cada usuário só acessa seus próprios tokens
- * - Validação completa de JWT
- * - Logs detalhados para auditoria
+ * SECURITY IMPROVEMENTS:
+ * - Decrypts tokens before use
+ * - Never exposes decrypted tokens to frontend
+ * - Sensitive data filtered from logs
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -27,6 +18,70 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Inline crypto utilities for token decryption
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
+async function deriveKey(secret: string): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+
+  const salt = encoder.encode('apoc-token-encryption-salt-v1');
+
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function decryptToken(encryptedText: string, encryptionKey: string): Promise<string> {
+  const [ivHex, ciphertextHex] = encryptedText.split(':');
+  
+  if (!ivHex || !ciphertextHex) {
+    throw new Error('Invalid encrypted token format');
+  }
+
+  const iv = hexToBytes(ivHex);
+  const ciphertext = hexToBytes(ciphertextHex);
+  const key = await deriveKey(encryptionKey);
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+
+  const decoder = new TextDecoder();
+  return decoder.decode(decrypted);
+}
+
+function isEncrypted(token: string): boolean {
+  if (!token) return false;
+  const parts = token.split(':');
+  if (parts.length !== 2) return false;
+  if (parts[0].length !== 24) return false;
+  return /^[0-9a-f]+$/i.test(parts[0]) && /^[0-9a-f]+$/i.test(parts[1]);
+}
+
 interface ApiRequestPayload {
   integration_name: string;
   endpoint: string;
@@ -36,8 +91,27 @@ interface ApiRequestPayload {
   query_params?: Record<string, string>;
 }
 
+/**
+ * Filter sensitive data from response before logging
+ */
+function filterSensitiveData(data: any): any {
+  if (!data || typeof data !== 'object') return data;
+  
+  const sensitiveKeys = ['password', 'secret', 'token', 'key', 'authorization', 'api_key', 'apiKey'];
+  const filtered = Array.isArray(data) ? [...data] : { ...data };
+  
+  for (const key of Object.keys(filtered)) {
+    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
+      filtered[key] = '[REDACTED]';
+    } else if (typeof filtered[key] === 'object') {
+      filtered[key] = filterSensitiveData(filtered[key]);
+    }
+  }
+  
+  return filtered;
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -45,9 +119,9 @@ serve(async (req) => {
   try {
     console.log('Proxy API Request: Starting request');
 
-    // Get Supabase config
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const tokenEncryptionKey = Deno.env.get('TOKEN_ENCRYPTION_KEY');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase configuration');
@@ -75,11 +149,9 @@ serve(async (req) => {
 
     console.log(`Proxy API Request: User ${user.id} authenticated`);
 
-    // Parse request payload
     const payload: ApiRequestPayload = await req.json();
     const { integration_name, endpoint, method, headers: customHeaders, body, query_params } = payload;
 
-    // Validate required fields
     if (!integration_name || !endpoint || !method) {
       return new Response(
         JSON.stringify({ 
@@ -92,7 +164,6 @@ serve(async (req) => {
 
     console.log(`Proxy API Request: Fetching token for integration "${integration_name}"`);
 
-    // Fetch user's token for this integration
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('integration_oauth_tokens')
       .select('*')
@@ -111,13 +182,13 @@ serve(async (req) => {
       );
     }
 
-    // Check if token is expired and needs refresh
+    // Check if token is expired
     const expiresAt = new Date(tokenData.expires_at);
     const now = new Date();
     let accessToken = tokenData.access_token;
 
     if (expiresAt <= now) {
-      console.log('Token expired, attempting refresh...');
+      console.log('Token expired, needs refresh...');
       
       if (!tokenData.refresh_token) {
         return new Response(
@@ -129,9 +200,6 @@ serve(async (req) => {
         );
       }
 
-      // Call refresh function based on integration
-      // For now, we'll return an error asking user to reconnect
-      // In a real implementation, you'd call the specific refresh endpoint
       return new Response(
         JSON.stringify({ 
           error: 'Token expired',
@@ -142,6 +210,24 @@ serve(async (req) => {
       );
     }
 
+    // SECURITY: Decrypt token if encrypted
+    if (tokenEncryptionKey && isEncrypted(accessToken)) {
+      console.log('Proxy API Request: Decrypting access token...');
+      try {
+        accessToken = await decryptToken(accessToken, tokenEncryptionKey);
+        console.log('Proxy API Request: Token decrypted successfully');
+      } catch (decryptError) {
+        console.error('Proxy API Request: Token decryption failed:', decryptError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Token decryption failed',
+            message: 'Unable to decrypt stored token. Please reconnect your account.'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Build full URL with query params
     let fullUrl = endpoint;
     if (query_params && Object.keys(query_params).length > 0) {
@@ -149,7 +235,6 @@ serve(async (req) => {
       fullUrl += `?${queryString}`;
     }
 
-    // Prepare headers
     const requestHeaders: Record<string, string> = {
       'Authorization': `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
@@ -158,7 +243,6 @@ serve(async (req) => {
 
     console.log(`Proxy API Request: Calling ${method} ${fullUrl}`);
 
-    // Make the API request
     const startTime = Date.now();
     let apiResponse: Response;
     
@@ -171,7 +255,6 @@ serve(async (req) => {
     } catch (fetchError) {
       console.error('API request failed:', fetchError);
       
-      // Save error to history
       await supabaseClient.from('integration_webhooks').insert({
         integration_name,
         event_type: 'api_request',
@@ -189,10 +272,7 @@ serve(async (req) => {
         JSON.stringify({ 
           error: 'API request failed',
           message: fetchError instanceof Error ? fetchError.message : 'Unknown error',
-          details: {
-            endpoint: fullUrl,
-            method
-          }
+          details: { endpoint: fullUrl, method }
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -200,7 +280,6 @@ serve(async (req) => {
 
     const duration = Date.now() - startTime;
 
-    // Parse response
     let responseData: any;
     const contentType = apiResponse.headers.get('content-type') || '';
     
@@ -212,7 +291,9 @@ serve(async (req) => {
 
     console.log(`Proxy API Request: Response ${apiResponse.status} (${duration}ms)`);
 
-    // Save to history
+    // SECURITY: Filter sensitive data before logging
+    const filteredResponse = filterSensitiveData(responseData);
+
     await supabaseClient.from('integration_webhooks').insert({
       integration_name,
       event_type: 'api_request',
@@ -226,15 +307,14 @@ serve(async (req) => {
         duration_ms: duration,
         request: {
           headers: customHeaders,
-          body,
+          body: filterSensitiveData(body),
           query_params
         },
-        response: responseData
+        response: filteredResponse
       },
       processed_at: new Date().toISOString()
     });
 
-    // Return response to frontend
     return new Response(
       JSON.stringify({
         success: apiResponse.ok,

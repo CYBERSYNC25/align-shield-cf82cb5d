@@ -1,24 +1,12 @@
 /**
- * Google OAuth 2.0 - Token Refresh
+ * Google OAuth 2.0 - Token Refresh (SECURED)
  * 
- * Renova automaticamente os tokens de acesso usando o refresh token.
- * Deve ser chamado quando o access_token expira ou está próximo de expirar.
+ * Automatically renews access tokens using the refresh token.
+ * Now supports encrypted token storage/retrieval.
  * 
- * SECRETS NECESSÁRIAS (Supabase Dashboard):
- * - GOOGLE_CLIENT_ID
- * - GOOGLE_CLIENT_SECRET
- * 
- * FLUXO:
- * 1. Busca o refresh_token do banco de dados
- * 2. Usa refresh_token para obter novo access_token
- * 3. Atualiza tokens no banco de dados
- * 4. Retorna novo access_token para uso imediato
- * 
- * IMPORTANTE:
- * - Refresh tokens não expiram (a menos que revogados)
- * - Sempre verificar validade antes de usar tokens expirados
- * - Implementar retry logic para falhas de rede
- * - Logar todas as renovações para auditoria
+ * SECURITY IMPROVEMENTS:
+ * - Decrypts stored refresh token before use
+ * - Encrypts new access token before storage
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -29,8 +17,87 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Inline crypto utilities
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+  }
+  return bytes;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function deriveKey(secret: string): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+
+  const salt = encoder.encode('apoc-token-encryption-salt-v1');
+
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptToken(plainText: string, encryptionKey: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plainText);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(encryptionKey);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    data
+  );
+  const encryptedBytes = new Uint8Array(encrypted);
+  return `${bytesToHex(iv)}:${bytesToHex(encryptedBytes)}`;
+}
+
+async function decryptToken(encryptedText: string, encryptionKey: string): Promise<string> {
+  const [ivHex, ciphertextHex] = encryptedText.split(':');
+  if (!ivHex || !ciphertextHex) {
+    throw new Error('Invalid encrypted token format');
+  }
+  const iv = hexToBytes(ivHex);
+  const ciphertext = hexToBytes(ciphertextHex);
+  const key = await deriveKey(encryptionKey);
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+  const decoder = new TextDecoder();
+  return decoder.decode(decrypted);
+}
+
+function isEncrypted(token: string): boolean {
+  if (!token) return false;
+  const parts = token.split(':');
+  if (parts.length !== 2) return false;
+  if (parts[0].length !== 24) return false;
+  return /^[0-9a-f]+$/i.test(parts[0]) && /^[0-9a-f]+$/i.test(parts[1]);
+}
+
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -38,11 +105,11 @@ serve(async (req) => {
   try {
     console.log('Google OAuth Refresh: Starting token refresh');
 
-    // ✅ Buscar credenciais dos Supabase Secrets
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const tokenEncryptionKey = Deno.env.get('TOKEN_ENCRYPTION_KEY');
 
     if (!clientId || !clientSecret || !supabaseUrl || !supabaseServiceKey) {
       console.error('Google OAuth Refresh: Missing configuration');
@@ -55,7 +122,6 @@ serve(async (req) => {
       );
     }
 
-    // Obter o token de autenticação do usuário
     const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       console.error('Google OAuth Refresh: No authorization header');
@@ -65,14 +131,10 @@ serve(async (req) => {
       );
     }
 
-    // Criar cliente Supabase
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-      global: {
-        headers: { authorization: authHeader }
-      }
+      global: { headers: { authorization: authHeader } }
     });
 
-    // Verificar usuário autenticado
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       console.error('Google OAuth Refresh: Invalid user token', userError);
@@ -84,7 +146,6 @@ serve(async (req) => {
 
     console.log(`Google OAuth Refresh: Refreshing token for user ${user.id}`);
 
-    // Buscar refresh token do banco de dados
     const { data: tokenData, error: tokenError } = await supabase
       .from('integration_oauth_tokens')
       .select('*')
@@ -114,14 +175,32 @@ serve(async (req) => {
       );
     }
 
-    console.log('Google OAuth Refresh: Refresh token found, exchanging for new access token...');
+    // SECURITY: Decrypt refresh token if encrypted
+    let refreshToken = tokenData.refresh_token;
+    if (tokenEncryptionKey && isEncrypted(refreshToken)) {
+      console.log('Google OAuth Refresh: Decrypting refresh token...');
+      try {
+        refreshToken = await decryptToken(refreshToken, tokenEncryptionKey);
+        console.log('Google OAuth Refresh: Token decrypted successfully');
+      } catch (decryptError) {
+        console.error('Google OAuth Refresh: Token decryption failed:', decryptError);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Token decryption failed',
+            message: 'Please reconnect the integration'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
-    // Renovar o token
+    console.log('Google OAuth Refresh: Exchanging for new access token...');
+
     const tokenEndpoint = 'https://oauth2.googleapis.com/token';
     const tokenParams = new URLSearchParams({
       client_id: clientId,
       client_secret: clientSecret,
-      refresh_token: tokenData.refresh_token,
+      refresh_token: refreshToken,
       grant_type: 'refresh_token'
     });
 
@@ -135,7 +214,6 @@ serve(async (req) => {
       const errorText = await tokenResponse.text();
       console.error('Google OAuth Refresh: Token refresh failed', errorText);
       
-      // Se o refresh token for inválido, o usuário precisa reconectar
       if (tokenResponse.status === 400) {
         return new Response(
           JSON.stringify({ 
@@ -153,16 +231,22 @@ serve(async (req) => {
     const tokens = await tokenResponse.json();
     console.log('Google OAuth Refresh: New access token obtained');
 
-    // Calcular nova data de expiração
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + tokens.expires_in);
 
-    // Atualizar tokens no banco de dados
+    // SECURITY: Encrypt new access token before storage
+    let accessTokenToStore = tokens.access_token;
+    if (tokenEncryptionKey) {
+      console.log('Google OAuth Refresh: Encrypting new access token...');
+      accessTokenToStore = await encryptToken(tokens.access_token, tokenEncryptionKey);
+      console.log('Google OAuth Refresh: Token encrypted successfully');
+    }
+
     console.log('Google OAuth Refresh: Updating tokens in database...');
     const { error: updateError } = await supabase
       .from('integration_oauth_tokens')
       .update({
-        access_token: tokens.access_token,
+        access_token: accessTokenToStore,
         expires_at: expiresAt.toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -174,7 +258,6 @@ serve(async (req) => {
       throw new Error(`Failed to update tokens: ${updateError.message}`);
     }
 
-    // Log successful refresh to audit trail
     await supabase.from('audit_logs').insert({
       user_id: user.id,
       action: 'token.refreshed',
@@ -182,16 +265,18 @@ serve(async (req) => {
       resource_id: 'google_workspace',
       new_data: { 
         expires_at: expiresAt.toISOString(),
-        expires_in: tokens.expires_in 
+        expires_in: tokens.expires_in,
+        encrypted: !!tokenEncryptionKey
       },
     });
 
     console.log('Google OAuth Refresh: Tokens updated successfully');
 
+    // Return the unencrypted token for immediate use (only in the response, not stored)
     return new Response(
       JSON.stringify({ 
         success: true,
-        access_token: tokens.access_token,
+        access_token: tokens.access_token, // Return unencrypted for immediate use
         expires_at: expiresAt.toISOString(),
         expires_in: tokens.expires_in
       }),
