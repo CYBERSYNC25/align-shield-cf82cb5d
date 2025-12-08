@@ -7,55 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RefreshCw, Users, FolderClosed, Shield, CheckCircle2, XCircle, AlertCircle, Mail, Building2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-interface WorkspaceUser {
-  id: string;
-  primaryEmail: string;
-  name: {
-    fullName: string;
-    givenName?: string;
-    familyName?: string;
-  };
-  isAdmin: boolean;
-  suspended: boolean;
-  orgUnitPath?: string;
-  lastLoginTime?: string;
-  creationTime?: string;
-}
-
-interface WorkspaceGroup {
-  id: string;
-  email: string;
-  name: string;
-  description?: string;
-  directMembersCount: number;
-  adminCreated?: boolean;
-}
-
-interface UserProfile {
-  id: string;
-  email: string;
-  name: string;
-  picture?: string;
-  hd?: string;
-}
-
-interface GoogleWorkspaceData {
-  timestamp: string;
-  profile: UserProfile | null;
-  users: {
-    totalCount: number;
-    items: WorkspaceUser[];
-  };
-  groups: {
-    totalCount: number;
-    items: WorkspaceGroup[];
-  };
-}
+import { useGoogleSync, GoogleWorkspaceData } from '@/hooks/integrations/useGoogleSync';
 
 interface GoogleWorkspaceResourcesModalProps {
   open: boolean;
@@ -63,101 +17,15 @@ interface GoogleWorkspaceResourcesModalProps {
 }
 
 export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWorkspaceResourcesModalProps) {
-  const [loading, setLoading] = useState(false);
   const [data, setData] = useState<GoogleWorkspaceData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const syncMutation = useGoogleSync();
 
-  const syncResources = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Não autenticado');
+  const handleSync = () => {
+    syncMutation.mutate(undefined, {
+      onSuccess: (result) => {
+        setData(result);
       }
-
-      // Fetch profile
-      const profileResponse = await supabase.functions.invoke('google-workspace-sync', {
-        body: { action: 'get_user_profile' },
-      });
-
-      let profile: UserProfile | null = null;
-      if (profileResponse.data?.success) {
-        profile = profileResponse.data.data.profile;
-      }
-
-      // Try to fetch users (may fail without Admin SDK permissions)
-      let users: WorkspaceUser[] = [];
-      
-      try {
-        const usersResponse = await supabase.functions.invoke('google-workspace-sync', {
-          body: { action: 'list_users', params: { maxResults: 100 } },
-        });
-        
-        // Check both data.success and handle error responses
-        if (usersResponse.data?.success && usersResponse.data?.data?.users) {
-          users = usersResponse.data.data.users;
-        }
-        // Silently ignore 403/permission errors - expected for personal accounts
-      } catch (err) {
-        // Expected error for personal Gmail accounts - silently ignore
-        console.log('Users fetch skipped (Admin SDK not available)');
-      }
-
-      // Try to fetch groups (may fail without Admin SDK permissions)
-      let groups: WorkspaceGroup[] = [];
-      
-      try {
-        const groupsResponse = await supabase.functions.invoke('google-workspace-sync', {
-          body: { action: 'list_groups', params: { maxResults: 100 } },
-        });
-        
-        // Check both data.success and handle error responses
-        if (groupsResponse.data?.success && groupsResponse.data?.data?.groups) {
-          groups = groupsResponse.data.data.groups;
-        }
-        // Silently ignore 403/permission errors - expected for personal accounts
-      } catch (err) {
-        // Expected error for personal Gmail accounts - silently ignore
-        console.log('Groups fetch skipped (Admin SDK not available)');
-      }
-
-      setData({
-        timestamp: new Date().toISOString(),
-        profile,
-        users: {
-          totalCount: users.length,
-          items: users,
-        },
-        groups: {
-          totalCount: groups.length,
-          items: groups,
-        },
-      });
-
-      const messages: string[] = [];
-      if (profile) messages.push(`Perfil: ${profile.email}`);
-      if (users.length > 0) messages.push(`${users.length} usuários`);
-      if (groups.length > 0) messages.push(`${groups.length} grupos`);
-      
-      toast({
-        title: 'Sincronização concluída',
-        description: messages.length > 0 ? messages.join(', ') : 'Dados do perfil carregados',
-      });
-
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro desconhecido';
-      setError(message);
-      toast({
-        title: 'Erro na sincronização',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const formatDate = (dateStr: string | undefined) => {
@@ -222,9 +90,13 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
         <div className="flex-1 overflow-hidden flex flex-col gap-4 mt-4">
           {/* Sync Button */}
           <div className="flex items-center justify-between">
-            <Button onClick={syncResources} disabled={loading} className="gap-2">
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? 'Sincronizando...' : 'Sincronizar Agora'}
+            <Button 
+              onClick={handleSync} 
+              disabled={syncMutation.isPending} 
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar Agora'}
             </Button>
             {data && (
               <span className="text-xs text-muted-foreground">
@@ -234,10 +106,10 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
           </div>
 
           {/* Error State */}
-          {error && !loading && (
+          {syncMutation.isError && !syncMutation.isPending && (
             <Card className="border-destructive bg-destructive/5">
               <CardContent className="pt-4">
-                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-sm text-destructive">{syncMutation.error?.message}</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Verifique se a integração Google está conectada corretamente.
                 </p>
@@ -246,7 +118,7 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
           )}
 
           {/* Loading State */}
-          {loading && !data && (
+          {syncMutation.isPending && !data && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <Skeleton className="h-20" />
@@ -335,7 +207,7 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
                   </Card>
                 )}
 
-              {/* Users Table */}
+                {/* Users Table */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -386,7 +258,7 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
                   </CardContent>
                 </Card>
 
-              {/* Groups Table */}
+                {/* Groups Table */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -441,7 +313,7 @@ export function GoogleWorkspaceResourcesModal({ open, onOpenChange }: GoogleWork
           )}
 
           {/* Empty State */}
-          {!loading && !data && !error && (
+          {!syncMutation.isPending && !data && !syncMutation.isError && (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
               <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">Sincronize seus recursos</h3>

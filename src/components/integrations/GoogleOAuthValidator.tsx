@@ -24,9 +24,9 @@ import {
   Copy,
   Check
 } from 'lucide-react';
-import { useGoogleOAuthValidation, ValidationResult, CheckStatus } from '@/hooks/useGoogleOAuthValidation';
+import { useGoogleOAuthValidation, CheckStatus } from '@/hooks/useGoogleOAuthValidation';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useGoogleOAuthDiagnostic } from '@/hooks/integrations/useGoogleSync';
 
 interface DiagnosticResult {
   success: boolean;
@@ -52,65 +52,22 @@ export const GoogleOAuthValidator = () => {
   const [expandedChecks, setExpandedChecks] = useState<Set<string>>(new Set());
   const [connectingOAuth, setConnectingOAuth] = useState(false);
   const [diagnostic, setDiagnostic] = useState<DiagnosticResult | null>(null);
-  const [loadingDiagnostic, setLoadingDiagnostic] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
-  const { toast } = useToast();
+  
+  const diagnosticMutation = useGoogleOAuthDiagnostic();
 
-  const runDiagnostic = async () => {
-    setLoadingDiagnostic(true);
-    setDiagnostic(null);
-
-    try {
-      // Get the current session for auth header
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.access_token) {
-        throw new Error('Você precisa estar logado para executar o diagnóstico');
+  const runDiagnostic = () => {
+    diagnosticMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        setDiagnostic(data as DiagnosticResult);
       }
-
-      const response = await fetch(
-        'https://ofbyxnpprwwuieabwhdo.supabase.co/functions/v1/google-oauth-start?diagnostic=true',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mYnl4bnBwcnd3dWllYWJ3aGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MDY4NTEsImV4cCI6MjA3MzE4Mjg1MX0.aHH2NWUQZnvV6FALdBIP5SB02YbrE8u12lXI1DtIbiw',
-          },
-        }
-      );
-
-      const data = await response.json();
-      
-      if (data.diagnostic) {
-        setDiagnostic(data);
-        toast({
-          title: 'Diagnóstico Concluído',
-          description: 'Verifique as informações abaixo e compare com o Google Cloud Console',
-        });
-      } else {
-        throw new Error(data.error || 'Resposta inesperada');
-      }
-    } catch (error) {
-      console.error('Diagnostic error:', error);
-      toast({
-        title: 'Erro no Diagnóstico',
-        description: error instanceof Error ? error.message : 'Não foi possível executar o diagnóstico',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoadingDiagnostic(false);
-    }
+    });
   };
 
   const copyTestUrl = async () => {
     if (diagnostic?.testAuthUrl) {
       await navigator.clipboard.writeText(diagnostic.testAuthUrl);
       setCopiedUrl(true);
-      toast({
-        title: 'URL Copiada',
-        description: 'Cole em uma aba anônima para testar manualmente',
-      });
       setTimeout(() => setCopiedUrl(false), 2000);
     }
   };
@@ -186,11 +143,6 @@ export const GoogleOAuthValidator = () => {
       window.open(data.authUrl, '_blank', 'noopener,noreferrer');
     } catch (error) {
       console.error('Erro ao conectar:', error);
-      toast({
-        title: 'Erro na Conexão',
-        description: error instanceof Error ? error.message : 'Não foi possível iniciar a conexão com o Google',
-        variant: 'destructive',
-      });
       setConnectingOAuth(false);
     }
   };
@@ -243,11 +195,11 @@ export const GoogleOAuthValidator = () => {
             </div>
             <Button
               onClick={runDiagnostic}
-              disabled={loadingDiagnostic}
+              disabled={diagnosticMutation.isPending}
               variant="outline"
               size="sm"
             >
-              {loadingDiagnostic ? (
+              {diagnosticMutation.isPending ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
                   Verificando...
@@ -472,42 +424,31 @@ export const GoogleOAuthValidator = () => {
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-start gap-2 flex-1">
-                            <span className={`text-lg ${getStatusColor(result.status)}`}>
-                              {getStatusIcon(result.status)}
-                            </span>
+                            <span className="mt-0.5">{getStatusIcon(result.status)}</span>
                             <div className="flex-1">
-                              <div className="font-medium">{result.check}</div>
-                              <div className="text-sm text-muted-foreground">{result.message}</div>
+                              <p className="font-medium text-sm">{result.check}</p>
+                              {!isExpanded && (
+                                <p className="text-xs text-muted-foreground line-clamp-1">
+                                  {result.message}
+                                </p>
+                              )}
                             </div>
                           </div>
-                          <Badge variant={getStatusBadgeVariant(result.status)} className="ml-2">
+                          <Badge variant={getStatusBadgeVariant(result.status)}>
                             {getStatusLabel(result.status)}
                           </Badge>
                         </div>
-
-                        {isExpanded && (result.details || result.recommendation || result.link) && (
-                          <div className="pl-7 space-y-2 mt-2">
+                        
+                        {isExpanded && (
+                          <div className="pl-6 space-y-2">
+                            <p className="text-sm text-muted-foreground">{result.message}</p>
                             {result.details && (
-                              <div className="text-xs bg-muted p-2 rounded">
-                                <strong>Detalhes:</strong> {result.details}
+                              <div className="text-xs bg-muted p-2 rounded font-mono overflow-x-auto">
+                                {typeof result.details === 'string' 
+                                  ? result.details 
+                                  : JSON.stringify(result.details, null, 2)
+                                }
                               </div>
-                            )}
-                            {result.recommendation && (
-                              <div className="text-xs bg-blue-50 dark:bg-blue-950 p-2 rounded border border-blue-200 dark:border-blue-800">
-                                <strong>Recomendação:</strong> {result.recommendation}
-                              </div>
-                            )}
-                            {result.link && (
-                              <a
-                                href={result.link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary hover:underline flex items-center gap-1"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                Abrir no Google Cloud Console
-                                <ExternalLink className="h-3 w-3" />
-                              </a>
                             )}
                           </div>
                         )}
@@ -516,28 +457,6 @@ export const GoogleOAuthValidator = () => {
                   })}
                 </div>
               </ScrollArea>
-            </div>
-
-            {/* Configuração Atual */}
-            <details className="space-y-2">
-              <summary className="font-semibold cursor-pointer hover:text-primary">
-                Ver Configuração Técnica
-              </summary>
-              <div className="text-xs space-y-1 p-3 bg-muted rounded mt-2">
-                <div><strong>Project ID:</strong> {validation.configuration.projectId}</div>
-                <div><strong>Redirect URI:</strong> {validation.configuration.redirectUri}</div>
-                <div><strong>Escopos:</strong> {validation.configuration.configuredScopes.length}</div>
-                <div className="pl-4 space-y-0.5 text-muted-foreground">
-                  {validation.configuration.configuredScopes.map((scope, i) => (
-                    <div key={i}>• {scope}</div>
-                  ))}
-                </div>
-              </div>
-            </details>
-
-            {/* Timestamp */}
-            <div className="text-xs text-muted-foreground text-center">
-              Última validação: {new Date(validation.timestamp).toLocaleString('pt-BR')}
             </div>
           </div>
         )}

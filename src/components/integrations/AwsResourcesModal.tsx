@@ -7,46 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RefreshCw, Users, Database, Shield, CheckCircle2, XCircle, AlertCircle, Cloud } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-interface AwsUser {
-  userName: string;
-  userId: string;
-  createdAt: string;
-  mfaEnabled: boolean | null;
-}
-
-interface AwsBucket {
-  name: string;
-  createdAt: string;
-}
-
-interface AwsTrail {
-  name: string;
-  isMultiRegion: boolean;
-  s3BucketName: string;
-}
-
-interface AwsResourcesData {
-  timestamp: string;
-  accountId: string;
-  iam: {
-    totalUsers: number;
-    users: AwsUser[];
-  };
-  s3: {
-    totalBuckets: number;
-    buckets: AwsBucket[];
-  };
-  cloudtrail: {
-    enabled: boolean;
-    totalTrails: number;
-    trails: AwsTrail[];
-  };
-}
+import { useAwsSync, AwsResourcesData } from '@/hooks/integrations/useAwsSync';
 
 interface AwsResourcesModalProps {
   open: boolean;
@@ -56,49 +19,15 @@ interface AwsResourcesModalProps {
 }
 
 export function AwsResourcesModal({ open, onOpenChange, integrationId, integrationName }: AwsResourcesModalProps) {
-  const [loading, setLoading] = useState(false);
   const [data, setData] = useState<AwsResourcesData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const syncMutation = useAwsSync(integrationId);
 
-  const syncResources = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Não autenticado');
+  const handleSync = () => {
+    syncMutation.mutate(undefined, {
+      onSuccess: (result) => {
+        setData(result);
       }
-
-      const response = await supabase.functions.invoke('aws-sync-resources', {
-        body: { integration_id: integrationId },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || 'Erro ao sincronizar');
-      }
-
-      if (!response.data?.success) {
-        throw new Error(response.data?.error || 'Falha na sincronização');
-      }
-
-      setData(response.data.data);
-      toast({
-        title: 'Sincronização concluída',
-        description: `${response.data.data.iam.totalUsers} usuários e ${response.data.data.s3.totalBuckets} buckets encontrados.`,
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Erro desconhecido';
-      setError(message);
-      toast({
-        title: 'Erro na sincronização',
-        description: message,
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   const formatDate = (dateStr: string) => {
@@ -154,9 +83,13 @@ export function AwsResourcesModal({ open, onOpenChange, integrationId, integrati
         <div className="flex-1 overflow-hidden flex flex-col gap-4 mt-4">
           {/* Sync Button */}
           <div className="flex items-center justify-between">
-            <Button onClick={syncResources} disabled={loading} className="gap-2">
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              {loading ? 'Sincronizando...' : 'Sincronizar Agora'}
+            <Button 
+              onClick={handleSync} 
+              disabled={syncMutation.isPending} 
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
+              {syncMutation.isPending ? 'Sincronizando...' : 'Sincronizar Agora'}
             </Button>
             {data && (
               <span className="text-xs text-muted-foreground">
@@ -166,10 +99,10 @@ export function AwsResourcesModal({ open, onOpenChange, integrationId, integrati
           </div>
 
           {/* Error State */}
-          {error && !loading && (
+          {syncMutation.isError && !syncMutation.isPending && (
             <Card className="border-destructive bg-destructive/5">
               <CardContent className="pt-4">
-                <p className="text-sm text-destructive">{error}</p>
+                <p className="text-sm text-destructive">{syncMutation.error?.message}</p>
                 <p className="text-xs text-muted-foreground mt-2">
                   Verifique se a Role AWS tem as permissões necessárias: iam:ListUsers, s3:ListAllMyBuckets, cloudtrail:DescribeTrails
                 </p>
@@ -178,7 +111,7 @@ export function AwsResourcesModal({ open, onOpenChange, integrationId, integrati
           )}
 
           {/* Loading State */}
-          {loading && !data && (
+          {syncMutation.isPending && !data && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-3">
                 <Skeleton className="h-20" />
@@ -373,7 +306,7 @@ export function AwsResourcesModal({ open, onOpenChange, integrationId, integrati
           )}
 
           {/* Empty State */}
-          {!loading && !data && !error && (
+          {!syncMutation.isPending && !data && !syncMutation.isError && (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
               <Cloud className="h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">Sincronize seus recursos</h3>
