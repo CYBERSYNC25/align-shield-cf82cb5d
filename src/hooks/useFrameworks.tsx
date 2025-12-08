@@ -306,23 +306,40 @@ export function useFrameworks() {
 
     try {
       // Buscar frameworks do Supabase
-      const { data, error } = await supabase
+      const { data: frameworksData, error: frameworksError } = await supabase
         .from('frameworks')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (frameworksError) throw frameworksError;
+
+      // Buscar controls do Supabase
+      const { data: controlsData, error: controlsError } = await supabase
+        .from('controls')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('code', { ascending: true });
+
+      if (controlsError) throw controlsError;
       
-      // Se não há dados, usar dados mock para desenvolvimento
-      const frameworksData = data && data.length > 0 ? data : getMockFrameworks();
-      
-      setFrameworks(frameworksData);
-      setControls(getMockControls()); // Usar dados mock para controls por enquanto
+      // Se há dados reais, usar. Senão, usar mock para desenvolvimento
+      if (frameworksData && frameworksData.length > 0) {
+        setFrameworks(frameworksData);
+        setControls(controlsData?.map(c => ({
+          ...c,
+          status: c.status as FrameworkControl['status'],
+          owner: c.owner || '',
+          last_verified: c.last_verified || '',
+          next_review: c.next_review || '',
+          findings: c.findings || [],
+        })) || []);
+      } else {
+        setFrameworks(getMockFrameworks());
+        setControls(getMockControls());
+      }
     } catch (error) {
       console.error('Erro ao buscar frameworks:', error);
-      // Em caso de erro, usar dados mockados
-      console.log('Fallback para dados mockados devido a erro de conexão');
       setFrameworks(getMockFrameworks());
       setControls(getMockControls());
     } finally {

@@ -16,6 +16,7 @@ import { BackupDataModal } from '@/components/settings/BackupDataModal';
 import { ViewLogsModal } from '@/components/settings/ViewLogsModal';
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
 import UserRolesManagement from '@/components/settings/UserRolesManagement';
+import { SeedDatabaseCard } from '@/components/settings/SeedDatabaseCard';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import {
   User,
@@ -69,6 +70,7 @@ const Settings = () => {
                   <TabsTrigger value="notifications">Notificações</TabsTrigger>
                   <TabsTrigger value="permissions">Permissões</TabsTrigger>
                   <TabsTrigger value="audit">Auditoria</TabsTrigger>
+                  <TabsTrigger value="system">Sistema</TabsTrigger>
                 </TabsList>
 
                 {/* Account Tab */}
@@ -297,6 +299,11 @@ const Settings = () => {
                 {/* Audit Tab */}
                 <TabsContent value="audit">
                   <AuditLogsViewer />
+                </TabsContent>
+
+                {/* System Tab */}
+                <TabsContent value="system" className="space-y-6">
+                  <SeedDatabaseCard />
                 </TabsContent>
               </Tabs>
             </div>
