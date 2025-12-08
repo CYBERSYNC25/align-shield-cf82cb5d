@@ -39,18 +39,18 @@ const Header = () => {
 
   return (
     <header className="h-16 bg-surface-elevated/95 backdrop-blur-sm border-b border-card-border/50 flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm">
-      {/* Logo & Brand */}
+      {/* Logo & Brand - Enterprise Security Identity */}
       <div className="flex items-center space-x-4 flex-1">
         <div className="flex items-center space-x-3 hover-glow rounded-lg p-2 transition-all duration-200">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-            <ShieldCheck className="h-6 w-6 text-primary" />
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
+            <ShieldCheck className="h-6 w-6 text-primary drop-shadow-sm" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-2xl font-bold tracking-wide text-foreground">
               APOC
             </h1>
-            <p className="text-xs text-muted-foreground font-medium">
-              Automated Platform for Online Compliance
+            <p className="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
+              Security & Compliance Platform
             </p>
           </div>
         </div>
