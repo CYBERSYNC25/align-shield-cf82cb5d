@@ -253,16 +253,18 @@ const Sidebar = () => {
 
   return (
     <aside className="w-64 bg-surface-elevated border-r border-card-border h-screen sticky top-16 overflow-y-auto">
-      {/* Application Header - Non-clickable branding */}
+      {/* Application Header - Enterprise Security Branding */}
       <header className="p-4 border-b border-card-border select-none pointer-events-none">
         <div className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10">
-            <ShieldCheck className="h-6 w-6 text-primary" />
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
+            <ShieldCheck className="h-6 w-6 text-primary drop-shadow-sm" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">APOC</h1>
-            <p className="text-xs text-muted-foreground leading-tight">
-              Automated Platform for<br />Online Compliance
+            <h1 className="text-xl font-bold tracking-wide text-foreground">
+              APOC
+            </h1>
+            <p className="text-[10px] text-muted-foreground leading-tight tracking-tight uppercase">
+              Security & Compliance
             </p>
           </div>
         </div>
