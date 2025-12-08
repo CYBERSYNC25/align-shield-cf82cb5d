@@ -1,24 +1,17 @@
 /**
- * Google OAuth 2.0 - Callback Handler
+ * Google OAuth 2.0 - Callback Handler (SECURED)
  * 
- * Processa o callback do Google após o usuário autorizar o acesso.
- * Troca o código de autorização por tokens de acesso e refresh.
+ * Processes the callback from Google after user authorizes access.
+ * Exchanges authorization code for tokens and stores them ENCRYPTED.
  * 
- * SECRETS NECESSÁRIAS (Supabase Dashboard):
+ * SECURITY IMPROVEMENTS:
+ * - Tokens are encrypted using AES-256-GCM before storage
+ * - Uses TOKEN_ENCRYPTION_KEY secret for encryption
+ * 
+ * SECRETS REQUIRED:
  * - GOOGLE_CLIENT_ID
  * - GOOGLE_CLIENT_SECRET
- * 
- * FLUXO:
- * 1. Valida o state para proteção CSRF
- * 2. Troca o code por access_token e refresh_token
- * 3. Armazena tokens no banco de dados (criptografados)
- * 4. Redireciona usuário de volta para a aplicação
- * 
- * IMPORTANTE:
- * - State DEVE ser validado antes de processar
- * - Tokens são armazenados com criptografia
- * - Refresh token permite renovação automática
- * - Error handling completo para todos os casos
+ * - TOKEN_ENCRYPTION_KEY (for token encryption)
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -29,16 +22,62 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Inline crypto utilities to avoid import issues in edge functions
+async function deriveKey(secret: string): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+
+  const salt = encoder.encode('apoc-token-encryption-salt-v1');
+
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt,
+      iterations: 100000,
+      hash: 'SHA-256'
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+async function encryptToken(plainText: string, encryptionKey: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plainText);
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(encryptionKey);
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    data
+  );
+  const encryptedBytes = new Uint8Array(encrypted);
+  return `${bytesToHex(iv)}:${bytesToHex(encryptedBytes)}`;
+}
+
 /**
- * Valida o state recebido do Google para proteção CSRF
+ * Validates the state received from Google for CSRF protection
  */
 function validateState(encodedState: string): { userId: string; timestamp: number } | null {
   try {
-    // Primeiro decodificar URL encoding, depois decodificar Base64
     const decodedState = decodeURIComponent(encodedState);
     const stateData = JSON.parse(atob(decodedState));
     
-    // Verificar se o state não está muito antigo (10 minutos)
+    // Check if state is not too old (10 minutes)
     const age = Date.now() - stateData.timestamp;
     if (age > 10 * 60 * 1000) {
       console.error('OAuth Callback: State expired');
@@ -61,7 +100,6 @@ function validateState(encodedState: string): { userId: string; timestamp: numbe
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -69,33 +107,26 @@ serve(async (req) => {
   try {
     console.log('Google OAuth Callback: Processing callback');
 
-    // Extrair parâmetros da URL
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
     const state = url.searchParams.get('state');
     const error = url.searchParams.get('error');
 
-    // Verificar se houve erro na autorização
     if (error) {
       console.error(`Google OAuth Callback: Authorization error: ${error}`);
-      
-      // Redirecionar de volta para a aplicação com erro
       const projectRef = Deno.env.get('SUPABASE_URL')?.match(/https:\/\/([^.]+)/)?.[1] || '';
       const redirectUrl = `https://preview--${projectRef}.lovable.app/integrations?error=${encodeURIComponent(error)}`;
-      
       return new Response(null, {
         status: 302,
         headers: { 'Location': redirectUrl }
       });
     }
 
-    // Validar parâmetros obrigatórios
     if (!code || !state) {
       console.error('Google OAuth Callback: Missing code or state');
       throw new Error('Missing authorization code or state');
     }
 
-    // Validar state (proteção CSRF)
     const stateData = validateState(state);
     if (!stateData) {
       throw new Error('Invalid or expired state');
@@ -103,21 +134,19 @@ serve(async (req) => {
 
     console.log(`Google OAuth Callback: Processing for user ${stateData.userId}`);
 
-    // ✅ Buscar credenciais dos Supabase Secrets
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID');
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const tokenEncryptionKey = Deno.env.get('TOKEN_ENCRYPTION_KEY');
 
     if (!clientId || !clientSecret || !supabaseUrl || !supabaseServiceKey) {
       console.error('Google OAuth Callback: Missing configuration');
       throw new Error('Server configuration error');
     }
 
-    // Definir redirect URI (deve ser o mesmo usado no start)
     const redirectUri = `${supabaseUrl}/functions/v1/google-oauth-callback`;
 
-    // Trocar código por tokens
     console.log('Google OAuth Callback: Exchanging code for tokens...');
     const tokenEndpoint = 'https://oauth2.googleapis.com/token';
     const tokenParams = new URLSearchParams({
@@ -143,7 +172,6 @@ serve(async (req) => {
     const tokens = await tokenResponse.json();
     console.log('Google OAuth Callback: Tokens obtained successfully');
 
-    // Obter informações do usuário do Google
     console.log('Google OAuth Callback: Fetching user info...');
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: {
@@ -154,11 +182,24 @@ serve(async (req) => {
     const userInfo = await userInfoResponse.json();
     console.log(`Google OAuth Callback: User info obtained for ${userInfo.email}`);
 
-    // Calcular data de expiração
     const expiresAt = new Date();
     expiresAt.setSeconds(expiresAt.getSeconds() + tokens.expires_in);
 
-    // Armazenar tokens no banco de dados
+    // SECURITY: Encrypt tokens before storage
+    let accessTokenToStore = tokens.access_token;
+    let refreshTokenToStore = tokens.refresh_token;
+
+    if (tokenEncryptionKey) {
+      console.log('Google OAuth Callback: Encrypting tokens before storage...');
+      accessTokenToStore = await encryptToken(tokens.access_token, tokenEncryptionKey);
+      if (tokens.refresh_token) {
+        refreshTokenToStore = await encryptToken(tokens.refresh_token, tokenEncryptionKey);
+      }
+      console.log('Google OAuth Callback: Tokens encrypted successfully');
+    } else {
+      console.warn('Google OAuth Callback: TOKEN_ENCRYPTION_KEY not set - storing tokens unencrypted (NOT RECOMMENDED)');
+    }
+
     console.log('Google OAuth Callback: Storing tokens in database...');
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -167,8 +208,8 @@ serve(async (req) => {
       .upsert({
         user_id: stateData.userId,
         integration_name: 'google_workspace',
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        access_token: accessTokenToStore,
+        refresh_token: refreshTokenToStore,
         token_type: tokens.token_type,
         expires_at: expiresAt.toISOString(),
         scope: tokens.scope,
@@ -176,7 +217,8 @@ serve(async (req) => {
           email: userInfo.email,
           name: userInfo.name,
           picture: userInfo.picture,
-          verified_email: userInfo.verified_email
+          verified_email: userInfo.verified_email,
+          encrypted: !!tokenEncryptionKey
         }
       }, {
         onConflict: 'user_id,integration_name'
@@ -187,10 +229,8 @@ serve(async (req) => {
       throw new Error(`Failed to store tokens: ${dbError.message}`);
     }
 
-    console.log('Google OAuth Callback: Tokens stored successfully');
+    console.log('Google OAuth Callback: Tokens stored successfully (encrypted:', !!tokenEncryptionKey, ')');
 
-    // Redirecionar de volta para a aplicação com sucesso
-    // Usar URL do preview Lovable com prefixo correto
     const projectRef = Deno.env.get('SUPABASE_URL')?.match(/https:\/\/([^.]+)/)?.[1] || '';
     const redirectUrl = `https://preview--${projectRef}.lovable.app/integrations?success=google_workspace`;
     
@@ -202,7 +242,6 @@ serve(async (req) => {
   } catch (error) {
     console.error('Google OAuth Callback Error:', error);
     
-    // Redirecionar para a aplicação com erro
     const projectRef = Deno.env.get('SUPABASE_URL')?.match(/https:\/\/([^.]+)/)?.[1] || '';
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const redirectUrl = `https://preview--${projectRef}.lovable.app/integrations?error=${encodeURIComponent(errorMessage)}`;
