@@ -295,18 +295,12 @@ const Auth = () => {
           </div>
           <CardTitle className="text-2xl text-card-foreground">Bem-vindo</CardTitle>
           <CardDescription className="text-muted-foreground">
-            Faça login ou crie sua conta para acessar a plataforma de compliance
+            Faça login para acessar a plataforma de compliance
           </CardDescription>
         </CardHeader>
         
         <CardContent className="px-8 pb-8">
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-muted">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="signup">Cadastro</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login">
+          <div className="w-full">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-foreground">Email</Label>
@@ -358,160 +352,12 @@ const Auth = () => {
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>
-            </TabsContent>
-            
-            <TabsContent value="signup">
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name" className="text-foreground">Nome Completo</Label>
-                  <Input 
-                    id="signup-name"
-                    name="displayName"
-                    type="text" 
-                    placeholder="João Silva"
-                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.displayName ? 'border-destructive' : ''}`}
-                    required 
-                  />
-                  {signupErrors.displayName && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {signupErrors.displayName}
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-organization" className="text-foreground">
-                    <Building2 className="inline h-4 w-4 mr-1" />
-                    Organização
-                  </Label>
-                  <Input 
-                    id="signup-organization"
-                    name="organization"
-                    type="text" 
-                    placeholder="Nome da sua empresa"
-                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.organization ? 'border-destructive' : ''}`}
-                    required 
-                  />
-                  {signupErrors.organization && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {signupErrors.organization}
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email" className="text-foreground">Email</Label>
-                  <Input 
-                    id="signup-email"
-                    name="email"
-                    type="email" 
-                    placeholder="seu@email.com"
-                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.email ? 'border-destructive' : ''}`}
-                    required 
-                  />
-                  {signupErrors.email && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {signupErrors.email}
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="text-foreground">Senha</Label>
-                  <Input 
-                    id="signup-password"
-                    name="password"
-                    type="password" 
-                    placeholder="••••••••"
-                    value={signupPassword}
-                    onChange={(e) => handlePasswordChange(e.target.value)}
-                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.password ? 'border-destructive' : ''}`}
-                    required 
-                  />
-                  {signupErrors.password && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {signupErrors.password}
-                    </p>
-                  )}
-                  
-                  {/* Indicador de força de senha */}
-                  {passwordStrength && signupPassword && (
-                    <div className="space-y-2 pt-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Força da senha:</span>
-                        <span className={`font-medium ${
-                          passwordStrength.score >= 3 ? 'text-green-600 dark:text-green-500' : 
-                          passwordStrength.score >= 2 ? 'text-amber-600 dark:text-amber-500' : 
-                          'text-red-600 dark:text-red-500'
-                        }`}>
-                          {passwordStrength.label}
-                        </span>
-                      </div>
-                      <Progress 
-                        value={passwordStrength.score * 25} 
-                        className="h-2"
-                      />
-                      {passwordStrength.feedback.length > 0 && (
-                        <div className="space-y-1">
-                          {passwordStrength.feedback.map((fb: string, i: number) => (
-                            <p key={i} className="text-xs text-muted-foreground flex items-start gap-1">
-                              {passwordStrength.passesRequirements ? (
-                                <CheckCircle2 className="h-3 w-3 mt-0.5 text-green-600" />
-                              ) : (
-                                <AlertCircle className="h-3 w-3 mt-0.5" />
-                              )}
-                              {fb}
-                            </p>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password" className="text-foreground">Confirmar Senha</Label>
-                  <Input 
-                    id="signup-confirm-password"
-                    name="confirmPassword"
-                    type="password" 
-                    placeholder="••••••••"
-                    className={`bg-background border-input text-foreground placeholder:text-muted-foreground ${signupErrors.confirmPassword ? 'border-destructive' : ''}`}
-                    required 
-                  />
-                  {signupErrors.confirmPassword && (
-                    <p className="text-sm text-destructive flex items-center gap-1">
-                      <AlertCircle className="h-3 w-3" />
-                      {signupErrors.confirmPassword}
-                    </p>
-                  )}
-                </div>
-                
-                {/* Alerta de senha vazada */}
-                {isPwned && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Esta senha foi encontrada em <strong>{pwnedCount.toLocaleString()}</strong> vazamentos de dados. 
-                      Por favor, escolha uma senha diferente.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                <Button type="submit" className="w-full" disabled={isLoading || !passwordStrength?.passesRequirements}>
-                  {isLoading ? 'Criando conta...' : 'Criar Conta'}
-                </Button>
-                
-                <p className="text-xs text-center text-muted-foreground">
-                  Ao criar uma conta, você concorda com nossos Termos de Uso e Política de Privacidade
-                </p>
-              </form>
-            </TabsContent>
-          </Tabs>
+              
+              {/* Nota de acesso restrito */}
+              <p className="text-xs text-center text-muted-foreground mt-6 pt-4 border-t border-border">
+                Acesso restrito. Entre em contato com o administrador para solicitar acesso.
+              </p>
+          </div>
         </CardContent>
       </Card>
     </div>
