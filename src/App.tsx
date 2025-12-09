@@ -45,6 +45,11 @@ const App = () => (
               <Index />
             </ProtectedRoute>
           } />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
           <Route path="/controls" element={
             <ProtectedRoute>
               <ControlsFrameworks />
