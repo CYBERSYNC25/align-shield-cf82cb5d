@@ -26,24 +26,24 @@ export const GoogleIntegrationCard = ({ isConnected = false, lastSync = null }: 
   if (isConnected) {
     return (
       <>
-        <Card className="transition-all duration-200 border-green-500/50 ring-1 ring-green-500/20 shadow-lg hover:shadow-xl">
-          <CardHeader>
-            <div className="flex items-start justify-between">
+        <Card className="h-full flex flex-col transition-all duration-200 border-green-500/50 ring-1 ring-green-500/20 shadow-lg hover:shadow-xl">
+          <CardHeader className="flex-1">
+            <div className="flex items-center justify-between">
               <div className="p-3 rounded-lg bg-green-500/10 text-green-600">
                 <HardDrive className="h-8 w-8" />
               </div>
-              <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse" />
+              <Badge className="bg-green-500/10 text-green-600 border-green-500/30 flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                 Conectado
               </Badge>
             </div>
-            <CardTitle className="mt-4">Google Workspace</CardTitle>
-            <CardDescription>
+            <CardTitle className="mt-4 truncate">Google Workspace</CardTitle>
+            <CardDescription className="line-clamp-2">
               Integração OAuth 2.0 para coleta de usuários e permissões
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 mt-auto">
             <div className="flex gap-2">
               <Button 
                 variant="default" 
@@ -89,24 +89,24 @@ export const GoogleIntegrationCard = ({ isConnected = false, lastSync = null }: 
 
   return (
     <>
-      <Card className="transition-all duration-200 border-primary/50 shadow-md hover:shadow-lg">
-        <CardHeader>
-          <div className="flex items-start justify-between">
+      <Card className="h-full flex flex-col transition-all duration-200 border-primary/50 shadow-md hover:shadow-lg">
+        <CardHeader className="flex-1">
+          <div className="flex items-center justify-between">
             <div className="p-3 rounded-lg bg-primary/10 text-primary">
               <HardDrive className="h-8 w-8" />
             </div>
-            <Badge variant="default" className="bg-success text-success-foreground">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
+            <Badge variant="default" className="bg-success text-success-foreground flex items-center gap-1">
+              <CheckCircle2 className="h-3 w-3" />
               Disponível
             </Badge>
           </div>
-          <CardTitle className="mt-4">Google Workspace</CardTitle>
-          <CardDescription>
+          <CardTitle className="mt-4 truncate">Google Workspace</CardTitle>
+          <CardDescription className="line-clamp-2">
             Integração OAuth 2.0 para coleta de usuários e permissões
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-2 mt-auto">
           <Button className="w-full" onClick={() => setIsModalOpen(true)}>
             Conectar
           </Button>

@@ -102,7 +102,7 @@ const IntegrationsHub = () => {
 
               {/* Stats Cards */}
               <div className="col-span-full lg:col-span-4">
-                <Card>
+                <Card className="h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <Activity className="h-4 w-4" />
@@ -125,7 +125,7 @@ const IntegrationsHub = () => {
               </div>
 
               <div className="col-span-full lg:col-span-4">
-                <Card>
+                <Card className="h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <Clock className="h-4 w-4" />
@@ -150,7 +150,7 @@ const IntegrationsHub = () => {
               </div>
 
               <div className="col-span-full lg:col-span-4">
-                <Card>
+                <Card className="h-full">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                       <Database className="h-4 w-4" />
@@ -190,14 +190,14 @@ const IntegrationsHub = () => {
 
                     {/* AWS Cloud - Connected */}
                     {aws.connected && (
-                      <Card className="transition-all duration-200 border-green-500/50 ring-1 ring-green-500/20 shadow-lg hover:shadow-xl">
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
+                      <Card className="h-full flex flex-col transition-all duration-200 border-green-500/50 ring-1 ring-green-500/20 shadow-lg hover:shadow-xl">
+                        <CardHeader className="flex-1">
+                          <div className="flex items-center justify-between">
                             <div className="p-3 rounded-lg bg-green-500/10 text-green-600">
                               <Cloud className="h-8 w-8" />
                             </div>
-                            <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
-                              <span className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse" />
+                            <Badge className="bg-green-500/10 text-green-600 border-green-500/30 flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                               Conectado
                             </Badge>
                           </div>
@@ -207,7 +207,7 @@ const IntegrationsHub = () => {
                           </CardDescription>
                         </CardHeader>
 
-                        <CardContent className="space-y-3">
+                        <CardContent className="space-y-3 mt-auto">
                           <Button 
                             variant="default" 
                             className="w-full gap-2" 
@@ -228,14 +228,14 @@ const IntegrationsHub = () => {
 
                     {/* MikroTik - Connected */}
                     {mikrotik.connected && (
-                      <Card className="transition-all duration-200 border-green-500/50 ring-1 ring-green-500/20 shadow-lg hover:shadow-xl">
-                        <CardHeader>
-                          <div className="flex items-start justify-between">
+                      <Card className="h-full flex flex-col transition-all duration-200 border-green-500/50 ring-1 ring-green-500/20 shadow-lg hover:shadow-xl">
+                        <CardHeader className="flex-1">
+                          <div className="flex items-center justify-between">
                             <div className="p-3 rounded-lg bg-green-500/10 text-green-600">
                               <WifiOff className="h-8 w-8" />
                             </div>
-                            <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
-                              <span className="h-1.5 w-1.5 rounded-full bg-green-500 mr-1.5 animate-pulse" />
+                            <Badge className="bg-green-500/10 text-green-600 border-green-500/30 flex items-center gap-1.5">
+                              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
                               Conectado
                             </Badge>
                           </div>
@@ -248,7 +248,7 @@ const IntegrationsHub = () => {
                           </CardDescription>
                         </CardHeader>
 
-                        <CardContent className="space-y-2">
+                        <CardContent className="space-y-2 mt-auto">
                           <Button variant="outline" className="w-full" onClick={() => setIsMikroTikModalOpen(true)}>
                             Gerenciar
                           </Button>
@@ -264,7 +264,7 @@ const IntegrationsHub = () => {
 
               {/* Available Integrations Section */}
               <div className="col-span-full">
-                <h2 className="text-xl font-semibold text-foreground mb-4">
+                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">
                   {hasConnectedIntegrations ? 'Disponíveis para Conectar' : 'Integrações Disponíveis'}
                 </h2>
                 <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -280,14 +280,14 @@ const IntegrationsHub = () => {
 
                   {/* AWS Cloud - Available */}
                   {!aws.connected && (
-                    <Card className="transition-all duration-200 border-primary/50 shadow-lg hover:shadow-xl">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
+                    <Card className="h-full flex flex-col transition-all duration-200 border-primary/50 shadow-lg hover:shadow-xl">
+                      <CardHeader className="flex-1">
+                        <div className="flex items-center justify-between">
                           <div className="p-3 rounded-lg bg-primary/10 text-primary">
                             <Cloud className="h-8 w-8" />
                           </div>
-                          <Badge variant="default" className="bg-success text-success-foreground">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          <Badge variant="default" className="bg-success text-success-foreground flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
                             Disponível
                           </Badge>
                         </div>
@@ -297,7 +297,7 @@ const IntegrationsHub = () => {
                         </CardDescription>
                       </CardHeader>
 
-                      <CardContent className="space-y-2">
+                      <CardContent className="space-y-2 mt-auto">
                         <Button className="w-full" onClick={() => setIsAwsModalOpen(true)}>
                           Conectar
                         </Button>
@@ -310,14 +310,14 @@ const IntegrationsHub = () => {
 
                   {/* MikroTik Agent - Available */}
                   {!mikrotik.connected && (
-                    <Card className="transition-all duration-200 border-primary/50 shadow-lg hover:shadow-xl">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
+                    <Card className="h-full flex flex-col transition-all duration-200 border-primary/50 shadow-lg hover:shadow-xl">
+                      <CardHeader className="flex-1">
+                        <div className="flex items-center justify-between">
                           <div className="p-3 rounded-lg bg-primary/10 text-primary">
                             <WifiOff className="h-8 w-8" />
                           </div>
-                          <Badge variant="default" className="bg-success text-success-foreground">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                          <Badge variant="default" className="bg-success text-success-foreground flex items-center gap-1">
+                            <CheckCircle2 className="h-3 w-3" />
                             Disponível
                           </Badge>
                         </div>
@@ -327,7 +327,7 @@ const IntegrationsHub = () => {
                         </CardDescription>
                       </CardHeader>
 
-                      <CardContent className="space-y-2">
+                      <CardContent className="space-y-2 mt-auto">
                         <Button className="w-full" onClick={() => setIsMikroTikModalOpen(true)}>
                           Instalar Agente
                         </Button>
@@ -342,12 +342,12 @@ const IntegrationsHub = () => {
 
               {/* Coming Soon Integrations */}
               <div className="col-span-full">
-                <h2 className="text-xl font-semibold text-foreground mb-4">Em Breve</h2>
+                <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center">Em Breve</h2>
                 <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {comingSoonIntegrations.map((integration) => (
-                    <Card key={integration.id} className="transition-all duration-200 opacity-75 hover:shadow-md">
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
+                    <Card key={integration.id} className="h-full flex flex-col transition-all duration-200 opacity-75 hover:shadow-md">
+                      <CardHeader className="flex-1">
+                        <div className="flex items-center justify-between">
                           <div className="p-3 rounded-lg bg-muted text-muted-foreground">
                             {integration.icon}
                           </div>
@@ -357,7 +357,7 @@ const IntegrationsHub = () => {
                         <CardDescription className="line-clamp-2">{integration.description}</CardDescription>
                       </CardHeader>
 
-                      <CardContent>
+                      <CardContent className="mt-auto">
                         <Button variant="secondary" className="w-full" disabled>
                           Em breve
                         </Button>
