@@ -6,7 +6,6 @@ import ComplianceScoreCard from '@/components/dashboard/ComplianceScoreCard';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import TasksPanel from '@/components/dashboard/TasksPanel';
 import ConnectionStatus from '@/components/dashboard/ConnectionStatus';
-import AnalyticsDashboard from '@/components/dashboard/AnalyticsDashboard';
 import ComplianceChart from '@/components/dashboard/ComplianceChart';
 import NetworkMonitoring from '@/components/dashboard/NetworkMonitoring';
 import AutomatedControls from '@/components/dashboard/AutomatedControls';
@@ -14,13 +13,24 @@ import ComplianceHub from '@/components/dashboard/ComplianceHub';
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Clock, FileText } from 'lucide-react';
+import { TrendingUp, Clock, FileText, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useState } from 'react';
 
 const Index = () => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const handleExportReport = () => {
     window.print();
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+      window.location.reload();
+    }, 500);
   };
 
   const currentDate = format(new Date(), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
@@ -40,85 +50,96 @@ const Index = () => {
         
         <main className="flex-1 ml-72 min-h-[calc(100vh-4rem)] overflow-y-auto">
           <PageContainer>
-            {/* Grid Layout Container */}
+            {/* Page Header */}
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="space-y-1">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight truncate">
+                  Dashboard
+                </h1>
+                <p className="text-muted-foreground line-clamp-2">
+                  Visão geral da postura de segurança e conformidade da organização
+                </p>
+              </div>
+              <div className="flex items-center gap-2 print-hide flex-wrap">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </Button>
+                <CreateTaskModal />
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleExportReport}
+                  className="gap-2"
+                >
+                  <FileText className="h-4 w-4" />
+                  Exportar
+                </Button>
+                <Badge variant="outline" className="bg-success/10 text-success border-success/20 hidden sm:flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  Postura Melhorada
+                </Badge>
+                <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 hidden md:flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Atualizado 2 min atrás
+                </Badge>
+              </div>
+            </div>
+
+            {/* Main Score + Connection Status Row */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              
-              {/* Hero Section - Full Width */}
-              <div className="col-span-full">
-                <div className="flex items-center justify-between flex-wrap gap-4">
-                  <div className="space-y-2">
-                    <h1 className="text-3xl md:text-4xl font-bold text-foreground truncate">
-                      APOC Dashboard
-                    </h1>
-                    <p className="text-base md:text-lg text-muted-foreground line-clamp-2">
-                      Visão geral da postura de segurança e conformidade da organização
-                    </p>
-                  </div>
-                  <div className="flex items-center space-x-3 print-hide flex-wrap gap-2">
-                    <CreateTaskModal />
-                    <Button 
-                      variant="outline" 
-                      onClick={handleExportReport}
-                      className="gap-2"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Exportar Relatório
-                    </Button>
-                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                      <TrendingUp className="h-3 w-3 mr-1" />
-                      Postura Melhorada
-                    </Badge>
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                      <Clock className="h-3 w-3 mr-1" />
-                      Atualizado 2 min atrás
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              {/* Compliance Hub - Full Width */}
-              <div className="col-span-full">
-                <ComplianceHub />
-              </div>
-
-              {/* Metrics Grid - Full Width */}
-              <div className="col-span-full">
-                <MetricsGrid />
-              </div>
-
-              {/* Compliance Score Card - 8 columns on large screens */}
-              <div className="col-span-full lg:col-span-8">
+              <div className="lg:col-span-8">
                 <ComplianceScoreCard />
               </div>
-
-              {/* Connection Status - 4 columns on large screens */}
-              <div className="col-span-full lg:col-span-4">
+              <div className="lg:col-span-4">
                 <ConnectionStatus />
               </div>
+            </div>
 
-              {/* Automated Controls - Full Width */}
-              <div className="col-span-full">
-                <AutomatedControls />
-              </div>
+            {/* Metrics Grid */}
+            <MetricsGrid />
 
-              {/* Network Monitoring - Full Width */}
-              <div className="col-span-full">
-                <NetworkMonitoring />
-              </div>
+            {/* Compliance Hub */}
+            <ComplianceHub />
 
-              {/* Compliance Chart - Full Width */}
-              <div className="col-span-full">
-                <ComplianceChart />
-              </div>
+            {/* Automated Controls */}
+            <AutomatedControls />
 
-              {/* Tasks Panel - 6 columns on large screens */}
-              <div className="col-span-full lg:col-span-6">
-                <TasksPanel />
-              </div>
+            {/* Network Monitoring */}
+            <NetworkMonitoring />
 
-              {/* Analytics Dashboard - 6 columns on large screens */}
-              <div className="col-span-full lg:col-span-6">
-                <AnalyticsDashboard />
+            {/* Compliance Chart */}
+            <ComplianceChart />
+
+            {/* Tasks + Analytics Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <TasksPanel />
+              <div className="space-y-6">
+                {/* Quick Stats Summary */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-surface-elevated border border-card-border rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-success">156</div>
+                    <div className="text-xs text-muted-foreground">Controles Ativos</div>
+                  </div>
+                  <div className="bg-surface-elevated border border-card-border rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-primary">324</div>
+                    <div className="text-xs text-muted-foreground">Evidências</div>
+                  </div>
+                  <div className="bg-surface-elevated border border-card-border rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-warning">7</div>
+                    <div className="text-xs text-muted-foreground">Ações Pendentes</div>
+                  </div>
+                  <div className="bg-surface-elevated border border-card-border rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-destructive">3</div>
+                    <div className="text-xs text-muted-foreground">Riscos Críticos</div>
+                  </div>
+                </div>
               </div>
             </div>
           </PageContainer>

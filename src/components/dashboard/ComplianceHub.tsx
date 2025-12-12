@@ -238,7 +238,7 @@ const ComplianceHub = () => {
   };
 
   return (
-    <Card className="bg-surface-elevated border-card-border">
+    <Card className="h-full bg-surface-elevated border-card-border">
       <CardHeader>
         <div className="space-y-4">
           <div className="flex items-center justify-between">

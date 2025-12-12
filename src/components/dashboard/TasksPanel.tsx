@@ -133,7 +133,7 @@ const TasksPanel = () => {
 
   // Show recent tasks (limit to 5)
   const recentTasks = tasks.slice(0, 5);
-  return <Card className="border-card-border shadow-card">
+  return <Card className="h-full border-card-border shadow-card flex flex-col">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center space-x-2">
@@ -149,7 +149,7 @@ const TasksPanel = () => {
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 flex-1">
         {loading ? <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             <span className="ml-2 text-sm text-muted-foreground">Carregando tarefas...</span>

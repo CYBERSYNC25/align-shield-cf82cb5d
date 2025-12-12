@@ -60,7 +60,7 @@ const ComplianceScoreCard = () => {
   };
 
   return (
-    <Card className="relative overflow-hidden">
+    <Card className="h-full relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
       
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative">
