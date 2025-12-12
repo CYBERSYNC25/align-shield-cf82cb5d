@@ -1,6 +1,7 @@
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import PageContainer from '@/components/layout/PageContainer';
 import ComplianceScoreCard from '@/components/dashboard/ComplianceScoreCard';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import TasksPanel from '@/components/dashboard/TasksPanel';
@@ -34,96 +35,97 @@ const Index = () => {
 
       <Header />
       
-      <div className="flex flex-1">
+      <div className="flex flex-1 pt-16">
         <Sidebar />
         
-        <main className="flex-1 p-6 overflow-auto">
-          {/* Grid Layout Container */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
-            
-            {/* Hero Section - Full Width */}
-            <div className="col-span-full">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="space-y-2">
-                  <h1 className="text-4xl font-bold text-foreground">
-                    APOC Dashboard
-                  </h1>
-                  <p className="text-lg text-muted-foreground">
-                    Visão geral da postura de segurança e conformidade da organização
-                  </p>
-                </div>
-                <div className="flex items-center space-x-3 print-hide">
-                  <CreateTaskModal />
-                  <Button 
-                    variant="outline" 
-                    onClick={handleExportReport}
-                    className="gap-2"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Exportar Relatório
-                  </Button>
-                  <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Postura Melhorada
-                  </Badge>
-                  <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Atualizado 2 min atrás
-                  </Badge>
+        <main className="flex-1 ml-64 min-h-[calc(100vh-4rem)] overflow-y-auto">
+          <PageContainer>
+            {/* Grid Layout Container */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Hero Section - Full Width */}
+              <div className="col-span-full">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl md:text-4xl font-bold text-foreground truncate">
+                      APOC Dashboard
+                    </h1>
+                    <p className="text-base md:text-lg text-muted-foreground line-clamp-2">
+                      Visão geral da postura de segurança e conformidade da organização
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-3 print-hide flex-wrap gap-2">
+                    <CreateTaskModal />
+                    <Button 
+                      variant="outline" 
+                      onClick={handleExportReport}
+                      className="gap-2"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Exportar Relatório
+                    </Button>
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                      <TrendingUp className="h-3 w-3 mr-1" />
+                      Postura Melhorada
+                    </Badge>
+                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Atualizado 2 min atrás
+                    </Badge>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Compliance Hub - Full Width */}
-            <div className="col-span-full">
-              <ComplianceHub />
-            </div>
+              {/* Compliance Hub - Full Width */}
+              <div className="col-span-full">
+                <ComplianceHub />
+              </div>
 
-            {/* Metrics Grid - Full Width */}
-            <div className="col-span-full">
-              <MetricsGrid />
-            </div>
+              {/* Metrics Grid - Full Width */}
+              <div className="col-span-full">
+                <MetricsGrid />
+              </div>
 
-            {/* Compliance Score Card - 8 columns on large screens */}
-            <div className="col-span-full lg:col-span-8">
-              <ComplianceScoreCard />
-            </div>
+              {/* Compliance Score Card - 8 columns on large screens */}
+              <div className="col-span-full lg:col-span-8">
+                <ComplianceScoreCard />
+              </div>
 
-            {/* Connection Status - 4 columns on large screens */}
-            <div className="col-span-full lg:col-span-4">
-              <ConnectionStatus />
-            </div>
+              {/* Connection Status - 4 columns on large screens */}
+              <div className="col-span-full lg:col-span-4">
+                <ConnectionStatus />
+              </div>
 
-            {/* Automated Controls - Full Width */}
-            <div className="col-span-full">
-              <AutomatedControls />
-            </div>
+              {/* Automated Controls - Full Width */}
+              <div className="col-span-full">
+                <AutomatedControls />
+              </div>
 
-            {/* Network Monitoring - Full Width */}
-            <div className="col-span-full">
-              <NetworkMonitoring />
-            </div>
+              {/* Network Monitoring - Full Width */}
+              <div className="col-span-full">
+                <NetworkMonitoring />
+              </div>
 
-            {/* Compliance Chart - Full Width */}
-            <div className="col-span-full">
-              <ComplianceChart />
-            </div>
+              {/* Compliance Chart - Full Width */}
+              <div className="col-span-full">
+                <ComplianceChart />
+              </div>
 
-            {/* Tasks Panel - 6 columns on large screens */}
-            <div className="col-span-full lg:col-span-6">
-              <TasksPanel />
-            </div>
+              {/* Tasks Panel - 6 columns on large screens */}
+              <div className="col-span-full lg:col-span-6">
+                <TasksPanel />
+              </div>
 
-            {/* Analytics Dashboard - 6 columns on large screens */}
-            <div className="col-span-full lg:col-span-6">
-              <AnalyticsDashboard />
+              {/* Analytics Dashboard - 6 columns on large screens */}
+              <div className="col-span-full lg:col-span-6">
+                <AnalyticsDashboard />
+              </div>
             </div>
-
-          </div>
+          </PageContainer>
+          
+          <Footer />
         </main>
       </div>
-
-      <Footer />
 
       {/* Print Footer - Only visible when printing */}
       <div className="print-footer hidden print:block">

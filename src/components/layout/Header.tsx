@@ -38,7 +38,7 @@ const Header = () => {
   };
 
   return (
-    <header className="h-16 bg-surface-elevated/95 backdrop-blur-sm border-b border-card-border/50 flex items-center justify-between px-6 sticky top-0 z-50 shadow-sm">
+    <header className="h-16 bg-surface-elevated/95 backdrop-blur-sm border-b border-card-border/50 flex items-center justify-between px-6 fixed top-0 left-0 right-0 z-50 shadow-sm">
       {/* Logo & Brand - Enterprise Security Identity */}
       <div className="flex items-center space-x-4 flex-1">
         <div className="flex items-center space-x-3 hover-glow rounded-lg p-2 transition-all duration-200">

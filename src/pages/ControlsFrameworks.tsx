@@ -1,6 +1,7 @@
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Footer from '@/components/layout/Footer';
+import PageContainer from '@/components/layout/PageContainer';
 import FrameworksOverview from '@/components/controls/FrameworksOverview';
 import ControlsMatrix from '@/components/controls/ControlsMatrix';
 import GapAssessment from '@/components/controls/GapAssessment';
@@ -16,59 +17,61 @@ const ControlsFrameworks = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
-      <div className="flex flex-1">
+      <div className="flex flex-1 pt-16">
         <Sidebar />
         
-        <main className="flex-1 p-6 overflow-auto">
-          {/* Grid Layout Container */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* Viewer Alert */}
-            {isViewer() && !canEditResources() && (
-              <div className="col-span-full">
-                <Alert variant="default" className="bg-info/10 border-info/20">
-                  <Info className="h-4 w-4 text-info" />
-                  <AlertDescription className="text-info">
-                    Você está visualizando como observador. Apenas administradores podem criar ou editar conteúdos.
-                  </AlertDescription>
-                </Alert>
-              </div>
-            )}
-
-            {/* Page Header - Full Width */}
-            <div className="col-span-full">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold text-foreground">
-                    Controles e Frameworks
-                  </h1>
-                  <p className="text-muted-foreground">
-                    Mapeamento de controles de segurança e avaliação de conformidade por framework
-                  </p>
+        <main className="flex-1 ml-64 min-h-[calc(100vh-4rem)] overflow-y-auto">
+          <PageContainer>
+            {/* Grid Layout Container */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Viewer Alert */}
+              {isViewer() && !canEditResources() && (
+                <div className="col-span-full">
+                  <Alert variant="default" className="bg-info/10 border-info/20">
+                    <Info className="h-4 w-4 text-info" />
+                    <AlertDescription className="text-info">
+                      Você está visualizando como observador. Apenas administradores podem criar ou editar conteúdos.
+                    </AlertDescription>
+                  </Alert>
                 </div>
-                {canEditResources() && <CreateControlModal />}
+              )}
+
+              {/* Page Header - Full Width */}
+              <div className="col-span-full">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-bold text-foreground truncate">
+                      Controles e Frameworks
+                    </h1>
+                    <p className="text-muted-foreground line-clamp-2">
+                      Mapeamento de controles de segurança e avaliação de conformidade por framework
+                    </p>
+                  </div>
+                  {canEditResources() && <CreateControlModal />}
+                </div>
+              </div>
+
+              {/* Frameworks Overview - Full Width */}
+              <div className="col-span-full">
+                <FrameworksOverview />
+              </div>
+
+              {/* Gap Assessment - Full Width */}
+              <div className="col-span-full">
+                <GapAssessment />
+              </div>
+
+              {/* Controls Matrix - Full Width */}
+              <div className="col-span-full">
+                <ControlsMatrix />
               </div>
             </div>
-
-            {/* Frameworks Overview - Full Width */}
-            <div className="col-span-full">
-              <FrameworksOverview />
-            </div>
-
-            {/* Gap Assessment - Full Width */}
-            <div className="col-span-full">
-              <GapAssessment />
-            </div>
-
-            {/* Controls Matrix - Full Width */}
-            <div className="col-span-full">
-              <ControlsMatrix />
-            </div>
-          </div>
+          </PageContainer>
+          
+          <Footer />
         </main>
       </div>
-
-      <Footer />
     </div>
   );
 };

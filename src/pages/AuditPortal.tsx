@@ -1,6 +1,7 @@
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import Footer from '@/components/layout/Footer';
+import PageContainer from '@/components/layout/PageContainer';
 import AuditStats from '@/components/audit/AuditStats';
 import EvidenceLocker from '@/components/audit/EvidenceLocker';
 import FrameworkChecklists from '@/components/audit/FrameworkChecklists';
@@ -33,61 +34,63 @@ const AuditPortal = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
       
-      <div className="flex flex-1">
+      <div className="flex flex-1 pt-16">
         <Sidebar />
         
-        <main className="flex-1 p-6 overflow-auto">
-          {/* Grid Layout Container */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
-            {/* Page Header - Full Width */}
-            <div className="col-span-full">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-bold text-foreground">
-                    Auditorias Contínuas
-                  </h1>
-                  <p className="text-muted-foreground">
-                    Cofre de evidências, checklists de conformidade e portal para auditores externos
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <EvidenceUploadModal />
-                  <CreateAuditModal />
+        <main className="flex-1 ml-64 min-h-[calc(100vh-4rem)] overflow-y-auto">
+          <PageContainer>
+            {/* Grid Layout Container */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              
+              {/* Page Header - Full Width */}
+              <div className="col-span-full">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-bold text-foreground truncate">
+                      Auditorias Contínuas
+                    </h1>
+                    <p className="text-muted-foreground line-clamp-2">
+                      Cofre de evidências, checklists de conformidade e portal para auditores externos
+                    </p>
+                  </div>
+                  <div className="flex gap-3 flex-wrap">
+                    <EvidenceUploadModal />
+                    <CreateAuditModal />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Stats Overview - Full Width */}
-            <div className="col-span-full">
-              <AuditStats />
-            </div>
+              {/* Stats Overview - Full Width */}
+              <div className="col-span-full">
+                <AuditStats />
+              </div>
 
-            {/* Workflow & Report Generation - 2 columns on xl */}
-            <div className="col-span-full xl:col-span-6">
-              <AuditWorkflowVisualizer audit={currentAudit} />
-            </div>
-            <div className="col-span-full xl:col-span-6">
-              <AuditReportGenerator audit={currentAudit} />
-            </div>
+              {/* Workflow & Report Generation - 2 columns on xl */}
+              <div className="col-span-full xl:col-span-6">
+                <AuditWorkflowVisualizer audit={currentAudit} />
+              </div>
+              <div className="col-span-full xl:col-span-6">
+                <AuditReportGenerator audit={currentAudit} />
+              </div>
 
-            {/* Evidence Locker - Full Width */}
-            <div className="col-span-full">
-              <EvidenceLocker />
-            </div>
+              {/* Evidence Locker - Full Width */}
+              <div className="col-span-full">
+                <EvidenceLocker />
+              </div>
 
-            {/* Framework Checklists & Auditor Access - 2 columns on xl */}
-            <div className="col-span-full xl:col-span-6">
-              <FrameworkChecklists />
+              {/* Framework Checklists & Auditor Access - 2 columns on xl */}
+              <div className="col-span-full xl:col-span-6">
+                <FrameworkChecklists />
+              </div>
+              <div className="col-span-full xl:col-span-6">
+                <AuditorAccess />
+              </div>
             </div>
-            <div className="col-span-full xl:col-span-6">
-              <AuditorAccess />
-            </div>
-          </div>
+          </PageContainer>
+          
+          <Footer />
         </main>
       </div>
-
-      <Footer />
     </div>
   );
 };
