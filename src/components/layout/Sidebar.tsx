@@ -252,7 +252,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-64 bg-surface-elevated border-r border-card-border h-screen sticky top-16 overflow-y-auto">
+    <aside className="w-64 bg-surface-elevated border-r border-card-border fixed left-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto z-40 print:hidden flex-shrink-0">
       {/* Application Header - Enterprise Security Branding */}
       <header className="p-4 border-b border-card-border select-none pointer-events-none">
         <div className="flex items-center space-x-3">
