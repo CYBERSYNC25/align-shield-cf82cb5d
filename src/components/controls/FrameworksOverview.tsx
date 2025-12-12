@@ -117,7 +117,7 @@ const FrameworksOverview = () => {
   return (
     <>
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-foreground">
+        <h2 className="text-xl font-semibold text-foreground flex items-center">
           Frameworks de Conformidade
         </h2>
         
@@ -125,11 +125,11 @@ const FrameworksOverview = () => {
           {frameworksData.map((framework) => (
             <Card 
               key={framework.id} 
-              className="bg-surface-elevated border-card-border cursor-pointer transition-all hover:shadow-lg hover:shadow-primary/5 hover:border-primary/30"
+              className="h-full flex flex-col bg-surface-elevated border-card-border cursor-pointer transition-all hover:shadow-lg hover:shadow-primary/5 hover:border-primary/30"
               onClick={() => handleCardClick(framework)}
             >
               <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
+                <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
                       {getStatusIcon(framework.status)}

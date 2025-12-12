@@ -245,7 +245,7 @@ export const KPICard = ({
   return (
     <Card 
       className={cn(
-        "animate-in fade-in slide-in-from-bottom-2 duration-300",
+        "h-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300",
         onClick && "cursor-pointer hover:shadow-lg transition-shadow",
         className
       )}
@@ -273,7 +273,7 @@ export const KPICard = ({
           </div>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1 flex flex-col justify-between">
         <div className="space-y-2">
           {/* Valor principal */}
           <div className="flex items-baseline justify-between">
