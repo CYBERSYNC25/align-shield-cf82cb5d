@@ -39,7 +39,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
   },
   {
     id: 'mikrotik',
-    name: 'MikroTik',
+    name: 'AgentAPOC',
     description: 'Monitoramento de roteadores, firewalls e configurações de rede',
     category: 'cloud',
     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Mikrotik-logo.svg/512px-Mikrotik-logo.svg.png',
