@@ -16,7 +16,7 @@ const ReportsExports = () => {
       <div className="flex flex-1 pt-16">
         <Sidebar />
         
-        <main className="flex-1 ml-64 min-h-[calc(100vh-4rem)] overflow-y-auto">
+        <main className="flex-1 ml-72 min-h-[calc(100vh-4rem)] overflow-y-auto">
           <PageContainer>
             {/* Grid Layout Container */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
