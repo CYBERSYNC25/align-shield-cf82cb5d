@@ -3,13 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
+import Footer from '@/components/layout/Footer';
+import PageContainer from '@/components/layout/PageContainer';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FileText, Upload, Eye, CheckCircle, AlertCircle, FileX, Calendar } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  FileText, 
+  Upload, 
+  Eye, 
+  CheckCircle, 
+  AlertCircle, 
+  FileX, 
+  Calendar,
+  FolderOpen,
+  Clock,
+  Shield
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -93,13 +107,11 @@ const PolicyDocuments = () => {
 
       if (error) throw error;
 
-      // Merge with templates - create missing ones
       const existingNames = new Set(data?.map(d => d.name) || []);
       const documentsToCreate = DOCUMENT_TEMPLATES.filter(
         template => !existingNames.has(template.name)
       );
 
-      // Create missing documents
       if (documentsToCreate.length > 0) {
         const newDocs = documentsToCreate.map(template => ({
           name: template.name,
@@ -116,7 +128,6 @@ const PolicyDocuments = () => {
 
         if (insertError) throw insertError;
 
-        // Refetch after creating
         const { data: refreshedData } = await supabase
           .from('policies')
           .select('*')
@@ -146,7 +157,6 @@ const PolicyDocuments = () => {
     setUploadingId(documentId);
 
     try {
-      // Upload to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${documentId}-${Date.now()}.${fileExt}`;
       const filePath = `${user.id}/${fileName}`;
@@ -157,17 +167,15 @@ const PolicyDocuments = () => {
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('documents')
         .getPublicUrl(filePath);
 
-      // Update policy record
       const { error: updateError } = await supabase
         .from('policies')
         .update({ 
           file_url: publicUrl,
-          status: 'active' // Mark as active when file is uploaded
+          status: 'active'
         })
         .eq('id', documentId);
 
@@ -252,11 +260,26 @@ const PolicyDocuments = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-success/10 text-success border-success/20"><CheckCircle className="h-3 w-3 mr-1" />Em Vigor</Badge>;
+        return (
+          <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Em Vigor
+          </Badge>
+        );
       case 'review':
-        return <Badge className="bg-warning/10 text-warning border-warning/20"><AlertCircle className="h-3 w-3 mr-1" />Revisão Necessária</Badge>;
+        return (
+          <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/30">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            Revisão
+          </Badge>
+        );
       default:
-        return <Badge variant="outline" className="bg-muted/10"><FileX className="h-3 w-3 mr-1" />Não Iniciado</Badge>;
+        return (
+          <Badge variant="outline" className="text-muted-foreground">
+            <FileX className="h-3 w-3 mr-1" />
+            Pendente
+          </Badge>
+        );
     }
   };
 
@@ -268,155 +291,250 @@ const PolicyDocuments = () => {
     }
   };
 
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Segurança':
+        return <Shield className="h-5 w-5 text-primary" />;
+      case 'Continuidade':
+        return <Clock className="h-5 w-5 text-amber-400" />;
+      default:
+        return <FileText className="h-5 w-5 text-muted-foreground" />;
+    }
+  };
+
   const implementationProgress = documents.length > 0 
     ? Math.round((documents.filter(d => d.status === 'active').length / documents.length) * 100)
     : 0;
 
+  const activeCount = documents.filter(d => d.status === 'active').length;
+  const reviewCount = documents.filter(d => d.status === 'review').length;
+  const pendingCount = documents.filter(d => d.status === 'draft').length;
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <div className="flex">
+      
+      <div className="flex flex-1 pt-16">
         <Sidebar />
-        <main className="flex-1 p-6">
-          {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-foreground mb-2">Políticas e Documentos</h1>
-            <p className="text-muted-foreground">
-              Organize e gerencie seus documentos oficiais de segurança e compliance
-            </p>
-          </div>
-
-          {/* Compliance Progress */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Resumo de Conformidade
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Documentação Implementada</span>
-                  <span className="text-2xl font-bold text-primary">{implementationProgress}%</span>
-                </div>
-                <Progress value={implementationProgress} className="h-3" />
-                <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
-                  <span>{documents.filter(d => d.status === 'active').length} de {documents.length} documentos em vigor</span>
-                  {documents.filter(d => d.status === 'review').length > 0 && (
-                    <span className="text-warning">{documents.filter(d => d.status === 'review').length} precisam de revisão</span>
-                  )}
-                </div>
+        
+        <main className="flex-1 ml-72 min-h-[calc(100vh-4rem)] overflow-y-auto">
+          <PageContainer>
+            <div className="space-y-6">
+              {/* Header */}
+              <div>
+                <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <FolderOpen className="h-6 w-6 text-primary" />
+                  Políticas e Documentos
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  Organize e gerencie seus documentos oficiais de segurança e compliance
+                </p>
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Documents Grid */}
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              Carregando documentos...
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {documents.map((doc) => (
-                <Card key={doc.id} className="hover:shadow-lg transition-shadow">
-                  <CardHeader>
-                    <div className="flex items-start justify-between mb-2">
-                      <FileText className="h-8 w-8 text-primary" />
-                      {getStatusBadge(doc.status)}
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="bg-card border-border">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <FileText className="h-5 w-5 text-primary" />
                     </div>
-                    <CardTitle className="text-lg">{doc.name}</CardTitle>
-                    <CardDescription>{doc.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Version */}
-                    <div className="space-y-2">
-                      <Label htmlFor={`version-${doc.id}`} className="text-xs">Versão</Label>
-                      <Input
-                        id={`version-${doc.id}`}
-                        value={doc.version}
-                        onChange={(e) => handleVersionUpdate(doc.id, e.target.value)}
-                        className="h-8"
-                        placeholder="v1.0"
-                      />
-                    </div>
-
-                    {/* Approval Date */}
-                    <div className="space-y-2">
-                      <Label htmlFor={`date-${doc.id}`} className="text-xs">Data de Aprovação</Label>
-                      <Input
-                        id={`date-${doc.id}`}
-                        type="date"
-                        value={doc.effective_date || ''}
-                        onChange={(e) => handleDateUpdate(doc.id, e.target.value)}
-                        className="h-8"
-                      />
-                    </div>
-
-                    {/* File Upload/View */}
-                    <div className="space-y-2">
-                      {doc.file_url ? (
-                        <div className="space-y-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => window.open(doc.file_url!, '_blank')}
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            Visualizar PDF
-                          </Button>
-                          <div className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            Atualizado {format(new Date(doc.updated_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <input
-                            type="file"
-                            accept=".pdf"
-                            id={`upload-${doc.id}`}
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleFileUpload(doc.id, file);
-                            }}
-                          />
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="w-full"
-                            onClick={() => document.getElementById(`upload-${doc.id}`)?.click()}
-                            disabled={uploadingId === doc.id}
-                          >
-                            <Upload className="h-4 w-4 mr-2" />
-                            {uploadingId === doc.id ? 'Enviando...' : 'Upload PDF'}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Status Actions */}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 text-xs"
-                        onClick={() => handleStatusChange(doc.id, 
-                          doc.status === 'active' ? 'review' : 'active'
-                        )}
-                      >
-                        {doc.status === 'active' ? 'Marcar Revisão' : 'Aprovar'}
-                      </Button>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{documents.length}</p>
+                      <p className="text-sm text-muted-foreground">Total de Documentos</p>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+
+                <Card className="bg-card border-border">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-emerald-500/10">
+                      <CheckCircle className="h-5 w-5 text-emerald-400" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{activeCount}</p>
+                      <p className="text-sm text-muted-foreground">Em Vigor</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-amber-500/10">
+                      <AlertCircle className="h-5 w-5 text-amber-400" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{reviewCount}</p>
+                      <p className="text-sm text-muted-foreground">Em Revisão</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-card border-border">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-muted">
+                      <FileX className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
+                      <p className="text-sm text-muted-foreground">Pendentes</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Progress Card */}
+              <Card className="bg-card border-border">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-primary" />
+                    Progresso de Conformidade Documental
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Documentação Implementada</span>
+                      <span className="text-2xl font-bold text-primary">{implementationProgress}%</span>
+                    </div>
+                    <Progress value={implementationProgress} className="h-2" />
+                    <p className="text-xs text-muted-foreground">
+                      {activeCount} de {documents.length} documentos em vigor
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Documents Grid */}
+              {loading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Card key={i} className="h-full">
+                      <CardHeader>
+                        <Skeleton className="h-8 w-8 rounded-lg" />
+                        <Skeleton className="h-5 w-3/4 mt-3" />
+                        <Skeleton className="h-4 w-full mt-2" />
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-8 w-full" />
+                        <Skeleton className="h-9 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {documents.map((doc) => (
+                    <Card key={doc.id} className="h-full flex flex-col bg-card border-border hover:border-primary/30 transition-colors">
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="p-2 rounded-lg bg-muted">
+                            {getCategoryIcon(doc.category)}
+                          </div>
+                          {getStatusBadge(doc.status)}
+                        </div>
+                        <CardTitle className="text-base leading-tight">{doc.name}</CardTitle>
+                        <CardDescription className="text-xs line-clamp-2">
+                          {doc.description}
+                        </CardDescription>
+                        <Badge variant="outline" className="w-fit text-[10px] mt-1">
+                          {doc.category}
+                        </Badge>
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-3 flex-1 flex flex-col">
+                        {/* Version & Date Row */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <Label htmlFor={`version-${doc.id}`} className="text-[10px] text-muted-foreground">
+                              Versão
+                            </Label>
+                            <Input
+                              id={`version-${doc.id}`}
+                              value={doc.version}
+                              onChange={(e) => handleVersionUpdate(doc.id, e.target.value)}
+                              className="h-7 text-xs"
+                              placeholder="v1.0"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label htmlFor={`date-${doc.id}`} className="text-[10px] text-muted-foreground">
+                              Aprovação
+                            </Label>
+                            <Input
+                              id={`date-${doc.id}`}
+                              type="date"
+                              value={doc.effective_date || ''}
+                              onChange={(e) => handleDateUpdate(doc.id, e.target.value)}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        {/* File Upload/View */}
+                        <div className="flex-1 flex flex-col justify-end space-y-2 pt-2 border-t border-border/50">
+                          {doc.file_url ? (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full"
+                                onClick={() => window.open(doc.file_url!, '_blank')}
+                              >
+                                <Eye className="h-3.5 w-3.5 mr-2" />
+                                Visualizar PDF
+                              </Button>
+                              <p className="text-[10px] text-muted-foreground flex items-center gap-1 justify-center">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(doc.updated_at), "dd/MM/yyyy", { locale: ptBR })}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <input
+                                type="file"
+                                accept=".pdf"
+                                id={`upload-${doc.id}`}
+                                className="hidden"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleFileUpload(doc.id, file);
+                                }}
+                              />
+                              <Button
+                                size="sm"
+                                className="w-full"
+                                onClick={() => document.getElementById(`upload-${doc.id}`)?.click()}
+                                disabled={uploadingId === doc.id}
+                              >
+                                <Upload className="h-3.5 w-3.5 mr-2" />
+                                {uploadingId === doc.id ? 'Enviando...' : 'Upload PDF'}
+                              </Button>
+                            </>
+                          )}
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full text-xs"
+                            onClick={() => handleStatusChange(doc.id, 
+                              doc.status === 'active' ? 'review' : 'active'
+                            )}
+                          >
+                            {doc.status === 'active' ? 'Marcar para Revisão' : 'Aprovar Documento'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
+          </PageContainer>
         </main>
       </div>
+
+      <Footer />
     </div>
   );
 };
