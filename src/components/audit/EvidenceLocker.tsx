@@ -49,17 +49,17 @@ const EvidenceLocker = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-foreground">
-          Evidence Locker
-        </h2>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1">
+          <Database className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold text-foreground">Evidence Locker</h2>
+          <Badge variant="outline" className="gap-1 text-xs">
             <Shield className="h-3 w-3" />
             Cofre Seguro
           </Badge>
-          <CreateAuditModal />
+        </div>
+        <div className="flex items-center gap-2">
           <SearchEvidenceModal />
         </div>
       </div>

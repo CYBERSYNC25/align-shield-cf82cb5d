@@ -65,6 +65,16 @@ const AuditPortal = () => {
                 <AuditStats />
               </div>
 
+              {/* Evidence Locker - 8 cols on xl */}
+              <div className="col-span-full xl:col-span-8">
+                <EvidenceLocker />
+              </div>
+              
+              {/* Framework Checklists - 4 cols on xl */}
+              <div className="col-span-full xl:col-span-4">
+                <FrameworkChecklists />
+              </div>
+
               {/* Workflow & Report Generation - 2 columns on xl */}
               <div className="col-span-full xl:col-span-6">
                 <AuditWorkflowVisualizer audit={currentAudit} />
@@ -73,16 +83,8 @@ const AuditPortal = () => {
                 <AuditReportGenerator audit={currentAudit} />
               </div>
 
-              {/* Evidence Locker - Full Width */}
+              {/* Auditor Access - Full Width */}
               <div className="col-span-full">
-                <EvidenceLocker />
-              </div>
-
-              {/* Framework Checklists & Auditor Access - 2 columns on xl */}
-              <div className="col-span-full xl:col-span-6">
-                <FrameworkChecklists />
-              </div>
-              <div className="col-span-full xl:col-span-6">
                 <AuditorAccess />
               </div>
             </div>
