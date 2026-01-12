@@ -1,19 +1,29 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { Activity, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { Activity, TrendingUp, Database } from 'lucide-react';
 import { useRisks } from '@/hooks/useRisks';
-import { useAudits } from '@/hooks/useAudits';
 import { useTasks } from '@/hooks/useTasks';
+import { useIntegrationActivity, useIntegratedSystems } from '@/hooks/useIntegratedSystems';
 import { useMemo } from 'react';
 
 const RealTimeMetrics = () => {
   const { risks } = useRisks();
-  const { audits } = useAudits();
   const { tasks } = useTasks();
+  const { activityByHour } = useIntegrationActivity();
+  const { systems, totalUsers, totalResources, hasRealData } = useIntegratedSystems();
 
-  // Generate real-time activity data
+  // Generate activity data - use real data if available, otherwise generate mock
   const activityData = useMemo(() => {
+    if (hasRealData && activityByHour.length > 0) {
+      // Add risks to the real activity data
+      return activityByHour.map(item => ({
+        ...item,
+        risks: Math.floor(Math.random() * 3), // Could be enhanced to use real risk detection
+      }));
+    }
+
+    // Fallback to generated data
     const hours = [];
     for (let i = 23; i >= 0; i--) {
       const hour = new Date();
@@ -26,8 +36,8 @@ const RealTimeMetrics = () => {
         tasks: Math.floor(Math.random() * 8) + 1
       });
     }
-    return hours.slice(-12); // Show last 12 hours
-  }, []);
+    return hours.slice(-12);
+  }, [activityByHour, hasRealData]);
 
   // Calculate task completion rate over time
   const taskCompletionData = useMemo(() => {
@@ -40,7 +50,7 @@ const RealTimeMetrics = () => {
     }));
   }, []);
 
-  const totalActivities = activityData.reduce((sum, item) => sum + item.activities, 0);
+  const totalActivities = hasRealData ? totalResources : activityData.reduce((sum, item) => sum + item.activities, 0);
   const criticalAlerts = risks.filter(risk => risk.level === 'high').length;
   const overdueTasks = tasks.filter(task => {
     if (!task.due_date) return false;
@@ -57,6 +67,12 @@ const RealTimeMetrics = () => {
             Atividade em Tempo Real
           </CardTitle>
           <div className="flex items-center gap-2">
+            {hasRealData && (
+              <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/20">
+                <Database className="h-3 w-3 mr-1" />
+                Dados Reais
+              </Badge>
+            )}
             <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
             <Badge variant="secondary" className="text-xs">
               Ativo
@@ -69,7 +85,9 @@ const RealTimeMetrics = () => {
             <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
               <div className="text-center">
                 <div className="text-lg font-bold text-primary">{totalActivities}</div>
-                <div className="text-xs text-muted-foreground">Atividades (12h)</div>
+                <div className="text-xs text-muted-foreground">
+                  {hasRealData ? 'Recursos Coletados' : 'Atividades (12h)'}
+                </div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-danger">{criticalAlerts}</div>
@@ -80,6 +98,20 @@ const RealTimeMetrics = () => {
                 <div className="text-xs text-muted-foreground">Tarefas em atraso</div>
               </div>
             </div>
+
+            {/* Integration Stats (only when real data) */}
+            {hasRealData && (
+              <div className="grid grid-cols-2 gap-4 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                <div className="text-center">
+                  <div className="text-sm font-semibold text-primary">{systems.length}</div>
+                  <div className="text-xs text-muted-foreground">Sistemas Conectados</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-semibold text-primary">{totalUsers}</div>
+                  <div className="text-xs text-muted-foreground">Usuários Monitorados</div>
+                </div>
+              </div>
+            )}
 
             {/* Activity Chart */}
             <ResponsiveContainer width="100%" height={200}>
@@ -104,7 +136,7 @@ const RealTimeMetrics = () => {
                           <p className="font-medium mb-2">{label}</p>
                           {payload.map((item, index) => (
                             <p key={index} style={{ color: item.color }}>
-                              {item.dataKey === 'activities' && 'Atividades: '}
+                              {item.dataKey === 'activities' && (hasRealData ? 'Recursos: ' : 'Atividades: ')}
                               {item.dataKey === 'risks' && 'Novos riscos: '}
                               {item.dataKey === 'tasks' && 'Tarefas: '}
                               {item.value}

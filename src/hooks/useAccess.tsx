@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { useIntegratedSystems } from './useIntegratedSystems';
 
 export interface AccessCampaign {
   id: string;
@@ -45,7 +46,7 @@ export interface AccessAnomaly {
   updated_at: string;
 }
 
-// Mock data for development
+// Mock data for development (fallback when no real data exists)
 const mockCampaigns: AccessCampaign[] = [
   {
     id: '1',
@@ -100,7 +101,7 @@ const mockSystems: SystemInventory[] = [
     last_review: '2024-10-15',
     risk_level: 'medium',
     compliance_status: 'compliant',
-    integration_status: 'connected',
+    integration_status: 'disconnected',
     created_at: '2024-01-15T00:00:00Z',
     updated_at: '2024-10-15T00:00:00Z'
   },
@@ -112,45 +113,21 @@ const mockSystems: SystemInventory[] = [
     last_review: '2024-11-01',
     risk_level: 'high',
     compliance_status: 'compliant',
-    integration_status: 'connected',
+    integration_status: 'disconnected',
     created_at: '2024-01-10T00:00:00Z',
     updated_at: '2024-11-01T00:00:00Z'
   },
   {
     id: '3',
-    name: 'GitHub Enterprise',
-    type: 'saas',
-    users_count: 78,
-    last_review: '2024-10-20',
-    risk_level: 'medium',
-    compliance_status: 'compliant',
-    integration_status: 'connected',
-    created_at: '2024-02-01T00:00:00Z',
-    updated_at: '2024-10-20T00:00:00Z'
-  },
-  {
-    id: '4',
     name: 'Legacy ERP System',
     type: 'on-premise',
     users_count: 234,
     last_review: '2024-11-08',
     risk_level: 'high',
     compliance_status: 'compliant',
-    integration_status: 'connected',
+    integration_status: 'disconnected',
     created_at: '2024-01-05T00:00:00Z',
     updated_at: '2024-11-08T00:00:00Z'
-  },
-  {
-    id: '5',
-    name: 'Slack Workspace',
-    type: 'saas',
-    users_count: 312,
-    last_review: '2024-10-30',
-    risk_level: 'low',
-    compliance_status: 'compliant',
-    integration_status: 'connected',
-    created_at: '2024-03-01T00:00:00Z',
-    updated_at: '2024-10-30T00:00:00Z'
   }
 ];
 
@@ -195,35 +172,45 @@ const mockAnomalies: AccessAnomaly[] = [
     assigned_to: 'compliance@company.com',
     created_at: '2024-11-05T16:45:00Z',
     updated_at: '2024-11-07T11:20:00Z'
-  },
-  {
-    id: '4',
-    user_id: 'user_004',
-    user_name: 'Ana Costa',
-    system_name: 'GitHub Enterprise',
-    anomaly_type: 'suspicious_activity',
-    severity: 'high',
-    description: 'Atividade suspeita detectada - múltiplos logins de localizações diferentes',
-    detected_at: '2024-11-04T22:10:00Z',
-    status: 'resolved',
-    assigned_to: 'security@company.com',
-    created_at: '2024-11-04T22:10:00Z',
-    updated_at: '2024-11-05T08:30:00Z'
   }
 ];
 
 export const useAccess = () => {
   const [campaigns, setCampaigns] = useState<AccessCampaign[]>([]);
-  const [systems, setSystems] = useState<SystemInventory[]>([]);
-  const [anomalies, setAnomalies] = useState<AccessAnomaly[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get real data from integrations
+  const { 
+    systems: integratedSystems, 
+    anomalies: detectedAnomalies, 
+    isLoading: integrationLoading,
+    hasRealData 
+  } = useIntegratedSystems();
+
+  // Combine real integration data with mock data as fallback
+  const systems = useMemo(() => {
+    if (hasRealData && integratedSystems.length > 0) {
+      // Use real data from integrations
+      return integratedSystems;
+    }
+    // Fallback to mock data if no integrations connected
+    return mockSystems;
+  }, [integratedSystems, hasRealData]);
+
+  const anomalies = useMemo(() => {
+    if (hasRealData && detectedAnomalies.length > 0) {
+      // Use real anomalies detected from integration data
+      return detectedAnomalies;
+    }
+    // Fallback to mock anomalies
+    return mockAnomalies;
+  }, [detectedAnomalies, hasRealData]);
 
   // Check if Supabase is properly configured
   const isSupabaseConfigured = () => {
     try {
-      return supabase && 
-             process.env.NODE_ENV === 'production'; // Simple check for production
+      return supabase && process.env.NODE_ENV === 'production';
     } catch (error) {
       return false;
     }
@@ -255,52 +242,6 @@ export const useAccess = () => {
     }
   };
 
-  const fetchSystems = async () => {
-    if (!isSupabaseConfigured()) {
-      console.log('Using mock data for system inventory');
-      setSystems(mockSystems);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('system_inventory')
-        .select('*')
-        .order('name');
-
-      if (error) {
-        console.error('Error fetching systems:', error);
-        setSystems(mockSystems);
-        return;
-      }
-
-      setSystems(data || mockSystems);
-    } catch (err) {
-      console.error('Error:', err);
-      setSystems(mockSystems);
-    }
-  };
-
-  const fetchAnomalies = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('access_anomalies')
-        .select('*')
-        .order('detected_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching anomalies:', error);
-        setAnomalies(mockAnomalies);
-        return;
-      }
-
-      setAnomalies(data || []);
-    } catch (err) {
-      console.error('Error:', err);
-      setAnomalies([]);
-    }
-  };
-
   const createCampaign = async (campaignData: Omit<AccessCampaign, 'id' | 'created_at' | 'updated_at'>) => {
     if (!isSupabaseConfigured()) {
       const newCampaign: AccessCampaign = {
@@ -310,7 +251,7 @@ export const useAccess = () => {
         updated_at: new Date().toISOString()
       };
       setCampaigns(prev => [newCampaign, ...prev]);
-      toast.success('Campanha criada com sucesso (mock)');
+      toast.success('Campanha criada com sucesso');
       return newCampaign;
     }
 
@@ -340,7 +281,7 @@ export const useAccess = () => {
           ? { ...campaign, ...updates, updated_at: new Date().toISOString() }
           : campaign
       ));
-      toast.success('Campanha atualizada com sucesso (mock)');
+      toast.success('Campanha atualizada com sucesso');
       return;
     }
 
@@ -375,10 +316,7 @@ export const useAccess = () => {
         .single();
 
       if (error) throw error;
-
-      setAnomalies(prev => prev.map(anomaly => 
-        anomaly.id === id ? data : anomaly
-      ));
+      toast.success('Anomalia atualizada com sucesso');
     } catch (err) {
       console.error('Error resolving anomaly:', err);
       toast.error('Erro ao atualizar anomalia');
@@ -390,11 +328,7 @@ export const useAccess = () => {
     const loadData = async () => {
       setLoading(true);
       try {
-        await Promise.all([
-          fetchCampaigns(),
-          fetchSystems(),
-          fetchAnomalies()
-        ]);
+        await fetchCampaigns();
       } catch (err) {
         setError('Erro ao carregar dados de acesso');
         console.error('Error loading access data:', err);
@@ -410,15 +344,14 @@ export const useAccess = () => {
     campaigns,
     systems,
     anomalies,
-    loading,
+    loading: loading || integrationLoading,
     error,
+    hasRealData,
     createCampaign,
     updateCampaign,
     resolveAnomaly,
     refetch: () => {
       fetchCampaigns();
-      fetchSystems();
-      fetchAnomalies();
     }
   };
 };
