@@ -34,6 +34,7 @@ import { Auth0Connector } from "@/components/integrations/Auth0Connector";
 import { Auth0ResourcesModal } from "@/components/integrations/Auth0ResourcesModal";
 import { ConnectAuth0Modal } from "@/components/integrations/ConnectAuth0Modal";
 import { ConnectOktaModal } from "@/components/integrations/ConnectOktaModal";
+import { ConnectionModal } from "@/components/integrations/ConnectionModal";
 import { Auth0Evidence } from "@/hooks/useAuth0Sync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -57,7 +58,7 @@ const CATEGORY_ICONS: Record<IntegrationCategory, React.ReactNode> = {
 
 export default function IntegrationsHub() {
   const [searchParams] = useSearchParams();
-  const { aws, google, azure, mikrotik, auth0, okta, loading, refetch } = useIntegrationStatus();
+  const { aws, google, azure, mikrotik, auth0, okta, cloudflare, jira, github, gitlab, slack, loading, refetch } = useIntegrationStatus();
 
   // Modal states
   const [showAwsModal, setShowAwsModal] = useState(false);
@@ -72,6 +73,14 @@ export default function IntegrationsHub() {
   const [showConnectOktaModal, setShowConnectOktaModal] = useState(false);
   const [auth0Data, setAuth0Data] = useState<Auth0Evidence | null>(null);
   const [featureRequestModal, setFeatureRequestModal] = useState<IntegrationDefinition | null>(null);
+  
+  // Generic ConnectionModal state
+  const [connectionModalConfig, setConnectionModalConfig] = useState<{
+    open: boolean;
+    provider: string;
+    integrationName: string;
+    integrationLogo: string;
+  } | null>(null);
 
   // Handle Azure OAuth callback
   useEffect(() => {
@@ -102,6 +111,16 @@ export default function IntegrationsHub() {
         return auth0.connected ? 'connected' : 'available';
       case 'okta':
         return okta.connected ? 'connected' : 'available';
+      case 'cloudflare':
+        return cloudflare.connected ? 'connected' : 'available';
+      case 'jira':
+        return jira.connected ? 'connected' : 'available';
+      case 'github':
+        return github.connected ? 'connected' : 'available';
+      case 'gitlab':
+        return gitlab.connected ? 'connected' : 'available';
+      case 'slack':
+        return slack.connected ? 'connected' : 'available';
       default:
         return 'available';
     }
@@ -121,6 +140,16 @@ export default function IntegrationsHub() {
         return auth0.lastSync;
       case 'okta':
         return okta.lastSync;
+      case 'cloudflare':
+        return cloudflare.lastSync;
+      case 'jira':
+        return jira.lastSync;
+      case 'github':
+        return github.lastSync;
+      case 'gitlab':
+        return gitlab.lastSync;
+      case 'slack':
+        return slack.lastSync;
       default:
         return null;
     }
@@ -129,6 +158,7 @@ export default function IntegrationsHub() {
 
   // Handlers for each integration
   const handleConnect = (integration: IntegrationDefinition) => {
+    // Integrations with specific modals
     switch (integration.id) {
       case 'aws':
         setShowAwsModal(true);
@@ -147,6 +177,19 @@ export default function IntegrationsHub() {
         break;
       case 'okta':
         setShowConnectOktaModal(true);
+        break;
+      // Self-service integrations use the generic ConnectionModal
+      case 'cloudflare':
+      case 'jira':
+      case 'github':
+      case 'gitlab':
+      case 'slack':
+        setConnectionModalConfig({
+          open: true,
+          provider: integration.provider,
+          integrationName: integration.name,
+          integrationLogo: integration.logo,
+        });
         break;
       default:
         setFeatureRequestModal(integration);
@@ -168,10 +211,23 @@ export default function IntegrationsHub() {
         setShowMikroTikModal(true);
         break;
       case 'auth0':
-        setShowAuth0ManageModal(true);
+        setShowConnectAuth0Modal(true);
         break;
       case 'okta':
         setShowConnectOktaModal(true);
+        break;
+      // Self-service integrations use the generic ConnectionModal for management too
+      case 'cloudflare':
+      case 'jira':
+      case 'github':
+      case 'gitlab':
+      case 'slack':
+        setConnectionModalConfig({
+          open: true,
+          provider: integration.provider,
+          integrationName: integration.name,
+          integrationLogo: integration.logo,
+        });
         break;
     }
   };
@@ -434,6 +490,20 @@ export default function IntegrationsHub() {
         onOpenChange={(open) => !open && setFeatureRequestModal(null)}
         integration={featureRequestModal}
       />
+
+      {/* Generic Connection Modal for Self-Service Integrations */}
+      {connectionModalConfig && (
+        <ConnectionModal
+          open={connectionModalConfig.open}
+          onOpenChange={(open) => {
+            if (!open) setConnectionModalConfig(null);
+          }}
+          provider={connectionModalConfig.provider}
+          integrationName={connectionModalConfig.integrationName}
+          integrationLogo={connectionModalConfig.integrationLogo}
+          onSuccess={refetch}
+        />
+      )}
     </div>
   );
 }

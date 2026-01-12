@@ -15,6 +15,11 @@ interface IntegrationStatusResult {
   mikrotik: IntegrationStatus & { deviceCount?: number };
   auth0: IntegrationStatus & { domain?: string; usersCount?: number; appsCount?: number };
   okta: IntegrationStatus & { domain?: string; usersCount?: number; groupsCount?: number; appsCount?: number };
+  cloudflare: IntegrationStatus;
+  jira: IntegrationStatus;
+  github: IntegrationStatus;
+  gitlab: IntegrationStatus;
+  slack: IntegrationStatus;
   loading: boolean;
   refetch: () => void;
 }
@@ -43,6 +48,26 @@ export function useIntegrationStatus(): IntegrationStatusResult {
     lastSync: null,
   });
   const [okta, setOkta] = useState<IntegrationStatus & { domain?: string; usersCount?: number; groupsCount?: number; appsCount?: number }>({
+    connected: false,
+    lastSync: null,
+  });
+  const [cloudflare, setCloudflare] = useState<IntegrationStatus>({
+    connected: false,
+    lastSync: null,
+  });
+  const [jira, setJira] = useState<IntegrationStatus>({
+    connected: false,
+    lastSync: null,
+  });
+  const [github, setGithub] = useState<IntegrationStatus>({
+    connected: false,
+    lastSync: null,
+  });
+  const [gitlab, setGitlab] = useState<IntegrationStatus>({
+    connected: false,
+    lastSync: null,
+  });
+  const [slack, setSlack] = useState<IntegrationStatus>({
     connected: false,
     lastSync: null,
   });
@@ -160,6 +185,38 @@ export function useIntegrationStatus(): IntegrationStatusResult {
         setOkta({ connected: false, lastSync: null });
       }
 
+      // Fetch self-service integrations from integration_status table
+      const selfServiceProviders = ['cloudflare', 'jira', 'github', 'gitlab', 'slack'];
+      
+      for (const provider of selfServiceProviders) {
+        const { data: providerStatus } = await supabase
+          .from('integration_status')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('integration_name', provider)
+          .maybeSingle();
+
+        const setter = {
+          cloudflare: setCloudflare,
+          jira: setJira,
+          github: setGithub,
+          gitlab: setGitlab,
+          slack: setSlack,
+        }[provider];
+
+        if (setter) {
+          if (providerStatus && providerStatus.status === 'healthy') {
+            setter({
+              connected: true,
+              lastSync: providerStatus.last_sync_at ? new Date(providerStatus.last_sync_at) : null,
+              metadata: providerStatus.metadata as Record<string, any> | undefined,
+            });
+          } else {
+            setter({ connected: false, lastSync: null });
+          }
+        }
+      }
+
       // Fetch MikroTik status - check device_logs from last 24 hours
       const twentyFourHoursAgo = new Date();
       twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
@@ -206,6 +263,11 @@ export function useIntegrationStatus(): IntegrationStatusResult {
     mikrotik,
     auth0,
     okta,
+    cloudflare,
+    jira,
+    github,
+    gitlab,
+    slack,
     loading,
     refetch: fetchStatus,
   };
