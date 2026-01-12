@@ -170,7 +170,7 @@ export const getIntegrationById = (id: string): IntegrationDefinition | undefine
 };
 
 // IDs das integrações que já estão funcionais
-export const FUNCTIONAL_INTEGRATIONS = ['aws', 'azure-ad', 'google-workspace', 'mikrotik', 'auth0'];
+export const FUNCTIONAL_INTEGRATIONS = ['aws', 'azure-ad', 'google-workspace', 'mikrotik', 'auth0', 'okta'];
 
 export const isIntegrationFunctional = (id: string): boolean => {
   return FUNCTIONAL_INTEGRATIONS.includes(id);

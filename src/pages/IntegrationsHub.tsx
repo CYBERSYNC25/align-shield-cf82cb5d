@@ -33,6 +33,7 @@ import { GoogleWorkspaceResourcesModal } from "@/components/integrations/GoogleW
 import { Auth0Connector } from "@/components/integrations/Auth0Connector";
 import { Auth0ResourcesModal } from "@/components/integrations/Auth0ResourcesModal";
 import { ConnectAuth0Modal } from "@/components/integrations/ConnectAuth0Modal";
+import { ConnectOktaModal } from "@/components/integrations/ConnectOktaModal";
 import { Auth0Evidence } from "@/hooks/useAuth0Sync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -56,7 +57,7 @@ const CATEGORY_ICONS: Record<IntegrationCategory, React.ReactNode> = {
 
 export default function IntegrationsHub() {
   const [searchParams] = useSearchParams();
-  const { aws, google, azure, mikrotik, auth0, loading, refetch } = useIntegrationStatus();
+  const { aws, google, azure, mikrotik, auth0, okta, loading, refetch } = useIntegrationStatus();
 
   // Modal states
   const [showAwsModal, setShowAwsModal] = useState(false);
@@ -68,6 +69,7 @@ export default function IntegrationsHub() {
   const [showConnectAuth0Modal, setShowConnectAuth0Modal] = useState(false);
   const [showAuth0ManageModal, setShowAuth0ManageModal] = useState(false);
   const [showAuth0ResourcesModal, setShowAuth0ResourcesModal] = useState(false);
+  const [showConnectOktaModal, setShowConnectOktaModal] = useState(false);
   const [auth0Data, setAuth0Data] = useState<Auth0Evidence | null>(null);
   const [featureRequestModal, setFeatureRequestModal] = useState<IntegrationDefinition | null>(null);
 
@@ -98,6 +100,8 @@ export default function IntegrationsHub() {
         return mikrotik.connected ? 'connected' : 'available';
       case 'auth0':
         return auth0.connected ? 'connected' : 'available';
+      case 'okta':
+        return okta.connected ? 'connected' : 'available';
       default:
         return 'available';
     }
@@ -115,6 +119,8 @@ export default function IntegrationsHub() {
         return mikrotik.lastSync;
       case 'auth0':
         return auth0.lastSync;
+      case 'okta':
+        return okta.lastSync;
       default:
         return null;
     }
@@ -139,6 +145,9 @@ export default function IntegrationsHub() {
       case 'auth0':
         setShowConnectAuth0Modal(true);
         break;
+      case 'okta':
+        setShowConnectOktaModal(true);
+        break;
       default:
         setFeatureRequestModal(integration);
     }
@@ -160,6 +169,9 @@ export default function IntegrationsHub() {
         break;
       case 'auth0':
         setShowAuth0ManageModal(true);
+        break;
+      case 'okta':
+        setShowConnectOktaModal(true);
         break;
     }
   };
@@ -409,6 +421,12 @@ export default function IntegrationsHub() {
         open={showAuth0ResourcesModal}
         onOpenChange={setShowAuth0ResourcesModal}
         data={auth0Data}
+      />
+
+      <ConnectOktaModal
+        open={showConnectOktaModal}
+        onOpenChange={setShowConnectOktaModal}
+        onConnected={refetch}
       />
 
       <FeatureRequestModal

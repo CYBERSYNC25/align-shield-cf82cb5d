@@ -14,6 +14,7 @@ interface IntegrationStatusResult {
   azure: IntegrationStatus & { expiresAt?: Date };
   mikrotik: IntegrationStatus & { deviceCount?: number };
   auth0: IntegrationStatus & { domain?: string; usersCount?: number; appsCount?: number };
+  okta: IntegrationStatus & { domain?: string; usersCount?: number; groupsCount?: number; appsCount?: number };
   loading: boolean;
   refetch: () => void;
 }
@@ -38,6 +39,10 @@ export function useIntegrationStatus(): IntegrationStatusResult {
     lastSync: null,
   });
   const [auth0, setAuth0] = useState<IntegrationStatus & { domain?: string; usersCount?: number; appsCount?: number }>({
+    connected: false,
+    lastSync: null,
+  });
+  const [okta, setOkta] = useState<IntegrationStatus & { domain?: string; usersCount?: number; groupsCount?: number; appsCount?: number }>({
     connected: false,
     lastSync: null,
   });
@@ -132,6 +137,29 @@ export function useIntegrationStatus(): IntegrationStatusResult {
         setAuth0({ connected: false, lastSync: null });
       }
 
+      // Fetch Okta status from integration_status table
+      const { data: oktaStatus } = await supabase
+        .from('integration_status')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('integration_name', 'okta')
+        .maybeSingle();
+
+      if (oktaStatus && oktaStatus.status === 'healthy') {
+        const metadata = oktaStatus.metadata as Record<string, any> | null;
+        setOkta({
+          connected: true,
+          lastSync: oktaStatus.last_sync_at ? new Date(oktaStatus.last_sync_at) : null,
+          domain: metadata?.domain,
+          usersCount: metadata?.users_count,
+          groupsCount: metadata?.groups_count,
+          appsCount: metadata?.apps_count,
+          metadata,
+        });
+      } else {
+        setOkta({ connected: false, lastSync: null });
+      }
+
       // Fetch MikroTik status - check device_logs from last 24 hours
       const twentyFourHoursAgo = new Date();
       twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
@@ -177,6 +205,7 @@ export function useIntegrationStatus(): IntegrationStatusResult {
     azure,
     mikrotik,
     auth0,
+    okta,
     loading,
     refetch: fetchStatus,
   };
