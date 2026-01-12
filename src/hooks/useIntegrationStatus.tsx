@@ -20,6 +20,9 @@ interface IntegrationStatusResult {
   github: IntegrationStatus;
   gitlab: IntegrationStatus;
   slack: IntegrationStatus;
+  bamboohr: IntegrationStatus;
+  crowdstrike: IntegrationStatus;
+  intune: IntegrationStatus;
   loading: boolean;
   refetch: () => void;
 }
@@ -68,6 +71,18 @@ export function useIntegrationStatus(): IntegrationStatusResult {
     lastSync: null,
   });
   const [slack, setSlack] = useState<IntegrationStatus>({
+    connected: false,
+    lastSync: null,
+  });
+  const [bamboohr, setBamboohr] = useState<IntegrationStatus>({
+    connected: false,
+    lastSync: null,
+  });
+  const [crowdstrike, setCrowdstrike] = useState<IntegrationStatus>({
+    connected: false,
+    lastSync: null,
+  });
+  const [intune, setIntune] = useState<IntegrationStatus>({
     connected: false,
     lastSync: null,
   });
@@ -186,7 +201,7 @@ export function useIntegrationStatus(): IntegrationStatusResult {
       }
 
       // Fetch self-service integrations from integration_status table
-      const selfServiceProviders = ['cloudflare', 'jira', 'github', 'gitlab', 'slack'];
+      const selfServiceProviders = ['cloudflare', 'jira', 'github', 'gitlab', 'slack', 'bamboohr', 'crowdstrike', 'intune'];
       
       for (const provider of selfServiceProviders) {
         const { data: providerStatus } = await supabase
@@ -202,6 +217,9 @@ export function useIntegrationStatus(): IntegrationStatusResult {
           github: setGithub,
           gitlab: setGitlab,
           slack: setSlack,
+          bamboohr: setBamboohr,
+          crowdstrike: setCrowdstrike,
+          intune: setIntune,
         }[provider];
 
         if (setter) {
@@ -268,6 +286,9 @@ export function useIntegrationStatus(): IntegrationStatusResult {
     github,
     gitlab,
     slack,
+    bamboohr,
+    crowdstrike,
+    intune,
     loading,
     refetch: fetchStatus,
   };
