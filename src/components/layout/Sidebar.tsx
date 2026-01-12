@@ -253,23 +253,6 @@ const Sidebar = () => {
 
   return (
     <aside className="w-72 bg-surface-elevated border-r border-card-border fixed left-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto z-40 print:hidden flex-shrink-0">
-      {/* Application Header - Enterprise Security Branding */}
-      <header className="p-4 border-b border-card-border select-none pointer-events-none">
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 shadow-sm">
-            <ShieldCheck className="h-6 w-6 text-primary drop-shadow-sm" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-wide text-foreground">
-              APOC
-            </h1>
-            <p className="text-[10px] text-muted-foreground leading-tight tracking-tight uppercase">
-              Security & Compliance
-            </p>
-          </div>
-        </div>
-      </header>
-
       {/* Navigation */}
       <div className="p-4 space-y-1">
         {sidebarItems.map(item => renderSidebarItem(item))}
