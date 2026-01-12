@@ -58,7 +58,7 @@ const CATEGORY_ICONS: Record<IntegrationCategory, React.ReactNode> = {
 
 export default function IntegrationsHub() {
   const [searchParams] = useSearchParams();
-  const { aws, google, azure, mikrotik, auth0, okta, cloudflare, jira, github, gitlab, slack, loading, refetch } = useIntegrationStatus();
+  const { aws, google, azure, mikrotik, auth0, okta, cloudflare, jira, github, gitlab, slack, bamboohr, crowdstrike, intune, loading, refetch } = useIntegrationStatus();
 
   // Modal states
   const [showAwsModal, setShowAwsModal] = useState(false);
@@ -121,6 +121,12 @@ export default function IntegrationsHub() {
         return gitlab.connected ? 'connected' : 'available';
       case 'slack':
         return slack.connected ? 'connected' : 'available';
+      case 'bamboohr':
+        return bamboohr.connected ? 'connected' : 'available';
+      case 'crowdstrike':
+        return crowdstrike.connected ? 'connected' : 'available';
+      case 'intune':
+        return intune.connected ? 'connected' : 'available';
       default:
         return 'available';
     }
@@ -150,6 +156,12 @@ export default function IntegrationsHub() {
         return gitlab.lastSync;
       case 'slack':
         return slack.lastSync;
+      case 'bamboohr':
+        return bamboohr.lastSync;
+      case 'crowdstrike':
+        return crowdstrike.lastSync;
+      case 'intune':
+        return intune.lastSync;
       default:
         return null;
     }
@@ -184,6 +196,9 @@ export default function IntegrationsHub() {
       case 'github':
       case 'gitlab':
       case 'slack':
+      case 'bamboohr':
+      case 'crowdstrike':
+      case 'intune':
         setConnectionModalConfig({
           open: true,
           provider: integration.provider,
@@ -222,6 +237,9 @@ export default function IntegrationsHub() {
       case 'github':
       case 'gitlab':
       case 'slack':
+      case 'bamboohr':
+      case 'crowdstrike':
+      case 'intune':
         setConnectionModalConfig({
           open: true,
           provider: integration.provider,

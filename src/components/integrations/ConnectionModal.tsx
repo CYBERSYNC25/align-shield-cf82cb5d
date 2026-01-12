@@ -172,6 +172,103 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     ],
     docsUrl: 'https://api.slack.com/authentication/token-types',
   },
+  bamboohr: {
+    fields: [
+      { 
+        name: 'subdomain', 
+        label: 'Subdomínio', 
+        type: 'text', 
+        placeholder: 'empresa',
+        required: true,
+        helpText: 'Seu subdomínio BambooHR (ex: empresa.bamboohr.com)'
+      },
+      { 
+        name: 'apiKey', 
+        label: 'API Key', 
+        type: 'password', 
+        required: true,
+        placeholder: '••••••••••••••••',
+        helpText: 'Chave de API do BambooHR'
+      },
+    ],
+    instructions: [
+      { step: 1, text: 'Acesse BambooHR → Settings', link: 'https://app.bamboohr.com' },
+      { step: 2, text: 'Vá em API Keys na seção de configurações' },
+      { step: 3, text: 'Clique em "Add New Key"' },
+      { step: 4, text: 'Dê um nome à chave e copie-a' },
+    ],
+    docsUrl: 'https://documentation.bamboohr.com/docs/getting-started',
+  },
+  crowdstrike: {
+    fields: [
+      { 
+        name: 'clientId', 
+        label: 'Client ID', 
+        type: 'text', 
+        required: true,
+        placeholder: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+        helpText: 'ID do cliente OAuth2'
+      },
+      { 
+        name: 'clientSecret', 
+        label: 'Client Secret', 
+        type: 'password', 
+        required: true,
+        placeholder: '••••••••••••••••',
+        helpText: 'Segredo do cliente OAuth2'
+      },
+      { 
+        name: 'baseUrl', 
+        label: 'Base URL (Região)', 
+        type: 'text', 
+        placeholder: 'api.crowdstrike.com',
+        required: true,
+        helpText: 'URL da sua região (api.crowdstrike.com, api.us-2.crowdstrike.com, api.eu-1.crowdstrike.com)'
+      },
+    ],
+    instructions: [
+      { step: 1, text: 'Acesse o Falcon Console', link: 'https://falcon.crowdstrike.com' },
+      { step: 2, text: 'Vá em Support → API Clients and Keys' },
+      { step: 3, text: 'Crie um novo API Client com escopos de leitura' },
+      { step: 4, text: 'Copie Client ID e Client Secret' },
+    ],
+    docsUrl: 'https://falcon.crowdstrike.com/documentation/46/crowdstrike-oauth2-based-apis',
+  },
+  intune: {
+    fields: [
+      { 
+        name: 'tenantId', 
+        label: 'Tenant ID', 
+        type: 'text', 
+        required: true,
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        helpText: 'ID do tenant do Azure AD'
+      },
+      { 
+        name: 'clientId', 
+        label: 'Client ID (App ID)', 
+        type: 'text', 
+        required: true,
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        helpText: 'ID do aplicativo registrado no Azure AD'
+      },
+      { 
+        name: 'clientSecret', 
+        label: 'Client Secret', 
+        type: 'password', 
+        required: true,
+        placeholder: '••••••••••••••••',
+        helpText: 'Segredo do cliente do aplicativo'
+      },
+    ],
+    instructions: [
+      { step: 1, text: 'Acesse Azure Portal → App Registrations', link: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade' },
+      { step: 2, text: 'Crie ou selecione um App com permissões Microsoft Graph' },
+      { step: 3, text: 'Adicione permissão: DeviceManagementManagedDevices.Read.All' },
+      { step: 4, text: 'Crie um Client Secret e copie Tenant ID, Client ID e Secret' },
+    ],
+    docsUrl: 'https://learn.microsoft.com/en-us/mem/intune/developer/intune-graph-apis',
+  },
 };
 
 interface ConnectionModalProps {

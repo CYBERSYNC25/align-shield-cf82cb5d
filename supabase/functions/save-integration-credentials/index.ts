@@ -226,6 +226,147 @@ async function testSlackConnection(credentials: SlackCredentials) {
 }
 
 // =============================================================================
+// New Provider Test Functions
+// =============================================================================
+
+interface BambooHRCredentials {
+  subdomain: string;
+  apiKey: string;
+}
+
+interface CrowdStrikeCredentials {
+  clientId: string;
+  clientSecret: string;
+  baseUrl: string;
+}
+
+interface IntuneCredentials {
+  tenantId: string;
+  clientId: string;
+  clientSecret: string;
+}
+
+async function testBambooHRConnection(credentials: BambooHRCredentials) {
+  console.log('[BambooHR] Testing connection...');
+  
+  const subdomain = credentials.subdomain.replace(/\.bamboohr\.com$/, '').trim();
+  const auth = btoa(`${credentials.apiKey}:x`);
+  
+  const response = await fetch(`https://api.bamboohr.com/api/gateway.php/${subdomain}/v1/employees/directory`, {
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Credenciais inválidas: ${response.status}`);
+  }
+
+  const data = await response.json();
+
+  console.log('[BambooHR] Connection successful, employees found:', data.employees?.length);
+
+  return {
+    success: true,
+    resources: {
+      employees: data.employees?.length || 0,
+    },
+  };
+}
+
+async function testCrowdStrikeConnection(credentials: CrowdStrikeCredentials) {
+  console.log('[CrowdStrike] Testing connection...');
+  
+  const baseUrl = credentials.baseUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  
+  // First, get OAuth2 access token
+  const tokenResponse = await fetch(`https://${baseUrl}/oauth2/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `client_id=${encodeURIComponent(credentials.clientId)}&client_secret=${encodeURIComponent(credentials.clientSecret)}`,
+  });
+
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json().catch(() => ({}));
+    throw new Error(errorData.errors?.[0]?.message || 'Credenciais inválidas');
+  }
+
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.access_token;
+
+  // Test by querying device count
+  const devicesResponse = await fetch(`https://${baseUrl}/devices/queries/devices/v1?limit=1`, {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+  });
+
+  if (!devicesResponse.ok) {
+    throw new Error('Falha ao consultar dispositivos');
+  }
+
+  const devicesData = await devicesResponse.json();
+
+  console.log('[CrowdStrike] Connection successful, total devices:', devicesData.meta?.pagination?.total);
+
+  return {
+    success: true,
+    resources: {
+      hosts: devicesData.meta?.pagination?.total || 0,
+    },
+  };
+}
+
+async function testIntuneConnection(credentials: IntuneCredentials) {
+  console.log('[Intune] Testing connection...');
+  
+  // Get OAuth2 token from Azure AD
+  const tokenResponse = await fetch(`https://login.microsoftonline.com/${credentials.tenantId}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `client_id=${encodeURIComponent(credentials.clientId)}&client_secret=${encodeURIComponent(credentials.clientSecret)}&scope=https://graph.microsoft.com/.default&grant_type=client_credentials`,
+  });
+
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json().catch(() => ({}));
+    throw new Error(errorData.error_description || 'Credenciais inválidas');
+  }
+
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.access_token;
+
+  // Query managed devices count
+  const devicesResponse = await fetch('https://graph.microsoft.com/v1.0/deviceManagement/managedDevices?$top=1&$count=true', {
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'ConsistencyLevel': 'eventual',
+    },
+  });
+
+  if (!devicesResponse.ok) {
+    const errorData = await devicesResponse.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || 'Falha ao consultar dispositivos');
+  }
+
+  const devicesData = await devicesResponse.json();
+
+  console.log('[Intune] Connection successful, devices:', devicesData['@odata.count'] || devicesData.value?.length);
+
+  return {
+    success: true,
+    resources: {
+      devices: devicesData['@odata.count'] || devicesData.value?.length || 0,
+    },
+  };
+}
+
+// =============================================================================
 // Main Handler
 // =============================================================================
 
@@ -284,6 +425,15 @@ Deno.serve(async (req) => {
         break;
       case 'slack':
         testResult = await testSlackConnection(credentials as SlackCredentials);
+        break;
+      case 'bamboohr':
+        testResult = await testBambooHRConnection(credentials as BambooHRCredentials);
+        break;
+      case 'crowdstrike':
+        testResult = await testCrowdStrikeConnection(credentials as CrowdStrikeCredentials);
+        break;
+      case 'intune':
+        testResult = await testIntuneConnection(credentials as IntuneCredentials);
         break;
       default:
         return new Response(
