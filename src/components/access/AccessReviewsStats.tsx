@@ -8,7 +8,8 @@ import {
   CheckCircle,
   Clock,
   TrendingUp,
-  Building
+  Building,
+  ShieldCheck
 } from 'lucide-react';
 import { useAccess } from '@/hooks/useAccess';
 
@@ -26,10 +27,19 @@ const AccessReviewsStats = () => {
   const certificationRate = totalUsers > 0 ? ((certifiedUsers / totalUsers) * 100).toFixed(1) : '0';
   
   const criticalAnomalies = anomalies.filter(a => a.severity === 'critical' && a.status !== 'resolved');
+  const highAnomalies = anomalies.filter(a => a.severity === 'high' && a.status !== 'resolved');
   const mediumAnomalies = anomalies.filter(a => a.severity === 'medium' && a.status !== 'resolved');
+  const totalActiveAnomalies = anomalies.filter(a => a.status !== 'resolved').length;
   
   const connectedSystems = systems.filter(s => s.integration_status === 'connected');
   const totalSystemUsers = systems.reduce((acc, s) => acc + s.users_count, 0);
+
+  // Calculate compliance rate: users without anomalies / total users
+  const usersWithAnomalies = new Set(anomalies.filter(a => a.status !== 'resolved').map(a => a.user_name)).size;
+  const monitoredUsers = totalSystemUsers > 0 ? totalSystemUsers : totalUsers;
+  const complianceRate = monitoredUsers > 0 
+    ? Math.max(0, ((monitoredUsers - usersWithAnomalies) / monitoredUsers) * 100).toFixed(1)
+    : '100';
 
   const stats = [
     {
@@ -43,27 +53,28 @@ const AccessReviewsStats = () => {
       subtitle: `${completedThisMonth.length} concluídas este mês`
     },
     {
-      title: 'Taxa de Certificação',
-      value: `${certificationRate}%`,
-      change: '+4.2%',
-      icon: CheckCircle,
-      color: 'text-success',
-      bgColor: 'bg-success/10',
-      subtitle: `${certifiedUsers}/${totalUsers} acessos certificados`
+      title: '% Conformidade',
+      value: `${complianceRate}%`,
+      status: parseFloat(complianceRate) >= 90 ? 'good' : parseFloat(complianceRate) >= 70 ? 'warning' : 'critical',
+      icon: ShieldCheck,
+      color: parseFloat(complianceRate) >= 90 ? 'text-success' : parseFloat(complianceRate) >= 70 ? 'text-warning' : 'text-destructive',
+      bgColor: parseFloat(complianceRate) >= 90 ? 'bg-success/10' : parseFloat(complianceRate) >= 70 ? 'bg-warning/10' : 'bg-destructive/10',
+      subtitle: `${monitoredUsers - usersWithAnomalies}/${monitoredUsers} usuários em conformidade`,
+      progress: parseFloat(complianceRate)
     },
     {
       title: 'Anomalias Detectadas',
-      value: (criticalAnomalies.length + mediumAnomalies.length).toString(),
-      status: criticalAnomalies.length > 0 ? 'critical' : 'normal',
+      value: totalActiveAnomalies.toString(),
+      status: criticalAnomalies.length > 0 ? 'critical' : highAnomalies.length > 0 ? 'warning' : 'normal',
       icon: AlertTriangle,
       color: 'text-warning',
       bgColor: 'bg-warning/10',
-      subtitle: `${criticalAnomalies.length} críticas, ${mediumAnomalies.length} médias`
+      subtitle: `${criticalAnomalies.length} críticas, ${highAnomalies.length} altas, ${mediumAnomalies.length} médias`
     },
     {
       title: 'Sistemas Integrados',
       value: connectedSystems.length.toString(),
-      change: '+2',
+      change: connectedSystems.length > 0 ? `+${connectedSystems.length}` : undefined,
       icon: Building,
       color: 'text-info',
       bgColor: 'bg-info/10',
