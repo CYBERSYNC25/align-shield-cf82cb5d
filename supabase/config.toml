@@ -68,3 +68,6 @@ verify_jwt = true
 
 [functions.aws-sync-resources]
 verify_jwt = true
+
+[functions.save-integration-credentials]
+verify_jwt = false
