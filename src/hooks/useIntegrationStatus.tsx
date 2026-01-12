@@ -13,6 +13,7 @@ interface IntegrationStatusResult {
   google: IntegrationStatus & { expiresAt?: Date };
   azure: IntegrationStatus & { expiresAt?: Date };
   mikrotik: IntegrationStatus & { deviceCount?: number };
+  auth0: IntegrationStatus & { domain?: string; usersCount?: number; appsCount?: number };
   loading: boolean;
   refetch: () => void;
 }
@@ -33,6 +34,10 @@ export function useIntegrationStatus(): IntegrationStatusResult {
     lastSync: null,
   });
   const [mikrotik, setMikrotik] = useState<IntegrationStatus & { deviceCount?: number }>({
+    connected: false,
+    lastSync: null,
+  });
+  const [auth0, setAuth0] = useState<IntegrationStatus & { domain?: string; usersCount?: number; appsCount?: number }>({
     connected: false,
     lastSync: null,
   });
@@ -105,11 +110,33 @@ export function useIntegrationStatus(): IntegrationStatusResult {
         setAzure({ connected: false, lastSync: null });
       }
 
+      // Fetch Auth0 status from integration_status table
+      const { data: auth0Status } = await supabase
+        .from('integration_status')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('integration_name', 'auth0')
+        .maybeSingle();
+
+      if (auth0Status && auth0Status.status === 'healthy') {
+        const metadata = auth0Status.metadata as Record<string, any> | null;
+        setAuth0({
+          connected: true,
+          lastSync: auth0Status.last_sync_at ? new Date(auth0Status.last_sync_at) : null,
+          domain: metadata?.domain,
+          usersCount: metadata?.users_count,
+          appsCount: metadata?.apps_count,
+          metadata,
+        });
+      } else {
+        setAuth0({ connected: false, lastSync: null });
+      }
+
       // Fetch MikroTik status - check device_logs from last 24 hours
       const twentyFourHoursAgo = new Date();
       twentyFourHoursAgo.setHours(twentyFourHoursAgo.getHours() - 24);
 
-      const { data: mikrotikLogs, count } = await supabase
+      const { data: mikrotikLogs } = await supabase
         .from('device_logs')
         .select('*', { count: 'exact' })
         .gte('created_at', twentyFourHoursAgo.toISOString())
@@ -149,6 +176,7 @@ export function useIntegrationStatus(): IntegrationStatusResult {
     google,
     azure,
     mikrotik,
+    auth0,
     loading,
     refetch: fetchStatus,
   };
