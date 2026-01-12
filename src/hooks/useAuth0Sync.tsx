@@ -1,0 +1,152 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { queryKeys } from '@/lib/query-keys';
+
+export interface Auth0User {
+  id: string;
+  email: string;
+  name: string;
+  picture: string;
+  emailVerified: boolean;
+  blocked: boolean;
+  createdAt: string;
+  lastLogin: string;
+  loginsCount: number;
+  providers: string[];
+}
+
+export interface Auth0Connection {
+  id: string;
+  name: string;
+  strategy: string;
+  enabledClients: number;
+}
+
+export interface Auth0Application {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  isFirstParty: boolean;
+}
+
+export interface Auth0Action {
+  id: string;
+  name: string;
+  triggers: string[];
+  status: string;
+  createdAt: string;
+}
+
+export interface Auth0Evidence {
+  timestamp: string;
+  domain: string;
+  users: {
+    total: number;
+    verified: number;
+    blocked: number;
+    withMfa: number;
+    list: Auth0User[];
+  };
+  connections: {
+    total: number;
+    list: Auth0Connection[];
+  };
+  applications: {
+    total: number;
+    firstParty: number;
+    list: Auth0Application[];
+  };
+  actions: {
+    total: number;
+    deployed: number;
+    list: Auth0Action[];
+  };
+}
+
+export interface Auth0SyncResult {
+  success: boolean;
+  data?: Auth0Evidence;
+  error?: string;
+  message?: string;
+  missing?: string[];
+}
+
+export const useAuth0TestConnection = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<Auth0SyncResult> => {
+      const { data, error } = await supabase.functions.invoke('auth0-integration');
+      
+      if (error) {
+        throw new Error(error.message || 'Erro ao conectar com Auth0');
+      }
+      
+      return data;
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        toast({
+          title: 'Auth0 conectado!',
+          description: `${result.data?.users.total || 0} usuários, ${result.data?.applications.total || 0} aplicações encontradas.`,
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.integrations });
+      } else {
+        toast({
+          title: 'Erro na conexão',
+          description: result.error || 'Não foi possível conectar ao Auth0.',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Falha na conexão',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+};
+
+export const useAuth0Sync = () => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (): Promise<Auth0SyncResult> => {
+      const { data, error } = await supabase.functions.invoke('auth0-integration');
+      
+      if (error) {
+        throw new Error(error.message || 'Erro ao sincronizar Auth0');
+      }
+      
+      return data;
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        toast({
+          title: 'Sincronização concluída!',
+          description: `Dados do Auth0 atualizados com sucesso.`,
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.integrations });
+      } else {
+        toast({
+          title: 'Erro na sincronização',
+          description: result.error || 'Não foi possível sincronizar.',
+          variant: 'destructive',
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Falha na sincronização',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+};

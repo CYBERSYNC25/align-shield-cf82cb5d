@@ -73,6 +73,15 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     provider: 'google',
   },
   {
+    id: 'auth0',
+    name: 'Auth0',
+    description: 'Gestão de identidades, SSO, MFA e conexões de autenticação',
+    category: 'iam',
+    logo: 'https://cdn.auth0.com/website/assets/pages/press/img/auth0-logo-3D7CE7F9A0-logo.svg',
+    isNew: true,
+    provider: 'auth0',
+  },
+  {
     id: 'okta',
     name: 'Okta',
     description: 'SSO, MFA, lifecycle de identidades e gestão de acessos',
@@ -161,7 +170,7 @@ export const getIntegrationById = (id: string): IntegrationDefinition | undefine
 };
 
 // IDs das integrações que já estão funcionais
-export const FUNCTIONAL_INTEGRATIONS = ['aws', 'azure-ad', 'google-workspace', 'mikrotik'];
+export const FUNCTIONAL_INTEGRATIONS = ['aws', 'azure-ad', 'google-workspace', 'mikrotik', 'auth0'];
 
 export const isIntegrationFunctional = (id: string): boolean => {
   return FUNCTIONAL_INTEGRATIONS.includes(id);

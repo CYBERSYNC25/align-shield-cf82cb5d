@@ -30,6 +30,9 @@ import { AwsResourcesModal } from "@/components/integrations/AwsResourcesModal";
 import { GoogleOAuthValidator } from "@/components/integrations/GoogleOAuthValidator";
 import { AzureConnectionStatus } from "@/components/integrations/AzureConnectionStatus";
 import { GoogleWorkspaceResourcesModal } from "@/components/integrations/GoogleWorkspaceResourcesModal";
+import { Auth0Connector } from "@/components/integrations/Auth0Connector";
+import { Auth0ResourcesModal } from "@/components/integrations/Auth0ResourcesModal";
+import { Auth0Evidence } from "@/hooks/useAuth0Sync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 // Catalog
@@ -61,6 +64,9 @@ export default function IntegrationsHub() {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showGoogleResourcesModal, setShowGoogleResourcesModal] = useState(false);
   const [showAzureModal, setShowAzureModal] = useState(false);
+  const [showAuth0Modal, setShowAuth0Modal] = useState(false);
+  const [showAuth0ResourcesModal, setShowAuth0ResourcesModal] = useState(false);
+  const [auth0Data, setAuth0Data] = useState<Auth0Evidence | null>(null);
   const [featureRequestModal, setFeatureRequestModal] = useState<IntegrationDefinition | null>(null);
 
   // Handle Azure OAuth callback
@@ -123,6 +129,9 @@ export default function IntegrationsHub() {
       case 'mikrotik':
         setShowMikroTikModal(true);
         break;
+      case 'auth0':
+        setShowAuth0Modal(true);
+        break;
       default:
         setFeatureRequestModal(integration);
     }
@@ -142,6 +151,9 @@ export default function IntegrationsHub() {
       case 'mikrotik':
         setShowMikroTikModal(true);
         break;
+      case 'auth0':
+        setShowAuth0Modal(true);
+        break;
     }
   };
 
@@ -153,7 +165,17 @@ export default function IntegrationsHub() {
       case 'google-workspace':
         setShowGoogleResourcesModal(true);
         break;
+      case 'auth0':
+        if (auth0Data) {
+          setShowAuth0ResourcesModal(true);
+        }
+        break;
     }
+  };
+
+  const handleAuth0ViewResources = (data: Auth0Evidence) => {
+    setAuth0Data(data);
+    setShowAuth0ResourcesModal(true);
   };
 
   // Stats
@@ -353,6 +375,21 @@ export default function IntegrationsHub() {
           <AzureConnectionStatus />
         </DialogContent>
       </Dialog>
+
+      <Dialog open={showAuth0Modal} onOpenChange={setShowAuth0Modal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Auth0</DialogTitle>
+          </DialogHeader>
+          <Auth0Connector onViewResources={handleAuth0ViewResources} />
+        </DialogContent>
+      </Dialog>
+
+      <Auth0ResourcesModal
+        open={showAuth0ResourcesModal}
+        onOpenChange={setShowAuth0ResourcesModal}
+        data={auth0Data}
+      />
 
       <FeatureRequestModal
         open={!!featureRequestModal}
