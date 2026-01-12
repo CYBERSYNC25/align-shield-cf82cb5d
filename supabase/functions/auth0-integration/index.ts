@@ -2,6 +2,7 @@
  * Auth0 Integration Edge Function
  * 
  * Coleta evidências de identidade e acesso via Auth0 Management API.
+ * PERSISTE dados no banco de dados Supabase para uso em todo o software.
  * 
  * SECRETS NECESSÁRIAS (configurar no Supabase Dashboard):
  * - AUTH0_DOMAIN (ex: dev-xxxxx.us.auth0.com)
@@ -12,6 +13,7 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,7 +110,6 @@ async function fetchAuth0Resource<T>(
   if (!response.ok) {
     const errorText = await response.text();
     console.warn(`Auth0: Failed to fetch ${endpoint}:`, errorText);
-    // Return empty array for non-critical endpoints
     return [];
   }
 
@@ -140,13 +141,26 @@ async function fetchAuth0Actions(
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     console.log('Auth0 Integration: Starting request');
+
+    // Criar cliente Supabase com service role para persistir dados
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Obter usuário autenticado
+    const authHeader = req.headers.get('authorization');
+    let authUserId: string | null = null;
+
+    if (authHeader) {
+      const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+      authUserId = user?.id || null;
+    }
 
     // Try to get credentials from request body first, then fall back to env secrets
     let body: { domain?: string; clientId?: string; clientSecret?: string } = {};
@@ -199,7 +213,102 @@ serve(async (req) => {
 
     console.log(`Auth0 Integration: Found ${users.length} users, ${connections.length} connections, ${clients.length} clients, ${actions.length} actions`);
 
-    // Compile evidence
+    // Se temos usuário autenticado, persistir dados no banco
+    if (authUserId) {
+      console.log(`Auth0 Integration: Persisting data for user ${authUserId}`);
+
+      // Salvar usuários
+      for (const user of users) {
+        await supabase.from('integration_collected_data').upsert({
+          user_id: authUserId,
+          integration_name: 'auth0',
+          resource_type: 'users',
+          resource_id: user.user_id,
+          resource_data: {
+            email: user.email,
+            name: user.name,
+            picture: user.picture,
+            emailVerified: user.email_verified,
+            blocked: user.blocked,
+            createdAt: user.created_at,
+            lastLogin: user.last_login,
+            loginsCount: user.logins_count,
+            providers: user.identities?.map(i => i.provider) || [],
+          },
+          collected_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+      }
+
+      // Salvar aplicações
+      for (const client of clients) {
+        await supabase.from('integration_collected_data').upsert({
+          user_id: authUserId,
+          integration_name: 'auth0',
+          resource_type: 'applications',
+          resource_id: client.client_id,
+          resource_data: {
+            name: client.name,
+            description: client.description,
+            type: client.app_type,
+            isFirstParty: client.is_first_party,
+          },
+          collected_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+      }
+
+      // Salvar conexões
+      for (const connection of connections) {
+        await supabase.from('integration_collected_data').upsert({
+          user_id: authUserId,
+          integration_name: 'auth0',
+          resource_type: 'connections',
+          resource_id: connection.id,
+          resource_data: {
+            name: connection.name,
+            strategy: connection.strategy,
+            enabledClients: connection.enabled_clients?.length || 0,
+          },
+          collected_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+      }
+
+      // Salvar actions
+      for (const action of actions) {
+        await supabase.from('integration_collected_data').upsert({
+          user_id: authUserId,
+          integration_name: 'auth0',
+          resource_type: 'actions',
+          resource_id: action.id,
+          resource_data: {
+            name: action.name,
+            triggers: action.supported_triggers?.map(t => t.id) || [],
+            status: action.status,
+            createdAt: action.created_at,
+          },
+          collected_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+      }
+
+      // Atualizar status da integração
+      await supabase.from('integration_status').upsert({
+        user_id: authUserId,
+        integration_name: 'auth0',
+        status: 'healthy',
+        health_score: 100,
+        last_sync_at: new Date().toISOString(),
+        metadata: {
+          domain: auth0Domain,
+          users_count: users.length,
+          apps_count: clients.length,
+          connections_count: connections.length,
+          actions_count: actions.length,
+        },
+      }, { onConflict: 'user_id,integration_name' });
+
+      console.log('Auth0 Integration: Data persisted successfully');
+    }
+
+    // Compile evidence for response
     const evidence = {
       timestamp: new Date().toISOString(),
       domain: auth0Domain,
@@ -207,7 +316,7 @@ serve(async (req) => {
         total: users.length,
         verified: users.filter(u => u.email_verified).length,
         blocked: users.filter(u => u.blocked).length,
-        withMfa: 0, // Would require additional API call
+        withMfa: 0,
         list: users.map(u => ({
           id: u.user_id,
           email: u.email,
@@ -259,7 +368,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        data: evidence 
+        data: evidence,
+        persisted: !!authUserId,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

@@ -187,7 +187,7 @@ async function listS3Buckets(credentials: { accessKeyId: string; secretAccessKey
   const headers = await signAwsRequest({
     method: 'GET',
     host,
-    region: 'us-east-1', // S3 ListBuckets always uses us-east-1
+    region: 'us-east-1',
     service: 's3',
     path: '/',
     body: '',
@@ -310,9 +310,9 @@ serve(async (req) => {
     const buckets = s3BucketsXml ? parseS3Buckets(s3BucketsXml) : [];
     const trails = cloudTrailXml ? parseCloudTrails(cloudTrailXml) : [];
 
-    // Try to get MFA status for each user (optional, may fail if permission not granted)
+    // Try to get MFA status for each user
     const usersWithMfa = await Promise.all(
-      users.map(async (user) => {
+      users.map(async (iamUser) => {
         try {
           const mfaXml = await callAwsApi({
             service: 'iam',
@@ -320,24 +320,94 @@ serve(async (req) => {
             version: '2010-05-08',
             region,
             credentials: tempCredentials,
-            extraParams: { UserName: user.userName },
+            extraParams: { UserName: iamUser.userName },
           });
           const hasMfa = mfaXml.includes('<MFADevice>') || mfaXml.includes('<member>');
-          return { ...user, mfaEnabled: hasMfa };
+          return { ...iamUser, mfaEnabled: hasMfa };
         } catch {
-          return { ...user, mfaEnabled: null }; // null means unknown/no permission
+          return { ...iamUser, mfaEnabled: null };
         }
       })
     );
 
-    // Update last sync time
+    // Persistir dados no banco
+    console.log('AWS Sync: Persisting collected data...');
+
+    // Salvar usuários IAM
+    for (const iamUser of usersWithMfa) {
+      await supabase.from('integration_collected_data').upsert({
+        user_id: user.id,
+        integration_name: 'aws',
+        resource_type: 'iam_users',
+        resource_id: iamUser.userId,
+        resource_data: {
+          userName: iamUser.userName,
+          arn: iamUser.arn,
+          createdAt: iamUser.createdAt,
+          mfaEnabled: iamUser.mfaEnabled,
+        },
+        collected_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+    }
+
+    // Salvar buckets S3
+    for (const bucket of buckets) {
+      await supabase.from('integration_collected_data').upsert({
+        user_id: user.id,
+        integration_name: 'aws',
+        resource_type: 's3_buckets',
+        resource_id: bucket.name,
+        resource_data: {
+          name: bucket.name,
+          createdAt: bucket.createdAt,
+        },
+        collected_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+    }
+
+    // Salvar trails CloudTrail
+    for (const trail of trails) {
+      await supabase.from('integration_collected_data').upsert({
+        user_id: user.id,
+        integration_name: 'aws',
+        resource_type: 'cloudtrail_trails',
+        resource_id: trail.name,
+        resource_data: {
+          name: trail.name,
+          isMultiRegion: trail.isMultiRegion,
+          s3BucketName: trail.s3BucketName,
+        },
+        collected_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+    }
+
+    // Atualizar status da integração
+    await supabase.from('integration_status').upsert({
+      user_id: user.id,
+      integration_name: 'aws',
+      status: 'healthy',
+      health_score: 100,
+      last_sync_at: new Date().toISOString(),
+      metadata: {
+        accountId,
+        region,
+        iam_users_count: usersWithMfa.length,
+        s3_buckets_count: buckets.length,
+        cloudtrail_trails_count: trails.length,
+      },
+    }, { onConflict: 'user_id,integration_name' });
+
+    // Update last sync time on integrations table
     await supabase
       .from('integrations')
       .update({ last_sync_at: new Date().toISOString() })
       .eq('id', integration_id);
 
+    console.log('AWS Sync: Data persisted successfully');
+
     const response = {
       success: true,
+      persisted: true,
       data: {
         timestamp: new Date().toISOString(),
         accountId,

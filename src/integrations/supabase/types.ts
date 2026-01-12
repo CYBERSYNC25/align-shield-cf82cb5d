@@ -559,6 +559,39 @@ export type Database = {
         }
         Relationships: []
       }
+      integration_collected_data: {
+        Row: {
+          collected_at: string | null
+          expires_at: string | null
+          id: string
+          integration_name: string
+          resource_data: Json
+          resource_id: string | null
+          resource_type: string
+          user_id: string
+        }
+        Insert: {
+          collected_at?: string | null
+          expires_at?: string | null
+          id?: string
+          integration_name: string
+          resource_data: Json
+          resource_id?: string | null
+          resource_type: string
+          user_id: string
+        }
+        Update: {
+          collected_at?: string | null
+          expires_at?: string | null
+          id?: string
+          integration_name?: string
+          resource_data?: Json
+          resource_id?: string | null
+          resource_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       integration_evidence_mapping: {
         Row: {
           collection_frequency: string | null

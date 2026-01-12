@@ -1,7 +1,8 @@
 /**
  * Azure Integration Edge Function
  * 
- * Esta função demonstra o uso correto de OAuth 2.0 com Azure usando Supabase Secrets.
+ * Esta função usa OAuth 2.0 com Azure usando Supabase Secrets.
+ * PERSISTE dados coletados no banco de dados Supabase.
  * 
  * SECRETS NECESSÁRIAS (configurar no Supabase Dashboard):
  * - AZURE_TENANT_ID
@@ -16,6 +17,7 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,7 +25,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -31,7 +32,21 @@ serve(async (req) => {
   try {
     console.log('Azure Integration: Starting request');
 
-    // ✅ CORRETO: Buscar credenciais dos Supabase Secrets
+    // Criar cliente Supabase
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Obter usuário autenticado
+    const authHeader = req.headers.get('authorization');
+    let authUserId: string | null = null;
+
+    if (authHeader) {
+      const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+      authUserId = user?.id || null;
+    }
+
+    // Buscar credenciais dos Supabase Secrets
     const tenantId = Deno.env.get('AZURE_TENANT_ID');
     const clientId = Deno.env.get('AZURE_CLIENT_ID');
     const clientSecret = Deno.env.get('AZURE_CLIENT_SECRET');
@@ -120,7 +135,60 @@ serve(async (req) => {
     const resourceGroups = await rgResponse.json();
     console.log(`Azure Integration: Found ${resourceGroups.value?.length || 0} resource groups`);
 
-    // Compilar evidências
+    // Persistir dados no banco se temos usuário autenticado
+    if (authUserId) {
+      console.log('Azure Integration: Persisting data...');
+
+      // Salvar recursos
+      for (const resource of (resources.value || [])) {
+        await supabase.from('integration_collected_data').upsert({
+          user_id: authUserId,
+          integration_name: 'azure',
+          resource_type: 'resources',
+          resource_id: resource.id,
+          resource_data: {
+            name: resource.name,
+            type: resource.type,
+            location: resource.location,
+            resourceGroup: resource.id.split('/')[4],
+          },
+          collected_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+      }
+
+      // Salvar resource groups
+      for (const rg of (resourceGroups.value || [])) {
+        await supabase.from('integration_collected_data').upsert({
+          user_id: authUserId,
+          integration_name: 'azure',
+          resource_type: 'resource_groups',
+          resource_id: rg.id,
+          resource_data: {
+            name: rg.name,
+            location: rg.location,
+          },
+          collected_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+      }
+
+      // Atualizar status da integração
+      await supabase.from('integration_status').upsert({
+        user_id: authUserId,
+        integration_name: 'azure',
+        status: 'healthy',
+        health_score: 100,
+        last_sync_at: new Date().toISOString(),
+        metadata: {
+          subscription: subscriptionId,
+          resources_count: resources.value?.length || 0,
+          resource_groups_count: resourceGroups.value?.length || 0,
+        },
+      }, { onConflict: 'user_id,integration_name' });
+
+      console.log('Azure Integration: Data persisted successfully');
+    }
+
+    // Compilar evidências para resposta
     const evidence = {
       timestamp: new Date().toISOString(),
       subscription: subscriptionId,
@@ -152,7 +220,8 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        data: evidence 
+        data: evidence,
+        persisted: !!authUserId,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

@@ -56,7 +56,7 @@ const CATEGORY_ICONS: Record<IntegrationCategory, React.ReactNode> = {
 
 export default function IntegrationsHub() {
   const [searchParams] = useSearchParams();
-  const { aws, google, azure, mikrotik, loading, refetch } = useIntegrationStatus();
+  const { aws, google, azure, mikrotik, auth0, loading, refetch } = useIntegrationStatus();
 
   // Modal states
   const [showAwsModal, setShowAwsModal] = useState(false);
@@ -96,6 +96,8 @@ export default function IntegrationsHub() {
         return azure.connected ? 'connected' : 'available';
       case 'mikrotik':
         return mikrotik.connected ? 'connected' : 'available';
+      case 'auth0':
+        return auth0.connected ? 'connected' : 'available';
       default:
         return 'available';
     }
@@ -111,10 +113,13 @@ export default function IntegrationsHub() {
         return azure.lastSync;
       case 'mikrotik':
         return mikrotik.lastSync;
+      case 'auth0':
+        return auth0.lastSync;
       default:
         return null;
     }
   };
+
 
   // Handlers for each integration
   const handleConnect = (integration: IntegrationDefinition) => {
