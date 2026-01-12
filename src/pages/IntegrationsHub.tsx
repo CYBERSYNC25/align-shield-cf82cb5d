@@ -32,6 +32,7 @@ import { AzureConnectionStatus } from "@/components/integrations/AzureConnection
 import { GoogleWorkspaceResourcesModal } from "@/components/integrations/GoogleWorkspaceResourcesModal";
 import { Auth0Connector } from "@/components/integrations/Auth0Connector";
 import { Auth0ResourcesModal } from "@/components/integrations/Auth0ResourcesModal";
+import { ConnectAuth0Modal } from "@/components/integrations/ConnectAuth0Modal";
 import { Auth0Evidence } from "@/hooks/useAuth0Sync";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -64,7 +65,8 @@ export default function IntegrationsHub() {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showGoogleResourcesModal, setShowGoogleResourcesModal] = useState(false);
   const [showAzureModal, setShowAzureModal] = useState(false);
-  const [showAuth0Modal, setShowAuth0Modal] = useState(false);
+  const [showConnectAuth0Modal, setShowConnectAuth0Modal] = useState(false);
+  const [showAuth0ManageModal, setShowAuth0ManageModal] = useState(false);
   const [showAuth0ResourcesModal, setShowAuth0ResourcesModal] = useState(false);
   const [auth0Data, setAuth0Data] = useState<Auth0Evidence | null>(null);
   const [featureRequestModal, setFeatureRequestModal] = useState<IntegrationDefinition | null>(null);
@@ -130,7 +132,7 @@ export default function IntegrationsHub() {
         setShowMikroTikModal(true);
         break;
       case 'auth0':
-        setShowAuth0Modal(true);
+        setShowConnectAuth0Modal(true);
         break;
       default:
         setFeatureRequestModal(integration);
@@ -152,7 +154,7 @@ export default function IntegrationsHub() {
         setShowMikroTikModal(true);
         break;
       case 'auth0':
-        setShowAuth0Modal(true);
+        setShowAuth0ManageModal(true);
         break;
     }
   };
@@ -171,6 +173,13 @@ export default function IntegrationsHub() {
         }
         break;
     }
+  };
+
+  const handleAuth0Connected = (data: Auth0Evidence) => {
+    setAuth0Data(data);
+    setShowConnectAuth0Modal(false);
+    // Optionally open the resources modal
+    setShowAuth0ResourcesModal(true);
   };
 
   const handleAuth0ViewResources = (data: Auth0Evidence) => {
@@ -376,7 +385,13 @@ export default function IntegrationsHub() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showAuth0Modal} onOpenChange={setShowAuth0Modal}>
+      <ConnectAuth0Modal
+        open={showConnectAuth0Modal}
+        onOpenChange={setShowConnectAuth0Modal}
+        onSuccess={handleAuth0Connected}
+      />
+
+      <Dialog open={showAuth0ManageModal} onOpenChange={setShowAuth0ManageModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Auth0</DialogTitle>
