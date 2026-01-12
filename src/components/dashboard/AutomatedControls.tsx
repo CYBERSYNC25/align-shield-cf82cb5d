@@ -2,8 +2,10 @@ import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle2, XCircle, Shield, Lock, Cpu } from 'lucide-react';
+import { CheckCircle2, XCircle, Shield, Lock, Cpu, Users, Database, Cloud } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIntegratedSystems } from '@/hooks/useIntegratedSystems';
+import { useIntegrationDataStats } from '@/hooks/useIntegrationData';
 
 interface DeviceLog {
   id: string;
@@ -28,6 +30,10 @@ const OFFLINE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 const AutomatedControls = () => {
   const [loading, setLoading] = useState(true);
   const [latestLog, setLatestLog] = useState<DeviceLog | null>(null);
+  
+  // Get integration data stats
+  const { systems, hasRealData, totalUsers } = useIntegratedSystems();
+  const { data: integrationStats } = useIntegrationDataStats();
 
   useEffect(() => {
     fetchLatestLog();
@@ -81,8 +87,10 @@ const AutomatedControls = () => {
     const isRecent = (now - logTime) < OFFLINE_THRESHOLD_MS;
     const avgCpu = latestLog?.cpu_usage || 100;
 
-    // 1. Monitoramento de Borda
-    const edgeMonitoring: ControlCheck = {
+    const checks: ControlCheck[] = [];
+
+    // 1. Edge Monitoring (MikroTik)
+    checks.push({
       id: 'edge-monitoring',
       name: 'Monitoramento de Borda',
       description: 'Agente MikroTik reportando',
@@ -91,30 +99,72 @@ const AutomatedControls = () => {
       details: isRecent 
         ? `CPU: ${avgCpu}% (OK)` 
         : 'Sem dados recentes (5min)',
-    };
+    });
 
-    // 2. Criptografia de Dados (Hardcoded)
-    const encryption: ControlCheck = {
+    // 2. Data Encryption (Always pass - HTTPS)
+    checks.push({
       id: 'encryption',
       name: 'Criptografia de Dados',
       description: 'TLS 1.2+ Ativo',
       status: 'pass',
       icon: Lock,
       details: 'Conexão HTTPS segura',
-    };
+    });
 
-    // 3. Versão do Firmware
-    const firmwareVersion: ControlCheck = {
+    // 3. Firmware Version
+    checks.push({
       id: 'firmware',
       name: 'Versão do Firmware',
       description: 'Firmware atualizado',
       status: latestLog?.version ? 'pass' : 'fail',
       icon: Cpu,
       details: latestLog?.version ? `v${latestLog.version}` : 'Versão não detectada',
-    };
+    });
 
-    return [edgeMonitoring, encryption, firmwareVersion];
-  }, [latestLog]);
+    // 4. Integration Data Collection (new - based on real integration data)
+    if (hasRealData) {
+      checks.push({
+        id: 'integration-data',
+        name: 'Coleta de Dados de Integrações',
+        description: 'Dados coletados automaticamente',
+        status: 'pass',
+        icon: Database,
+        details: `${systems.length} sistemas, ${totalUsers} usuários`,
+      });
+    }
+
+    // 5. Identity Monitoring (based on connected IAM integrations)
+    const iamIntegrations = systems.filter(s => 
+      ['Azure AD', 'Okta', 'Auth0', 'Google Workspace'].includes(s.name)
+    );
+    if (iamIntegrations.length > 0) {
+      checks.push({
+        id: 'identity-monitoring',
+        name: 'Monitoramento de Identidades',
+        description: 'IAM integrado',
+        status: 'pass',
+        icon: Users,
+        details: `${iamIntegrations.length} provedor(es) IAM conectado(s)`,
+      });
+    }
+
+    // 6. Cloud Infrastructure Monitoring
+    const cloudIntegrations = systems.filter(s => 
+      ['AWS Cloud', 'Cloudflare', 'Microsoft Intune'].includes(s.name)
+    );
+    if (cloudIntegrations.length > 0) {
+      checks.push({
+        id: 'cloud-monitoring',
+        name: 'Monitoramento de Nuvem',
+        description: 'Infraestrutura cloud monitorada',
+        status: 'pass',
+        icon: Cloud,
+        details: `${cloudIntegrations.length} plataforma(s) conectada(s)`,
+      });
+    }
+
+    return checks;
+  }, [latestLog, hasRealData, systems, totalUsers]);
 
   const passedCount = controlChecks.filter(c => c.status === 'pass').length;
   const totalCount = controlChecks.length;
