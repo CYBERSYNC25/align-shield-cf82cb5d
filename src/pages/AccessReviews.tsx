@@ -6,8 +6,13 @@ import AccessReviewsStats from '@/components/access/AccessReviewsStats';
 import ActiveCampaigns from '@/components/access/ActiveCampaigns';
 import SystemsInventory from '@/components/access/SystemsInventory';
 import AnomaliesDetection from '@/components/access/AnomaliesDetection';
+import { useAccess } from '@/hooks/useAccess';
+import { Badge } from '@/components/ui/badge';
+import { Database, AlertTriangle } from 'lucide-react';
 
 const AccessReviews = () => {
+  const { hasRealData } = useAccess();
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -23,9 +28,22 @@ const AccessReviews = () => {
               {/* Page Header - Full Width */}
               <div className="col-span-full">
                 <div className="space-y-2">
-                  <h1 className="text-3xl font-bold text-foreground truncate">
-                    Revisões de Acesso
-                  </h1>
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-3xl font-bold text-foreground truncate">
+                      Revisões de Acesso
+                    </h1>
+                    {hasRealData ? (
+                      <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 gap-1">
+                        <Database className="h-3 w-3" />
+                        Dados Reais
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Dados de Demonstração
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-muted-foreground line-clamp-2">
                     Certificação periódica de acessos, detecção de anomalias e gestão de privilégios
                   </p>

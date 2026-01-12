@@ -5,6 +5,7 @@ import { CheckCircle2, Clock, Settings, Zap, ExternalLink } from "lucide-react";
 import { IntegrationDefinition, IntegrationStatus } from "@/lib/integrations-catalog";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { SyncIntegrationButton } from "./SyncIntegrationButton";
 
 interface IntegrationCardProps {
   integration: IntegrationDefinition;
@@ -55,7 +56,8 @@ export function IntegrationCard({
     switch (status) {
       case 'connected':
         return (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <SyncIntegrationButton provider={integration.id} size="sm" />
             {onViewResources && (
               <Button variant="outline" size="sm" onClick={onViewResources}>
                 <ExternalLink className="h-3.5 w-3.5 mr-1" />
