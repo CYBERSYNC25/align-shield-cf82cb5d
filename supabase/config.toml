@@ -71,3 +71,6 @@ verify_jwt = true
 
 [functions.save-integration-credentials]
 verify_jwt = false
+
+[functions.sync-integration-data]
+verify_jwt = false

@@ -56,7 +56,8 @@ interface IntuneCredentials {
 // =============================================================================
 
 async function collectCloudflareData(credentials: CloudflareCredentials, userId: string, supabaseAdmin: any) {
-  console.log('[Cloudflare] Collecting data...');
+  console.log('[Cloudflare] Collecting data for user:', userId);
+  let zonesCollected = 0;
   
   const headers = {
     'X-Auth-Email': credentials.email,
@@ -68,9 +69,11 @@ async function collectCloudflareData(credentials: CloudflareCredentials, userId:
   const zonesResponse = await fetch('https://api.cloudflare.com/client/v4/zones?per_page=50', { headers });
   const zonesData = await zonesResponse.json();
 
+  console.log('[Cloudflare] Zones API response success:', zonesData.success);
+
   if (zonesData.success && zonesData.result) {
     for (const zone of zonesData.result) {
-      await supabaseAdmin.from('integration_collected_data').upsert({
+      const { error } = await supabaseAdmin.from('integration_collected_data').upsert({
         user_id: userId,
         integration_name: 'cloudflare',
         resource_type: 'zones',
@@ -84,11 +87,18 @@ async function collectCloudflareData(credentials: CloudflareCredentials, userId:
         },
         collected_at: new Date().toISOString(),
       }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+      
+      if (error) {
+        console.error('[Cloudflare] UPSERT ERROR for zone:', zone.id, JSON.stringify(error));
+      } else {
+        console.log('[Cloudflare] UPSERT SUCCESS for zone:', zone.name);
+        zonesCollected++;
+      }
     }
   }
 
-  console.log('[Cloudflare] Collected zones:', zonesData.result?.length || 0);
-  return { zones: zonesData.result?.length || 0 };
+  console.log('[Cloudflare] Total zones collected:', zonesCollected);
+  return { zones: zonesCollected };
 }
 
 async function collectJiraData(credentials: JiraCredentials, userId: string, supabaseAdmin: any) {
@@ -144,7 +154,9 @@ async function collectJiraData(credentials: JiraCredentials, userId: string, sup
 }
 
 async function collectGitHubData(credentials: GitHubCredentials, userId: string, supabaseAdmin: any) {
-  console.log('[GitHub] Collecting data...');
+  console.log('[GitHub] Collecting data for user:', userId);
+  let usersCollected = 0;
+  let reposCollected = 0;
   
   const headers = {
     'Authorization': `Bearer ${credentials.personalAccessToken}`,
@@ -156,7 +168,9 @@ async function collectGitHubData(credentials: GitHubCredentials, userId: string,
   const userResponse = await fetch('https://api.github.com/user', { headers });
   const userData = await userResponse.json();
 
-  await supabaseAdmin.from('integration_collected_data').upsert({
+  console.log('[GitHub] User API response:', userData.login);
+
+  const { error: userError } = await supabaseAdmin.from('integration_collected_data').upsert({
     user_id: userId,
     integration_name: 'github',
     resource_type: 'users',
@@ -173,12 +187,21 @@ async function collectGitHubData(credentials: GitHubCredentials, userId: string,
     collected_at: new Date().toISOString(),
   }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
 
+  if (userError) {
+    console.error('[GitHub] UPSERT ERROR for user:', JSON.stringify(userError));
+  } else {
+    console.log('[GitHub] UPSERT SUCCESS for user:', userData.login);
+    usersCollected++;
+  }
+
   // Collect repositories
   const reposResponse = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', { headers });
   const repos = await reposResponse.json();
 
+  console.log('[GitHub] Repos API response count:', repos.length);
+
   for (const repo of repos) {
-    await supabaseAdmin.from('integration_collected_data').upsert({
+    const { error } = await supabaseAdmin.from('integration_collected_data').upsert({
       user_id: userId,
       integration_name: 'github',
       resource_type: 'repositories',
@@ -191,10 +214,16 @@ async function collectGitHubData(credentials: GitHubCredentials, userId: string,
         default_branch: repo.default_branch,
         language: repo.language,
         updated_at: repo.updated_at,
-        has_branch_protection: false, // Would need additional API calls
+        has_branch_protection: false,
       },
       collected_at: new Date().toISOString(),
     }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+    
+    if (error) {
+      console.error('[GitHub] UPSERT ERROR for repo:', repo.name, JSON.stringify(error));
+    } else {
+      reposCollected++;
+    }
   }
 
   // Collect organization members if org repos exist
@@ -226,8 +255,8 @@ async function collectGitHubData(credentials: GitHubCredentials, userId: string,
     }
   }
 
-  console.log('[GitHub] Collected repos:', repos.length);
-  return { user: userData.login, repos: repos.length };
+  console.log('[GitHub] Total collected - users:', usersCollected, 'repos:', reposCollected);
+  return { user: userData.login, repos: reposCollected };
 }
 
 async function collectGitLabData(credentials: GitLabCredentials, userId: string, supabaseAdmin: any) {
@@ -797,7 +826,7 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Save to integrations table
+    // Save to integrations table (use 'connected' status to match sync-integration-data query)
     const { error: saveError } = await supabaseAdmin
       .from('integrations')
       .upsert({
@@ -805,13 +834,13 @@ Deno.serve(async (req) => {
         provider: provider,
         name: name || `${provider} Integration`,
         configuration: encryptedCredentials,
-        status: 'active',
+        status: 'connected',
         last_sync_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,provider', ignoreDuplicates: false });
 
     if (saveError) {
-      console.error('[save-integration-credentials] Save error:', saveError);
+      console.error('[save-integration-credentials] Save error:', JSON.stringify(saveError));
       
       // Fallback: try inserting if upsert fails
       const { error: insertError } = await supabaseAdmin
@@ -821,12 +850,12 @@ Deno.serve(async (req) => {
           provider: provider,
           name: name || `${provider} Integration`,
           configuration: encryptedCredentials,
-          status: 'active',
+          status: 'connected',
           last_sync_at: new Date().toISOString(),
         });
 
       if (insertError) {
-        console.error('[save-integration-credentials] Insert error:', insertError);
+        console.error('[save-integration-credentials] Insert error:', JSON.stringify(insertError));
         return new Response(
           JSON.stringify({ success: false, error: 'Erro ao salvar integração no banco de dados' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
