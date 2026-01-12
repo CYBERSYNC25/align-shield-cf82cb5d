@@ -73,13 +73,21 @@ export interface Auth0SyncResult {
   missing?: string[];
 }
 
+export interface Auth0Credentials {
+  domain: string;
+  clientId: string;
+  clientSecret: string;
+}
+
 export const useAuth0TestConnection = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (): Promise<Auth0SyncResult> => {
-      const { data, error } = await supabase.functions.invoke('auth0-integration');
+    mutationFn: async (credentials?: Auth0Credentials): Promise<Auth0SyncResult> => {
+      const { data, error } = await supabase.functions.invoke('auth0-integration', {
+        body: credentials || {},
+      });
       
       if (error) {
         throw new Error(error.message || 'Erro ao conectar com Auth0');
@@ -94,12 +102,6 @@ export const useAuth0TestConnection = () => {
           description: `${result.data?.users.total || 0} usuários, ${result.data?.applications.total || 0} aplicações encontradas.`,
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.integrations });
-      } else {
-        toast({
-          title: 'Erro na conexão',
-          description: result.error || 'Não foi possível conectar ao Auth0.',
-          variant: 'destructive',
-        });
       }
     },
     onError: (error: Error) => {
@@ -117,8 +119,10 @@ export const useAuth0Sync = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (): Promise<Auth0SyncResult> => {
-      const { data, error } = await supabase.functions.invoke('auth0-integration');
+    mutationFn: async (credentials?: Auth0Credentials): Promise<Auth0SyncResult> => {
+      const { data, error } = await supabase.functions.invoke('auth0-integration', {
+        body: credentials || {},
+      });
       
       if (error) {
         throw new Error(error.message || 'Erro ao sincronizar Auth0');
@@ -133,12 +137,6 @@ export const useAuth0Sync = () => {
           description: `Dados do Auth0 atualizados com sucesso.`,
         });
         queryClient.invalidateQueries({ queryKey: queryKeys.integrations });
-      } else {
-        toast({
-          title: 'Erro na sincronização',
-          description: result.error || 'Não foi possível sincronizar.',
-          variant: 'destructive',
-        });
       }
     },
     onError: (error: Error) => {

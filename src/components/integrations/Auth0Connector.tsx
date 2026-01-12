@@ -27,14 +27,14 @@ export function Auth0Connector({ onViewResources }: Auth0ConnectorProps) {
   const syncData = useAuth0Sync();
 
   const handleTestConnection = async () => {
-    const result = await testConnection.mutateAsync();
+    const result = await testConnection.mutateAsync(undefined);
     if (result.success && result.data) {
       setConnectionData(result.data);
     }
   };
 
   const handleSync = async () => {
-    const result = await syncData.mutateAsync();
+    const result = await syncData.mutateAsync(undefined);
     if (result.success && result.data) {
       setConnectionData(result.data);
     }

@@ -148,28 +148,37 @@ serve(async (req) => {
   try {
     console.log('Auth0 Integration: Starting request');
 
-    // Get credentials from Supabase Secrets
-    const auth0Domain = Deno.env.get('AUTH0_DOMAIN');
-    const auth0ClientId = Deno.env.get('AUTH0_CLIENT_ID');
-    const auth0ClientSecret = Deno.env.get('AUTH0_CLIENT_SECRET');
+    // Try to get credentials from request body first, then fall back to env secrets
+    let body: { domain?: string; clientId?: string; clientSecret?: string } = {};
+    try {
+      body = await req.json();
+    } catch {
+      // No body provided, will use env variables
+    }
+
+    // Priority: body > env
+    const auth0Domain = body.domain || Deno.env.get('AUTH0_DOMAIN');
+    const auth0ClientId = body.clientId || Deno.env.get('AUTH0_CLIENT_ID');
+    const auth0ClientSecret = body.clientSecret || Deno.env.get('AUTH0_CLIENT_SECRET');
 
     // Validate credentials
     if (!auth0Domain || !auth0ClientId || !auth0ClientSecret) {
       const missing = [];
-      if (!auth0Domain) missing.push('AUTH0_DOMAIN');
-      if (!auth0ClientId) missing.push('AUTH0_CLIENT_ID');
-      if (!auth0ClientSecret) missing.push('AUTH0_CLIENT_SECRET');
+      if (!auth0Domain) missing.push('domain');
+      if (!auth0ClientId) missing.push('clientId');
+      if (!auth0ClientSecret) missing.push('clientSecret');
       
-      console.error(`Auth0 Integration: Missing secrets: ${missing.join(', ')}`);
+      console.error(`Auth0 Integration: Missing credentials: ${missing.join(', ')}`);
       
       return new Response(
         JSON.stringify({ 
-          error: 'Auth0 credentials not configured',
+          success: false,
+          error: 'Credenciais Auth0 não fornecidas',
           missing,
-          instructions: 'Go to Supabase Dashboard > Settings > Edge Functions > Secrets'
+          instructions: 'Forneça domain, clientId e clientSecret'
         }),
         { 
-          status: 500, 
+          status: 400, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
         }
       );
