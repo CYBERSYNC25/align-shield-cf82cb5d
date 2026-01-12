@@ -57,6 +57,13 @@ interface Auth0Action {
   created_at: string;
 }
 
+interface Auth0ActionsResponse {
+  actions: Auth0Action[];
+  total: number;
+  per_page: number;
+  page: number;
+}
+
 async function getManagementToken(domain: string, clientId: string, clientSecret: string): Promise<string> {
   console.log('Auth0: Obtaining Management API token...');
   
@@ -108,6 +115,30 @@ async function fetchAuth0Resource<T>(
   return response.json();
 }
 
+async function fetchAuth0Actions(
+  domain: string, 
+  token: string
+): Promise<Auth0Action[]> {
+  const url = `https://${domain}/api/v2/actions/actions`;
+  console.log('Auth0: Fetching actions...');
+  
+  const response = await fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.warn('Auth0: Failed to fetch actions:', errorText);
+    return [];
+  }
+
+  const data: Auth0ActionsResponse = await response.json();
+  return data.actions || [];
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -154,7 +185,7 @@ serve(async (req) => {
       fetchAuth0Resource<Auth0User>(auth0Domain, token, '/users?per_page=100'),
       fetchAuth0Resource<Auth0Connection>(auth0Domain, token, '/connections'),
       fetchAuth0Resource<Auth0Client>(auth0Domain, token, '/clients'),
-      fetchAuth0Resource<Auth0Action>(auth0Domain, token, '/actions/actions'),
+      fetchAuth0Actions(auth0Domain, token),
     ]);
 
     console.log(`Auth0 Integration: Found ${users.length} users, ${connections.length} connections, ${clients.length} clients, ${actions.length} actions`);
