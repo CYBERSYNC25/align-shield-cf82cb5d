@@ -93,18 +93,50 @@ interface ApiRequestPayload {
 
 /**
  * Filter sensitive data from response before logging
+ * Enhanced to catch more PII and sensitive data patterns
  */
 function filterSensitiveData(data: any): any {
   if (!data || typeof data !== 'object') return data;
   
-  const sensitiveKeys = ['password', 'secret', 'token', 'key', 'authorization', 'api_key', 'apiKey'];
+  // Extended list of sensitive field patterns
+  const sensitiveKeys = [
+    // Authentication & secrets
+    'password', 'secret', 'token', 'key', 'authorization', 'api_key', 'apiKey',
+    'access_token', 'refresh_token', 'bearer', 'credential', 'auth', 'private',
+    // Personal identifiable information (PII)
+    'ssn', 'social_security', 'tax_id', 'national_id', 'passport',
+    // Financial data
+    'credit_card', 'card_number', 'cvv', 'expiry', 'bank_account', 'routing_number', 'iban',
+    // Contact info that may be sensitive
+    'phone', 'mobile', 'cell',
+  ];
+
+  // Patterns for value-based redaction
+  const sensitiveValuePatterns = [
+    /^\d{3}-\d{2}-\d{4}$/, // SSN format
+    /^\d{16}$/, // Credit card (16 digits)
+    /^\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}$/, // Credit card with separators
+  ];
+  
   const filtered = Array.isArray(data) ? [...data] : { ...data };
   
   for (const key of Object.keys(filtered)) {
-    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
+    const lowerKey = key.toLowerCase();
+    const value = filtered[key];
+    
+    // Check if key matches sensitive patterns
+    if (sensitiveKeys.some(sk => lowerKey.includes(sk))) {
       filtered[key] = '[REDACTED]';
-    } else if (typeof filtered[key] === 'object') {
-      filtered[key] = filterSensitiveData(filtered[key]);
+    } 
+    // Check if string value matches sensitive patterns
+    else if (typeof value === 'string') {
+      if (sensitiveValuePatterns.some(pattern => pattern.test(value))) {
+        filtered[key] = '[REDACTED]';
+      }
+    }
+    // Recursively filter nested objects
+    else if (typeof value === 'object') {
+      filtered[key] = filterSensitiveData(value);
     }
   }
   
