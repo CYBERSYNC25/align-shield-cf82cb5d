@@ -26,6 +26,7 @@ import Tasks from "./pages/Tasks";
 import ComplianceReadiness from "./pages/ComplianceReadiness";
 import PolicyDocuments from "./pages/PolicyDocuments";
 import Welcome from "./pages/Welcome";
+import Inventory from "./pages/Inventory";
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,11 @@ const App = () => (
           <Route path="/policy-documents" element={
             <ProtectedRoute>
               <PolicyDocuments />
+            </ProtectedRoute>
+          } />
+          <Route path="/inventory" element={
+            <ProtectedRoute>
+              <Inventory />
             </ProtectedRoute>
           } />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

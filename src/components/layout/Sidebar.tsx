@@ -18,7 +18,8 @@ import {
   UserCheck,
   ShieldCheck,
   Target,
-  Activity
+  Activity,
+  Package
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -125,11 +126,17 @@ const sidebarItems: SidebarItem[] = [
         href: '/integrations'
       },
       {
+        id: 'inventory',
+        label: 'Inventário de Ativos',
+        icon: Package,
+        href: '/inventory',
+        badge: 'Novo'
+      },
+      {
         id: 'analytics',
         label: 'Analytics',
         icon: Activity,
-        href: '/analytics',
-        badge: 'Novo'
+        href: '/analytics'
       },
       {
         id: 'reports',
