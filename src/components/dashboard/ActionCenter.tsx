@@ -132,7 +132,7 @@ const ActionCenter = () => {
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             {/* Score Section */}
             <div className="flex items-center gap-6">
-              <div className="relative">
+              <div className="relative pb-3">
                 <div
                   className={`flex items-center justify-center w-24 h-24 rounded-full border-4 ${
                     score >= 80
@@ -147,7 +147,7 @@ const ActionCenter = () => {
                   </span>
                 </div>
                 <div
-                  className={`absolute -bottom-1 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-xs font-medium text-white ${getScoreBgColor(
+                  className={`absolute bottom-0 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-xs font-medium text-white whitespace-nowrap ${getScoreBgColor(
                     score
                   )}`}
                 >
