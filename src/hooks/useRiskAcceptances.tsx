@@ -123,6 +123,25 @@ export function useRiskAcceptances() {
         throw error;
       }
 
+      // Log to system audit logs
+      await supabase.from('system_audit_logs').insert({
+        user_id: user.id,
+        action_type: 'risk_acceptance_created',
+        action_category: 'compliance',
+        resource_type: 'risk_acceptance',
+        resource_id: data.id,
+        description: `Risco aceito: ${input.ruleId} (${input.integrationName})`,
+        metadata: {
+          rule_id: input.ruleId,
+          integration_name: input.integrationName,
+          resource_type: input.resourceType,
+          justification: input.justification,
+          duration: input.duration,
+          expires_at: expiresAt,
+        },
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -145,6 +164,8 @@ export function useRiskAcceptances() {
   // Revoke a risk acceptance
   const revokeAcceptanceMutation = useMutation({
     mutationFn: async (acceptanceId: string) => {
+      if (!user?.id) throw new Error('Usuário não autenticado');
+
       const { error } = await supabase
         .from('risk_acceptances')
         .update({ status: 'revoked', updated_at: new Date().toISOString() })
@@ -154,6 +175,24 @@ export function useRiskAcceptances() {
         console.error('Error revoking risk acceptance:', error);
         throw error;
       }
+
+      // Get the acceptance details for logging
+      const acceptance = acceptances.find(a => a.id === acceptanceId);
+
+      // Log to system audit logs
+      await supabase.from('system_audit_logs').insert({
+        user_id: user.id,
+        action_type: 'risk_acceptance_revoked',
+        action_category: 'compliance',
+        resource_type: 'risk_acceptance',
+        resource_id: acceptanceId,
+        description: `Exceção revogada: ${acceptance?.ruleId || 'unknown'}`,
+        metadata: {
+          rule_id: acceptance?.ruleId,
+          integration_name: acceptance?.integrationName,
+        },
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['risk-acceptances'] });

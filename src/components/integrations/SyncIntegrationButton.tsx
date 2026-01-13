@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SyncIntegrationButtonProps {
   provider: string;
@@ -19,9 +20,24 @@ export function SyncIntegrationButton({
   showLabel = true 
 }: SyncIntegrationButtonProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const syncMutation = useMutation({
     mutationFn: async () => {
+      // Log sync started
+      if (user?.id) {
+        await supabase.from('system_audit_logs').insert({
+          user_id: user.id,
+          action_type: 'integration_sync_started',
+          action_category: 'integration',
+          resource_type: 'integration',
+          resource_id: provider,
+          description: `Sincronização ${provider} iniciada`,
+          metadata: { provider },
+          user_agent: navigator.userAgent,
+        });
+      }
+
       const { data, error } = await supabase.functions.invoke('sync-integration-data', {
         body: { provider }
       });
@@ -29,12 +45,27 @@ export function SyncIntegrationButton({
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       queryClient.invalidateQueries({ queryKey: ['integration-data'] });
       queryClient.invalidateQueries({ queryKey: ['integration-data-stats'] });
       queryClient.invalidateQueries({ queryKey: ['integration-status'] });
       
       const resourceCount = data?.resourcesCollected || 0;
+      
+      // Log sync completed
+      if (user?.id) {
+        await supabase.from('system_audit_logs').insert({
+          user_id: user.id,
+          action_type: 'integration_sync_completed',
+          action_category: 'integration',
+          resource_type: 'integration',
+          resource_id: provider,
+          description: `Sincronização ${provider} concluída: ${resourceCount} recursos`,
+          metadata: { provider, resources_collected: resourceCount },
+          user_agent: navigator.userAgent,
+        });
+      }
+
       toast.success(`Sincronização concluída`, {
         description: `${resourceCount} recursos coletados de ${provider}`
       });
