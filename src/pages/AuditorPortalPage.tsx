@@ -4,6 +4,7 @@ import AuditorAssetInventory from '@/components/auditor/AuditorAssetInventory';
 import AuditorEvidenceRepository from '@/components/auditor/AuditorEvidenceRepository';
 import AuditReportExportButton from '@/components/auditor/AuditReportExportButton';
 import { AuditorVerificationHistory } from '@/components/auditor/AuditorVerificationHistory';
+import { AuditorMTTRCard } from '@/components/auditor/AuditorMTTRCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -77,6 +78,11 @@ const AuditorPortalPage = () => {
 
           {/* Verification History - Proof of automated monitoring */}
           <AuditorVerificationHistory />
+
+          <Separator />
+
+          {/* MTTR Metrics - Proof of response agility */}
+          <AuditorMTTRCard />
 
           <Separator />
           <Card className="bg-surface-elevated border-card-border">

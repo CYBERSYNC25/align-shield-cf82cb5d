@@ -7,7 +7,8 @@ import {
   ShieldAlert,
   CheckCircle2,
   Clock,
-  ChevronRight
+  ChevronRight,
+  Ticket
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
@@ -26,6 +27,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { ComplianceTest } from '@/hooks/useComplianceStatus';
 import { getRemediationGuide } from '@/lib/remediation-guides';
 import { AcceptRiskModal } from './AcceptRiskModal';
+import { SLACountdown } from './SLACountdown';
+import { useComplianceAlerts } from '@/hooks/useComplianceAlerts';
+import { SLA_LABELS, SeverityLevel } from '@/hooks/useSLATracking';
 
 interface IssueDetailsSheetProps {
   test: ComplianceTest | null;
@@ -82,6 +86,7 @@ export function IssueDetailsSheet({ test, open, onOpenChange }: IssueDetailsShee
   const [showAcceptRiskModal, setShowAcceptRiskModal] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { alerts, createTicket, isCreatingTicket } = useComplianceAlerts();
 
   if (!test) return null;
 
@@ -89,6 +94,10 @@ export function IssueDetailsSheet({ test, open, onOpenChange }: IssueDetailsShee
   const SeverityIcon = severityConfig.icon;
   const guide = getRemediationGuide(test.id);
   const integrationLogo = INTEGRATION_LOGOS[test.integration.toLowerCase()] || '🔧';
+
+  // Find corresponding alert for this test
+  const correspondingAlert = alerts.find(a => a.rule_id === test.id && !a.resolved);
+  const hasTicket = !!correspondingAlert?.external_ticket_id;
 
   const handleVerifyFix = async () => {
     setIsVerifying(true);
@@ -133,6 +142,28 @@ export function IssueDetailsSheet({ test, open, onOpenChange }: IssueDetailsShee
     onOpenChange(false);
   };
 
+  const handleCreateTicket = async () => {
+    if (!correspondingAlert) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível encontrar o alerta correspondente.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await createTicket({
+        alertId: correspondingAlert.id,
+        ruleId: test.id,
+        ruleTitle: test.title,
+        externalSystem: 'jira',
+      });
+    } catch (error) {
+      // Error handling is done in the hook
+    }
+  };
+
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
@@ -163,6 +194,39 @@ export function IssueDetailsSheet({ test, open, onOpenChange }: IssueDetailsShee
 
           <ScrollArea className="flex-1 -mx-6 px-6">
             <div className="space-y-6 py-4">
+              {/* SLA Information Section */}
+              {correspondingAlert && (
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Prazo de Correção (SLA)</span>
+                    </div>
+                    <SLACountdown
+                      deadline={correspondingAlert.remediation_deadline}
+                      severity={test.severity as SeverityLevel}
+                      triggeredAt={correspondingAlert.triggered_at}
+                      slaHours={correspondingAlert.sla_hours}
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>
+                      Severidade <strong>{severityConfig.label}</strong>: {SLA_LABELS[test.severity as SeverityLevel] || '30 dias'}
+                    </p>
+                    {correspondingAlert.remediation_deadline && (
+                      <p>
+                        Prazo: {new Date(correspondingAlert.remediation_deadline).toLocaleString('pt-BR')}
+                      </p>
+                    )}
+                    {correspondingAlert.external_ticket_id && (
+                      <p className="flex items-center gap-1 mt-2 text-primary">
+                        <Ticket className="h-3 w-3" />
+                        Ticket: <strong>{correspondingAlert.external_ticket_id}</strong>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
               {/* How to Fix Section */}
               <div className="space-y-3">
                 <h3 className="font-semibold flex items-center gap-2">
@@ -273,6 +337,19 @@ export function IssueDetailsSheet({ test, open, onOpenChange }: IssueDetailsShee
             >
               <AlertTriangle className="h-4 w-4 mr-2" />
               Aceitar Risco / Criar Exceção
+            </Button>
+
+            {/* Create Ticket Button */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleCreateTicket}
+              disabled={isCreatingTicket || hasTicket || !correspondingAlert}
+            >
+              <Ticket className="h-4 w-4 mr-2" />
+              {hasTicket 
+                ? `Ticket Criado: ${correspondingAlert?.external_ticket_id}` 
+                : 'Enviar para Jira/Linear'}
             </Button>
           </div>
         </SheetContent>
