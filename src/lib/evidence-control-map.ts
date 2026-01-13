@@ -89,6 +89,43 @@ export const EVIDENCE_CONTROL_MAP: EvidenceControlRule[] = [
     resourceNameField: 'userPrincipalName',
   },
   {
+    id: 'azure-account-enabled',
+    integrationId: 'azure-ad',
+    resourceType: 'user',
+    controlCodes: ['A.5.15', 'CC6.1'],
+    complianceCheck: (resource) => {
+      return resource.accountEnabled === true;
+    },
+    evidenceLabel: 'Conta Ativa',
+    description: 'Conta de usuário habilitada no Microsoft Entra ID',
+    resourceNameField: 'userPrincipalName',
+  },
+  {
+    id: 'azure-conditional-access',
+    integrationId: 'azure-ad',
+    resourceType: 'conditional_access_policy',
+    controlCodes: ['A.5.1', 'CC6.1', 'CC6.2'],
+    complianceCheck: (resource) => {
+      return resource.state === 'enabled' || resource.state === 'enabledForReportingButNotEnforced';
+    },
+    evidenceLabel: 'Política CA Ativa',
+    description: 'Política de Acesso Condicional habilitada no Azure AD',
+    resourceNameField: 'displayName',
+  },
+  {
+    id: 'azure-guest-user',
+    integrationId: 'azure-ad',
+    resourceType: 'user',
+    controlCodes: ['A.5.15', 'CC6.3'],
+    complianceCheck: (resource) => {
+      // Guests should be tracked - returns true if NOT a guest (compliant)
+      return resource.userType !== 'Guest';
+    },
+    evidenceLabel: 'Usuário Interno',
+    description: 'Usuário membro (não guest) no Microsoft Entra ID',
+    resourceNameField: 'userPrincipalName',
+  },
+  {
     id: 'github-mfa',
     integrationId: 'github',
     resourceType: 'user',
