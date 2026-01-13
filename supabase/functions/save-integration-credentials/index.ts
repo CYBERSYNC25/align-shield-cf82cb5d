@@ -51,6 +51,12 @@ interface IntuneCredentials {
   clientSecret: string;
 }
 
+interface AzureADCredentials {
+  tenantId: string;
+  clientId: string;
+  clientSecret: string;
+}
+
 // =============================================================================
 // Data Collection Functions (collect and persist resources)
 // =============================================================================
@@ -716,6 +722,156 @@ async function testIntuneConnection(credentials: IntuneCredentials) {
   return { success: true, resources: { devices: devicesData['@odata.count'] || devicesData.value?.length || 0 } };
 }
 
+async function testAzureADConnection(credentials: AzureADCredentials) {
+  console.log('[Azure AD] Testing connection...');
+  
+  const tokenResponse = await fetch(`https://login.microsoftonline.com/${credentials.tenantId}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `client_id=${encodeURIComponent(credentials.clientId)}&client_secret=${encodeURIComponent(credentials.clientSecret)}&scope=https://graph.microsoft.com/.default&grant_type=client_credentials`,
+  });
+
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json().catch(() => ({}));
+    throw new Error(errorData.error_description || 'Credenciais inválidas');
+  }
+
+  const tokenData = await tokenResponse.json();
+  
+  // Test /users endpoint
+  const usersResponse = await fetch('https://graph.microsoft.com/v1.0/users?$top=1&$count=true', {
+    headers: { 'Authorization': `Bearer ${tokenData.access_token}`, 'ConsistencyLevel': 'eventual' },
+  });
+
+  if (!usersResponse.ok) {
+    const errorData = await usersResponse.json().catch(() => ({}));
+    throw new Error(errorData.error?.message || 'Falha ao consultar usuários - verifique permissões User.Read.All');
+  }
+
+  const usersData = await usersResponse.json();
+  
+  // Test /groups endpoint
+  const groupsResponse = await fetch('https://graph.microsoft.com/v1.0/groups?$top=1&$count=true', {
+    headers: { 'Authorization': `Bearer ${tokenData.access_token}`, 'ConsistencyLevel': 'eventual' },
+  });
+  const groupsData = groupsResponse.ok ? await groupsResponse.json() : { value: [] };
+
+  console.log('[Azure AD] Connection successful, users:', usersData['@odata.count'] || usersData.value?.length, 'groups:', groupsData['@odata.count'] || groupsData.value?.length);
+  return { 
+    success: true, 
+    resources: { 
+      users: usersData['@odata.count'] || usersData.value?.length || 0,
+      groups: groupsData['@odata.count'] || groupsData.value?.length || 0
+    } 
+  };
+}
+
+async function collectAzureADData(credentials: AzureADCredentials, userId: string, supabaseAdmin: any) {
+  console.log('[Azure AD] Collecting data...');
+
+  // Get OAuth2 token from Azure AD
+  const tokenResponse = await fetch(`https://login.microsoftonline.com/${credentials.tenantId}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: `client_id=${encodeURIComponent(credentials.clientId)}&client_secret=${encodeURIComponent(credentials.clientSecret)}&scope=https://graph.microsoft.com/.default&grant_type=client_credentials`,
+  });
+  const tokenData = await tokenResponse.json();
+  const accessToken = tokenData.access_token;
+
+  let usersCollected = 0;
+  let groupsCollected = 0;
+  let policiesCollected = 0;
+
+  // Collect users
+  const usersResponse = await fetch('https://graph.microsoft.com/v1.0/users?$top=100&$select=id,displayName,mail,userPrincipalName,accountEnabled,userType,createdDateTime,signInActivity', {
+    headers: { 'Authorization': `Bearer ${accessToken}`, 'ConsistencyLevel': 'eventual' },
+  });
+  const usersData = await usersResponse.json();
+
+  for (const user of usersData.value || []) {
+    const { error } = await supabaseAdmin.from('integration_collected_data').upsert({
+      user_id: userId,
+      integration_name: 'azure-ad',
+      resource_type: 'users',
+      resource_id: user.id,
+      resource_data: {
+        displayName: user.displayName,
+        mail: user.mail,
+        userPrincipalName: user.userPrincipalName,
+        accountEnabled: user.accountEnabled,
+        userType: user.userType,
+        createdDateTime: user.createdDateTime,
+        lastSignInDateTime: user.signInActivity?.lastSignInDateTime,
+      },
+      collected_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+    
+    if (!error) usersCollected++;
+  }
+
+  // Collect groups
+  const groupsResponse = await fetch('https://graph.microsoft.com/v1.0/groups?$top=100&$select=id,displayName,description,mailEnabled,securityEnabled,groupTypes,createdDateTime', {
+    headers: { 'Authorization': `Bearer ${accessToken}` },
+  });
+  const groupsData = await groupsResponse.json();
+
+  for (const group of groupsData.value || []) {
+    const { error } = await supabaseAdmin.from('integration_collected_data').upsert({
+      user_id: userId,
+      integration_name: 'azure-ad',
+      resource_type: 'groups',
+      resource_id: group.id,
+      resource_data: {
+        displayName: group.displayName,
+        description: group.description,
+        mailEnabled: group.mailEnabled,
+        securityEnabled: group.securityEnabled,
+        groupTypes: group.groupTypes,
+        createdDateTime: group.createdDateTime,
+      },
+      collected_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+    
+    if (!error) groupsCollected++;
+  }
+
+  // Collect conditional access policies
+  try {
+    const policiesResponse = await fetch('https://graph.microsoft.com/v1.0/identity/conditionalAccess/policies', {
+      headers: { 'Authorization': `Bearer ${accessToken}` },
+    });
+    
+    if (policiesResponse.ok) {
+      const policiesData = await policiesResponse.json();
+      
+      for (const policy of policiesData.value || []) {
+        const { error } = await supabaseAdmin.from('integration_collected_data').upsert({
+          user_id: userId,
+          integration_name: 'azure-ad',
+          resource_type: 'conditional_access_policies',
+          resource_id: policy.id,
+          resource_data: {
+            displayName: policy.displayName,
+            state: policy.state,
+            createdDateTime: policy.createdDateTime,
+            modifiedDateTime: policy.modifiedDateTime,
+            conditions: policy.conditions,
+            grantControls: policy.grantControls,
+          },
+          collected_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,integration_name,resource_type,resource_id' });
+        
+        if (!error) policiesCollected++;
+      }
+    }
+  } catch (e) {
+    console.log('[Azure AD] Could not fetch conditional access policies (may require Policy.Read.All permission)');
+  }
+
+  console.log('[Azure AD] Collected users:', usersCollected, 'groups:', groupsCollected, 'policies:', policiesCollected);
+  return { users: usersCollected, groups: groupsCollected, policies: policiesCollected };
+}
+
 // =============================================================================
 // Main Handler
 // =============================================================================
@@ -784,6 +940,9 @@ Deno.serve(async (req) => {
         break;
       case 'intune':
         testResult = await testIntuneConnection(credentials as IntuneCredentials);
+        break;
+      case 'azure-ad':
+        testResult = await testAzureADConnection(credentials as AzureADCredentials);
         break;
       default:
         return new Response(
@@ -893,6 +1052,9 @@ Deno.serve(async (req) => {
           break;
         case 'intune':
           collectedResources = await collectIntuneData(credentials as IntuneCredentials, user.id, supabaseAdmin);
+          break;
+        case 'azure-ad':
+          collectedResources = await collectAzureADData(credentials as AzureADCredentials, user.id, supabaseAdmin);
           break;
       }
       console.log(`[save-integration-credentials] Data collection completed for ${provider}`);

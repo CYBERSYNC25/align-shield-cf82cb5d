@@ -62,7 +62,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     description: 'Usuários, grupos, MFA e políticas de acesso condicional',
     category: 'iam',
     logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Microsoft_Azure.svg/150px-Microsoft_Azure.svg.png',
-    provider: 'azure',
+    provider: 'azure-ad',
   },
   {
     id: 'google-workspace',
