@@ -370,8 +370,8 @@ export default function IntegrationsHub() {
               </div>
 
               {/* Category Tabs */}
-              <Tabs defaultValue="all" className="w-full">
-                <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1">
+              <Tabs defaultValue="all" className="w-full overflow-hidden">
+                <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1 overflow-x-auto">
                   <TabsTrigger value="all" className="flex-1 min-w-[120px]">
                     Todas
                     <Badge variant="secondary" className="ml-2 text-[10px]">

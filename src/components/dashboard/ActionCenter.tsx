@@ -169,27 +169,27 @@ const ActionCenter = () => {
             </div>
 
             {/* Quick Stats */}
-            <div className="flex gap-4">
-              <div className="text-center px-4 py-2 rounded-lg bg-destructive/5 border border-destructive/20">
+            <div className="flex flex-wrap gap-3 sm:gap-4">
+              <div className="text-center px-3 sm:px-4 py-2 rounded-lg bg-destructive/5 border border-destructive/20 min-w-[70px]">
                 <div className="text-2xl font-bold text-destructive">
                   {criticalTests.length}
                 </div>
                 <div className="text-xs text-muted-foreground">Críticos</div>
               </div>
-              <div className="text-center px-4 py-2 rounded-lg bg-orange-500/5 border border-orange-500/20">
+              <div className="text-center px-3 sm:px-4 py-2 rounded-lg bg-orange-500/5 border border-orange-500/20 min-w-[70px]">
                 <div className="text-2xl font-bold text-orange-500">
                   {highTests.length}
                 </div>
                 <div className="text-xs text-muted-foreground">Altos</div>
               </div>
-              <div className="text-center px-4 py-2 rounded-lg bg-success/5 border border-success/20">
+              <div className="text-center px-3 sm:px-4 py-2 rounded-lg bg-success/5 border border-success/20 min-w-[70px]">
                 <div className="text-2xl font-bold text-success">
                   {passingTests.length}
                 </div>
                 <div className="text-xs text-muted-foreground">Aprovados</div>
               </div>
               {riskAcceptedTests.length > 0 && (
-                <div className="text-center px-4 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                <div className="text-center px-3 sm:px-4 py-2 rounded-lg bg-amber-500/5 border border-amber-500/20 min-w-[70px]">
                   <div className="text-2xl font-bold text-amber-500">
                     {riskAcceptedTests.length}
                   </div>
