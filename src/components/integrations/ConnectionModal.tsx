@@ -269,6 +269,42 @@ const PROVIDER_CONFIGS: Record<string, ProviderConfig> = {
     ],
     docsUrl: 'https://learn.microsoft.com/en-us/mem/intune/developer/intune-graph-apis',
   },
+  'azure-ad': {
+    fields: [
+      { 
+        name: 'tenantId', 
+        label: 'Tenant ID', 
+        type: 'text', 
+        required: true,
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        helpText: 'ID do seu tenant Azure AD (encontre em Azure Portal → Entra ID → Overview)'
+      },
+      { 
+        name: 'clientId', 
+        label: 'Client ID (App ID)', 
+        type: 'text', 
+        required: true,
+        placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+        helpText: 'ID do aplicativo registrado no Azure AD'
+      },
+      { 
+        name: 'clientSecret', 
+        label: 'Client Secret', 
+        type: 'password', 
+        required: true,
+        placeholder: '••••••••••••••••',
+        helpText: 'Segredo do cliente criado no App Registration'
+      },
+    ],
+    instructions: [
+      { step: 1, text: 'Acesse Azure Portal → Entra ID → App Registrations', link: 'https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade' },
+      { step: 2, text: 'Crie um novo App Registration ou selecione um existente' },
+      { step: 3, text: 'Adicione permissões Microsoft Graph: User.Read.All, Group.Read.All, Policy.Read.All' },
+      { step: 4, text: 'Vá em Certificates & Secrets → New client secret' },
+      { step: 5, text: 'Copie Tenant ID, Client ID e Client Secret' },
+    ],
+    docsUrl: 'https://learn.microsoft.com/en-us/entra/identity-platform/quickstart-register-app',
+  },
 };
 
 interface ConnectionModalProps {

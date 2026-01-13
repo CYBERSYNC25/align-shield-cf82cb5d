@@ -28,7 +28,6 @@ import { ConnectAwsModal } from "@/components/integrations/ConnectAwsModal";
 import { MikroTikAgentModal } from "@/components/integrations/MikroTikAgentModal";
 import { AwsResourcesModal } from "@/components/integrations/AwsResourcesModal";
 import { GoogleOAuthValidator } from "@/components/integrations/GoogleOAuthValidator";
-import { AzureConnectionStatus } from "@/components/integrations/AzureConnectionStatus";
 import { AzureResourcesModal } from "@/components/integrations/AzureResourcesModal";
 import { GoogleWorkspaceResourcesModal } from "@/components/integrations/GoogleWorkspaceResourcesModal";
 import { Auth0Connector } from "@/components/integrations/Auth0Connector";
@@ -67,7 +66,6 @@ export default function IntegrationsHub() {
   const [showAwsResourcesModal, setShowAwsResourcesModal] = useState(false);
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showGoogleResourcesModal, setShowGoogleResourcesModal] = useState(false);
-  const [showAzureModal, setShowAzureModal] = useState(false);
   const [showAzureResourcesModal, setShowAzureResourcesModal] = useState(false);
   const [showConnectAuth0Modal, setShowConnectAuth0Modal] = useState(false);
   const [showAuth0ManageModal, setShowAuth0ManageModal] = useState(false);
@@ -180,9 +178,6 @@ export default function IntegrationsHub() {
       case 'google-workspace':
         setShowGoogleModal(true);
         break;
-      case 'azure-ad':
-        setShowAzureModal(true);
-        break;
       case 'mikrotik':
         setShowMikroTikModal(true);
         break;
@@ -192,7 +187,8 @@ export default function IntegrationsHub() {
       case 'okta':
         setShowConnectOktaModal(true);
         break;
-      // Self-service integrations use the generic ConnectionModal
+      // Self-service integrations use the generic ConnectionModal (including Azure AD)
+      case 'azure-ad':
       case 'cloudflare':
       case 'jira':
       case 'github':
@@ -218,9 +214,6 @@ export default function IntegrationsHub() {
       case 'google-workspace':
         setShowGoogleModal(true);
         break;
-      case 'azure-ad':
-        setShowAzureModal(true);
-        break;
       case 'aws':
         setShowAwsModal(true);
         break;
@@ -233,7 +226,8 @@ export default function IntegrationsHub() {
       case 'okta':
         setShowConnectOktaModal(true);
         break;
-      // Self-service integrations use the generic ConnectionModal for management too
+      // Self-service integrations use the generic ConnectionModal for management (including Azure AD)
+      case 'azure-ad':
       case 'cloudflare':
       case 'jira':
       case 'github':
@@ -472,14 +466,6 @@ export default function IntegrationsHub() {
         onOpenChange={setShowGoogleResourcesModal}
       />
 
-      <Dialog open={showAzureModal} onOpenChange={setShowAzureModal}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Microsoft Entra ID (Azure AD)</DialogTitle>
-          </DialogHeader>
-          <AzureConnectionStatus />
-        </DialogContent>
-      </Dialog>
 
       <AzureResourcesModal
         open={showAzureResourcesModal}
