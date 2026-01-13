@@ -191,6 +191,120 @@ export type Database = {
         }
         Relationships: []
       }
+      compliance_alerts: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          affected_items: Json | null
+          affected_resources: number | null
+          created_at: string | null
+          id: string
+          integration_name: string
+          metadata: Json | null
+          new_status: string
+          previous_status: string
+          resolved: boolean | null
+          resolved_at: string | null
+          rule_id: string
+          rule_title: string
+          severity: string
+          triggered_at: string | null
+          user_id: string
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          affected_items?: Json | null
+          affected_resources?: number | null
+          created_at?: string | null
+          id?: string
+          integration_name: string
+          metadata?: Json | null
+          new_status: string
+          previous_status: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          rule_id: string
+          rule_title: string
+          severity: string
+          triggered_at?: string | null
+          user_id: string
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          affected_items?: Json | null
+          affected_resources?: number | null
+          created_at?: string | null
+          id?: string
+          integration_name?: string
+          metadata?: Json | null
+          new_status?: string
+          previous_status?: string
+          resolved?: boolean | null
+          resolved_at?: string | null
+          rule_id?: string
+          rule_title?: string
+          severity?: string
+          triggered_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      compliance_check_history: {
+        Row: {
+          check_type: string
+          created_at: string | null
+          drift_details: Json | null
+          drift_detected: boolean | null
+          failing_count: number | null
+          id: string
+          integrations_checked: Json | null
+          passing_count: number | null
+          risk_accepted_count: number | null
+          rules_results: Json | null
+          score: number | null
+          total_rules_checked: number | null
+          triggered_by: string | null
+          user_id: string
+        }
+        Insert: {
+          check_type?: string
+          created_at?: string | null
+          drift_details?: Json | null
+          drift_detected?: boolean | null
+          failing_count?: number | null
+          id?: string
+          integrations_checked?: Json | null
+          passing_count?: number | null
+          risk_accepted_count?: number | null
+          rules_results?: Json | null
+          score?: number | null
+          total_rules_checked?: number | null
+          triggered_by?: string | null
+          user_id: string
+        }
+        Update: {
+          check_type?: string
+          created_at?: string | null
+          drift_details?: Json | null
+          drift_detected?: boolean | null
+          failing_count?: number | null
+          id?: string
+          integrations_checked?: Json | null
+          passing_count?: number | null
+          risk_accepted_count?: number | null
+          rules_results?: Json | null
+          score?: number | null
+          total_rules_checked?: number | null
+          triggered_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       control_assignments: {
         Row: {
           assigned_by: string | null
@@ -1127,6 +1241,48 @@ export type Database = {
           trend?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      system_audit_logs: {
+        Row: {
+          action_category: string
+          action_type: string
+          created_at: string | null
+          description: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          resource_id: string | null
+          resource_type: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_category: string
+          action_type: string
+          created_at?: string | null
+          description: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_category?: string
+          action_type?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          resource_id?: string | null
+          resource_type?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

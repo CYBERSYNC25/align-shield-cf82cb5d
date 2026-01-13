@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Settings, User, ChevronDown, Shield, LogOut, ShieldCheck } from 'lucide-react';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import { ComplianceAlertsBadge } from '@/components/notifications/ComplianceAlertsBadge';
 import { ModeToggle } from '@/components/theme/ModeToggle';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,6 +75,9 @@ const Header = () => {
 
       {/* Actions & Profile */}
       <div className="flex items-center space-x-3 flex-1 justify-end">
+        {/* Compliance Alerts */}
+        <ComplianceAlertsBadge />
+
         {/* Notifications */}
         <NotificationCenter />
 

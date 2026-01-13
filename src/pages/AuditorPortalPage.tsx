@@ -3,6 +3,7 @@ import AuditorComplianceSummary from '@/components/auditor/AuditorComplianceSumm
 import AuditorAssetInventory from '@/components/auditor/AuditorAssetInventory';
 import AuditorEvidenceRepository from '@/components/auditor/AuditorEvidenceRepository';
 import AuditReportExportButton from '@/components/auditor/AuditReportExportButton';
+import { AuditorVerificationHistory } from '@/components/auditor/AuditorVerificationHistory';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -74,7 +75,10 @@ const AuditorPortalPage = () => {
 
           <Separator />
 
-          {/* Export Report Button */}
+          {/* Verification History - Proof of automated monitoring */}
+          <AuditorVerificationHistory />
+
+          <Separator />
           <Card className="bg-surface-elevated border-card-border">
             <CardContent className="py-6">
               <div className="flex flex-col md:flex-row items-center gap-4">
