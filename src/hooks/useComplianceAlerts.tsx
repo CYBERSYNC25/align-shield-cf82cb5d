@@ -142,69 +142,44 @@ export function useComplianceAlerts() {
     },
   });
 
-  // Create external ticket
+  // Create external ticket via Edge Function
   const createTicket = useMutation({
-    mutationFn: async ({ alertId, ruleId, ruleTitle, externalSystem = 'jira' }: { 
+    mutationFn: async ({ alertId, ruleId, ruleTitle, severity, externalSystem = 'jira' }: { 
       alertId: string; 
       ruleId: string; 
       ruleTitle: string;
-      externalSystem?: string;
+      severity?: string;
+      externalSystem?: 'jira' | 'linear';
     }) => {
       if (!user?.id) throw new Error('Usuário não autenticado');
 
-      // Generate simulated ticket ID
-      const ticketId = `${externalSystem.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-      // Create remediation ticket record
-      const { error: ticketError } = await supabase
-        .from('remediation_tickets')
-        .insert({
-          user_id: user.id,
-          alert_id: alertId,
-          rule_id: ruleId,
-          external_system: externalSystem,
-          external_ticket_id: ticketId,
-          ticket_title: ruleTitle,
-          ticket_status: 'open',
-        });
-
-      if (ticketError) throw ticketError;
-
-      // Update compliance alert with ticket reference
-      const { data, error } = await supabase
-        .from('compliance_alerts')
-        .update({
-          external_ticket_id: ticketId,
-        })
-        .eq('id', alertId)
-        .eq('user_id', user.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Log to audit
-      await supabase.from('system_audit_logs').insert({
-        user_id: user.id,
-        action_type: 'ticket_created',
-        action_category: 'remediation',
-        resource_type: 'remediation_ticket',
-        resource_id: alertId,
-        description: `Ticket ${ticketId} criado para: ${ruleTitle}`,
-        metadata: {
-          rule_id: ruleId,
-          external_system: externalSystem,
-          ticket_id: ticketId,
+      // Call Edge Function for real ticket creation
+      const { data, error } = await supabase.functions.invoke('create-remediation-ticket', {
+        body: {
+          alertId,
+          ruleId,
+          ruleTitle,
+          severity: severity || 'medium',
+          externalSystem,
+          description: `Alerta de compliance detectado pelo APOC.\n\nRegra: ${ruleId}\nSeveridade: ${severity || 'medium'}`,
         },
-        user_agent: navigator.userAgent,
       });
 
-      return { ticketId, alert: data };
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      return { 
+        ticketId: data.ticketId, 
+        ticketUrl: data.ticketUrl,
+        isSimulated: data.isSimulated,
+      };
     },
-    onSuccess: ({ ticketId }) => {
+    onSuccess: ({ ticketId, isSimulated }) => {
       queryClient.invalidateQueries({ queryKey: ['compliance-alerts'] });
       toast.success('Ticket de correção aberto!', {
-        description: `${ticketId} - Enviado para o board da equipe de TI.`,
+        description: isSimulated 
+          ? `${ticketId} (simulado) - Configure a integração Jira/Linear para criar tickets reais.`
+          : `${ticketId} - Enviado para o board da equipe de TI.`,
       });
     },
     onError: (error: Error) => {

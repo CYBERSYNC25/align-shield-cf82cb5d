@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export type AcceptanceDuration = '3_months' | '6_months' | '1_year' | 'permanent';
 export type AcceptanceStatus = 'active' | 'expired' | 'revoked';
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 export interface RiskAcceptance {
   id: string;
@@ -20,6 +21,12 @@ export interface RiskAcceptance {
   status: AcceptanceStatus;
   createdAt: string;
   updatedAt: string;
+  // Approval workflow fields
+  approvalStatus: ApprovalStatus;
+  approverId: string | null;
+  approvedAt: string | null;
+  rejectionReason: string | null;
+  requiresApproval: boolean;
 }
 
 export interface CreateAcceptanceInput {
@@ -85,11 +92,60 @@ export function useRiskAcceptances() {
         expiresAt: item.expires_at,
         status: item.status as AcceptanceStatus,
         createdAt: item.created_at,
-        updatedAt: item.updated_at
+        updatedAt: item.updated_at,
+        // Approval workflow fields
+        approvalStatus: (item.approval_status || 'approved') as ApprovalStatus,
+        approverId: item.approver_id,
+        approvedAt: item.approved_at,
+        rejectionReason: item.rejection_reason,
+        requiresApproval: item.requires_approval ?? false,
       })) as RiskAcceptance[];
     },
     enabled: !!user?.id,
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Fetch pending approvals (for admins)
+  const { data: pendingApprovals = [] } = useQuery({
+    queryKey: ['pending-approvals', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+
+      // Get all pending approvals (for admin view)
+      const { data, error } = await supabase
+        .from('risk_acceptances')
+        .select('*')
+        .eq('approval_status', 'pending')
+        .eq('status', 'active');
+
+      if (error) {
+        console.error('Error fetching pending approvals:', error);
+        throw error;
+      }
+
+      return (data || []).map(item => ({
+        id: item.id,
+        userId: item.user_id,
+        ruleId: item.rule_id,
+        integrationName: item.integration_name,
+        resourceType: item.resource_type,
+        resourceId: item.resource_id,
+        justification: item.justification,
+        acceptedBy: item.accepted_by,
+        duration: item.duration as AcceptanceDuration,
+        expiresAt: item.expires_at,
+        status: item.status as AcceptanceStatus,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        approvalStatus: (item.approval_status || 'pending') as ApprovalStatus,
+        approverId: item.approver_id,
+        approvedAt: item.approved_at,
+        rejectionReason: item.rejection_reason,
+        requiresApproval: item.requires_approval ?? true,
+      })) as RiskAcceptance[];
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60 * 2,
   });
 
   // Create a new risk acceptance
@@ -225,8 +281,15 @@ export function useRiskAcceptances() {
     return acceptances.find(a => a.ruleId === ruleId && a.status === 'active');
   };
 
+  // Filter approved acceptances only for compliance checks
+  const approvedAcceptances = acceptances.filter(a => 
+    a.approvalStatus === 'approved' || !a.requiresApproval
+  );
+
   return {
     acceptances,
+    approvedAcceptances,
+    pendingApprovals,
     isLoading,
     refetch,
     createAcceptance: createAcceptanceMutation.mutate,
@@ -236,5 +299,6 @@ export function useRiskAcceptances() {
     isRevoking: revokeAcceptanceMutation.isPending,
     isResourceAccepted,
     getAcceptanceForRule,
+    pendingCount: pendingApprovals.length,
   };
 }
