@@ -29,6 +29,7 @@ import { MikroTikAgentModal } from "@/components/integrations/MikroTikAgentModal
 import { AwsResourcesModal } from "@/components/integrations/AwsResourcesModal";
 import { GoogleOAuthValidator } from "@/components/integrations/GoogleOAuthValidator";
 import { AzureConnectionStatus } from "@/components/integrations/AzureConnectionStatus";
+import { AzureResourcesModal } from "@/components/integrations/AzureResourcesModal";
 import { GoogleWorkspaceResourcesModal } from "@/components/integrations/GoogleWorkspaceResourcesModal";
 import { Auth0Connector } from "@/components/integrations/Auth0Connector";
 import { Auth0ResourcesModal } from "@/components/integrations/Auth0ResourcesModal";
@@ -67,6 +68,7 @@ export default function IntegrationsHub() {
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showGoogleResourcesModal, setShowGoogleResourcesModal] = useState(false);
   const [showAzureModal, setShowAzureModal] = useState(false);
+  const [showAzureResourcesModal, setShowAzureResourcesModal] = useState(false);
   const [showConnectAuth0Modal, setShowConnectAuth0Modal] = useState(false);
   const [showAuth0ManageModal, setShowAuth0ManageModal] = useState(false);
   const [showAuth0ResourcesModal, setShowAuth0ResourcesModal] = useState(false);
@@ -258,6 +260,9 @@ export default function IntegrationsHub() {
       case 'google-workspace':
         setShowGoogleResourcesModal(true);
         break;
+      case 'azure-ad':
+        setShowAzureResourcesModal(true);
+        break;
       case 'auth0':
         if (auth0Data) {
           setShowAuth0ResourcesModal(true);
@@ -296,7 +301,7 @@ export default function IntegrationsHub() {
             onConnect={() => handleConnect(integration)}
             onManage={() => handleManage(integration)}
             onViewResources={
-              ['aws', 'google-workspace'].includes(integration.id) && status === 'connected'
+              ['aws', 'google-workspace', 'azure-ad'].includes(integration.id) && status === 'connected'
                 ? () => handleViewResources(integration)
                 : undefined
             }
@@ -475,6 +480,11 @@ export default function IntegrationsHub() {
           <AzureConnectionStatus />
         </DialogContent>
       </Dialog>
+
+      <AzureResourcesModal
+        open={showAzureResourcesModal}
+        onOpenChange={setShowAzureResourcesModal}
+      />
 
       <ConnectAuth0Modal
         open={showConnectAuth0Modal}

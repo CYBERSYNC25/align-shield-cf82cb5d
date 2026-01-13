@@ -262,6 +262,65 @@ const COMPLIANCE_RULES: ComplianceRule[] = [
     getAffectedName: (resource) => resource.resource_data?.profile?.email || resource.resource_data?.profile?.login || 'User',
     fixAction: '/access-reviews',
   },
+
+  // Azure AD / Microsoft Entra ID Rules
+  {
+    id: 'azure-user-no-mfa',
+    title: 'Usuário Azure AD sem MFA',
+    description: 'Usuário do Microsoft Entra ID sem autenticação multifator habilitada',
+    severity: 'high',
+    integrationId: 'azure-ad',
+    resourceType: 'user',
+    checkFn: (resource) => {
+      const data = resource.resource_data;
+      return data?.accountEnabled === true && data?.mfaEnabled === false;
+    },
+    getAffectedName: (resource) => resource.resource_data?.userPrincipalName || resource.resource_data?.displayName || 'User',
+    fixAction: '/access-reviews',
+  },
+  {
+    id: 'azure-guest-active',
+    title: 'Usuário Guest Ativo',
+    description: 'Usuário externo (Guest) com acesso ativo ao tenant',
+    severity: 'medium',
+    integrationId: 'azure-ad',
+    resourceType: 'user',
+    checkFn: (resource) => {
+      const data = resource.resource_data;
+      return data?.userType === 'Guest' && data?.accountEnabled === true;
+    },
+    getAffectedName: (resource) => resource.resource_data?.userPrincipalName || resource.resource_data?.displayName || 'Guest User',
+    fixAction: '/access-reviews',
+  },
+  {
+    id: 'azure-disabled-user',
+    title: 'Usuário Desativado',
+    description: 'Conta de usuário desativada que pode precisar ser removida',
+    severity: 'low',
+    integrationId: 'azure-ad',
+    resourceType: 'user',
+    checkFn: (resource) => {
+      const data = resource.resource_data;
+      return data?.accountEnabled === false;
+    },
+    getAffectedName: (resource) => resource.resource_data?.userPrincipalName || resource.resource_data?.displayName || 'User',
+    fixAction: '/access-reviews',
+  },
+  {
+    id: 'azure-no-conditional-access',
+    title: 'Sem Políticas de Acesso Condicional',
+    description: 'Tenant sem políticas de acesso condicional ativas para proteção',
+    severity: 'high',
+    integrationId: 'azure-ad',
+    resourceType: 'conditional_access_policy',
+    checkFn: (resource) => {
+      // This rule checks if policies exist but none are enabled
+      const data = resource.resource_data;
+      return data?.state !== 'enabled' && data?.state !== 'enabledForReportingButNotEnforced';
+    },
+    getAffectedName: (resource) => resource.resource_data?.displayName || 'Policy',
+    fixAction: '/integrations',
+  },
 ];
 
 export function useComplianceStatus(): ComplianceStatusResult {

@@ -134,6 +134,40 @@ export const useAzureRevokeConnection = () => {
   });
 };
 
+export const useAzureSyncResources = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('azure-sync-resources');
+
+      if (error) {
+        throw new Error(extractApiError(error));
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to sync Azure AD resources');
+      }
+
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.azureConnection });
+      queryClient.invalidateQueries({ queryKey: queryKeys.integrations });
+      queryClient.invalidateQueries({ queryKey: ['azure-resources'] });
+
+      toast.success('Sincronização concluída', {
+        description: `${data.summary?.total || 0} recursos coletados do Azure AD`
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Erro na sincronização', {
+        description: error.message
+      });
+    }
+  });
+};
+
 export const useAzureConnect = () => {
   return useMutation({
     mutationFn: async () => {
