@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -13,11 +14,13 @@ import {
   Download,
   Eye,
   User,
-  Loader2
+  Loader2,
+  Zap
 } from 'lucide-react';
 import { useFrameworks } from '@/hooks/useFrameworks';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useAutoEvidence } from '@/hooks/useAutoEvidence';
 import AuditReportModal from './AuditReportModal';
 import SearchEvidenceModal from './SearchEvidenceModal';
 import ControlEvidenceModal from './ControlEvidenceModal';
@@ -26,6 +29,7 @@ const FrameworkChecklists = () => {
   const { frameworks, controls, loading, updateControlStatus, getFrameworkStats } = useFrameworks();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { hasAutoEvidence, getEvidenceStats } = useAutoEvidence();
   const [selectedFramework, setSelectedFramework] = useState('');
   const [selectedControl, setSelectedControl] = useState<any>(null);
   const [controlModalOpen, setControlModalOpen] = useState(false);
@@ -167,14 +171,43 @@ const FrameworkChecklists = () => {
                       <p className="text-sm text-muted-foreground">Nenhum controle configurado</p>
                     </div>
                   ) : (
-                    frameworkControls.slice(0, 5).map((control) => (
+                    frameworkControls.slice(0, 5).map((control) => {
+                      const hasAuto = hasAutoEvidence(control.code);
+                      const autoStats = hasAuto ? getEvidenceStats(control.code) : null;
+                      
+                      return (
                       <div key={control.id} className="p-3 bg-background border border-border rounded-lg">
                         <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-wrap">
                             <Badge variant="outline" className="text-xs font-mono flex-shrink-0">
                               {control.code}
                             </Badge>
                             {getStatusBadge(control.status)}
+                            {hasAuto && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge 
+                                      variant="outline" 
+                                      className={`text-xs gap-1 ${
+                                        autoStats && autoStats.percentage === 100 
+                                          ? 'bg-success/10 text-success border-success/20' 
+                                          : 'bg-info/10 text-info border-info/20'
+                                      }`}
+                                    >
+                                      <Zap className="h-3 w-3" />
+                                      Auto
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">
+                                      Monitorado automaticamente<br />
+                                      {autoStats && `${autoStats.passing}/${autoStats.total} recursos em conformidade`}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                           <Button 
                             variant="ghost" 
@@ -218,7 +251,7 @@ const FrameworkChecklists = () => {
                           </div>
                         </div>
                       </div>
-                    ))
+                    );})
                   )}
                 </div>
               </TabsContent>

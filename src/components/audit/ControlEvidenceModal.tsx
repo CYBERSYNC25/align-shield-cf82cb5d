@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { 
   Eye, 
   Download, 
@@ -12,11 +13,14 @@ import {
   Hash,
   Shield,
   X,
-  Upload
+  Upload,
+  Zap
 } from 'lucide-react';
 import { useAudits } from '@/hooks/useAudits';
+import { useAutoEvidence } from '@/hooks/useAutoEvidence';
 import EvidenceUploadModal from './EvidenceUploadModal';
 import EvidenceViewModal from './EvidenceViewModal';
+import AutoEvidenceSection from './AutoEvidenceSection';
 
 interface Control {
   id: string;
@@ -36,6 +40,7 @@ interface ControlEvidenceModalProps {
 
 const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceModalProps) => {
   const { evidence } = useAudits();
+  const { hasAutoEvidence } = useAutoEvidence();
   const [selectedEvidence, setSelectedEvidence] = useState<any>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   
@@ -168,13 +173,19 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Badge variant="outline" className="font-mono">
                         {control.code}
                       </Badge>
                       <Badge variant="secondary">
                         {control.evidence_count} evidência(s)
                       </Badge>
+                      {hasAutoEvidence(control.code) && (
+                        <Badge className="bg-info/10 text-info border-info/20">
+                          <Zap className="h-3 w-3 mr-1" />
+                          Monitorado Automaticamente
+                        </Badge>
+                      )}
                     </div>
                     <h3 className="font-semibold text-foreground">{control.title}</h3>
                     {control.description && (
@@ -193,12 +204,20 @@ const ControlEvidenceModal = ({ control, open, onOpenChange }: ControlEvidenceMo
               </CardContent>
             </Card>
 
-            {/* Evidence List */}
+            {/* Auto Evidence Section */}
+            <AutoEvidenceSection controlCode={control.code} />
+
+            <Separator />
+
+            {/* Manual Evidence List */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium text-foreground">
-                  Evidências Relacionadas ({controlEvidences.length})
-                </h4>
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="font-medium text-foreground">
+                    Evidências Manuais ({controlEvidences.length})
+                  </h4>
+                </div>
               </div>
 
               {controlEvidences.length === 0 ? (
