@@ -98,6 +98,54 @@ export type Database = {
         }
         Relationships: []
       }
+      auditor_access_tokens: {
+        Row: {
+          access_count: number | null
+          audit_type: string | null
+          auditor_email: string | null
+          auditor_name: string | null
+          company_name: string | null
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_revoked: boolean | null
+          last_accessed_at: string | null
+          permissions: Json | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          access_count?: number | null
+          audit_type?: string | null
+          auditor_email?: string | null
+          auditor_name?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_revoked?: boolean | null
+          last_accessed_at?: string | null
+          permissions?: Json | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          access_count?: number | null
+          audit_type?: string | null
+          auditor_email?: string | null
+          auditor_name?: string | null
+          company_name?: string | null
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_revoked?: boolean | null
+          last_accessed_at?: string | null
+          permissions?: Json | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audits: {
         Row: {
           auditor: string | null
@@ -1157,12 +1205,17 @@ export type Database = {
       risk_acceptances: {
         Row: {
           accepted_by: string
+          approval_status: string | null
+          approved_at: string | null
+          approver_id: string | null
           created_at: string | null
           duration: string
           expires_at: string | null
           id: string
           integration_name: string
           justification: string
+          rejection_reason: string | null
+          requires_approval: boolean | null
           resource_id: string | null
           resource_type: string
           rule_id: string
@@ -1172,12 +1225,17 @@ export type Database = {
         }
         Insert: {
           accepted_by: string
+          approval_status?: string | null
+          approved_at?: string | null
+          approver_id?: string | null
           created_at?: string | null
           duration: string
           expires_at?: string | null
           id?: string
           integration_name: string
           justification: string
+          rejection_reason?: string | null
+          requires_approval?: boolean | null
           resource_id?: string | null
           resource_type: string
           rule_id: string
@@ -1187,16 +1245,54 @@ export type Database = {
         }
         Update: {
           accepted_by?: string
+          approval_status?: string | null
+          approved_at?: string | null
+          approver_id?: string | null
           created_at?: string | null
           duration?: string
           expires_at?: string | null
           id?: string
           integration_name?: string
           justification?: string
+          rejection_reason?: string | null
+          requires_approval?: boolean | null
           resource_id?: string | null
           resource_type?: string
           rule_id?: string
           status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      risk_approval_policies: {
+        Row: {
+          approver_roles: string[] | null
+          created_at: string | null
+          id: string
+          max_auto_approve_duration: string | null
+          min_severity: string
+          require_approval_for_permanent: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          approver_roles?: string[] | null
+          created_at?: string | null
+          id?: string
+          max_auto_approve_duration?: string | null
+          min_severity?: string
+          require_approval_for_permanent?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          approver_roles?: string[] | null
+          created_at?: string | null
+          id?: string
+          max_auto_approve_duration?: string | null
+          min_severity?: string
+          require_approval_for_permanent?: boolean | null
           updated_at?: string | null
           user_id?: string
         }
