@@ -29,7 +29,7 @@ export function IntegrationHealthDashboard() {
   const integrationNames = ['aws', 'google', 'azure', 'github', 'gitlab', 'slack', 'cloudflare', 'jira', 'bamboohr', 'crowdstrike', 'intune', 'auth0', 'okta'] as const;
 
   const integrations: IntegrationHealth[] = integrationNames
-    .map((name) => {
+    .map((name): IntegrationHealth | null => {
       const data = statusResult[name];
       if (!data) return null;
       
@@ -48,7 +48,8 @@ export function IntegrationHealthDashboard() {
         healthScore: connected ? 100 : 0,
       };
     })
-    .filter((i): i is IntegrationHealth => i !== null && i.status !== 'disconnected');
+    .filter((i): i is IntegrationHealth => i !== null)
+    .filter(i => i.status !== 'disconnected');
 
   const healthyCount = integrations.filter(i => i.status === 'healthy').length;
   const warningCount = integrations.filter(i => i.status === 'warning').length;
