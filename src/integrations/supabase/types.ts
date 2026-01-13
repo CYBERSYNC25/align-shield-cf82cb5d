@@ -957,6 +957,54 @@ export type Database = {
         }
         Relationships: []
       }
+      risk_acceptances: {
+        Row: {
+          accepted_by: string
+          created_at: string | null
+          duration: string
+          expires_at: string | null
+          id: string
+          integration_name: string
+          justification: string
+          resource_id: string | null
+          resource_type: string
+          rule_id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_by: string
+          created_at?: string | null
+          duration: string
+          expires_at?: string | null
+          id?: string
+          integration_name: string
+          justification: string
+          resource_id?: string | null
+          resource_type: string
+          rule_id: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_by?: string
+          created_at?: string | null
+          duration?: string
+          expires_at?: string | null
+          id?: string
+          integration_name?: string
+          justification?: string
+          resource_id?: string | null
+          resource_type?: string
+          rule_id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       risk_assessments: {
         Row: {
           completed_questions: number | null

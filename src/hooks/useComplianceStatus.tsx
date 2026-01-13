@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 import { useIntegrationData, CollectedResource } from './useIntegrationData';
 import { integrationsCatalog, getIntegrationById } from '@/lib/integrations-catalog';
+import { useRiskAcceptances } from './useRiskAcceptances';
 
 export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';
-export type TestStatus = 'pass' | 'fail' | 'not-configured';
+export type TestStatus = 'pass' | 'fail' | 'not-configured' | 'risk_accepted';
 
 export interface ComplianceTest {
   id: string;
@@ -14,6 +15,7 @@ export interface ComplianceTest {
   integration: string;
   integrationId: string;
   integrationLogo: string;
+  resourceType: string;
   affectedResources: number;
   affectedItems: string[];
   lastChecked: Date;
@@ -26,6 +28,7 @@ export interface ComplianceStatusResult {
   failingTests: ComplianceTest[];
   passingTests: ComplianceTest[];
   notConfiguredTests: ComplianceTest[];
+  riskAcceptedTests: ComplianceTest[];
   score: number;
   totalTests: number;
   isLoading: boolean;
@@ -263,6 +266,7 @@ const COMPLIANCE_RULES: ComplianceRule[] = [
 
 export function useComplianceStatus(): ComplianceStatusResult {
   const { data: allResources, isLoading } = useIntegrationData();
+  const { acceptances, isLoading: isLoadingAcceptances } = useRiskAcceptances();
 
   const result = useMemo(() => {
     if (!allResources || allResources.length === 0) {
@@ -277,6 +281,7 @@ export function useComplianceStatus(): ComplianceStatusResult {
           integration: 'Sistema',
           integrationId: 'system',
           integrationLogo: '',
+          resourceType: 'system',
           affectedResources: 0,
           affectedItems: [],
           lastChecked: new Date(),
@@ -290,6 +295,7 @@ export function useComplianceStatus(): ComplianceStatusResult {
         failingTests: [],
         passingTests: [],
         notConfiguredTests,
+        riskAcceptedTests: [],
         score: 0,
         totalTests: 0,
         isLoading: false,
@@ -340,15 +346,27 @@ export function useComplianceStatus(): ComplianceStatusResult {
       const failingResources = relevantResources.filter((r) => rule.checkFn(r));
       const affectedItems = failingResources.map((r) => rule.getAffectedName(r));
 
+      // Check if this rule has an active risk acceptance
+      const hasRiskAcceptance = acceptances.some(
+        (a) => a.ruleId === rule.id && a.status === 'active'
+      );
+
+      // Determine status
+      let status: TestStatus = 'pass';
+      if (failingResources.length > 0) {
+        status = hasRiskAcceptance ? 'risk_accepted' : 'fail';
+      }
+
       const test: ComplianceTest = {
         id: `${rule.id}-${integration.id}`,
         title: rule.title,
         description: rule.description,
         severity: rule.severity,
-        status: failingResources.length > 0 ? 'fail' : 'pass',
+        status,
         integration: integration.name,
         integrationId: integration.id,
         integrationLogo: integration.logo,
+        resourceType: rule.resourceType,
         affectedResources: failingResources.length,
         affectedItems,
         lastChecked: new Date(),
@@ -374,25 +392,27 @@ export function useComplianceStatus(): ComplianceStatusResult {
 
     const passingTests = tests.filter((t) => t.status === 'pass');
     const notConfiguredTests = tests.filter((t) => t.status === 'not-configured');
+    const riskAcceptedTests = tests.filter((t) => t.status === 'risk_accepted');
 
-    // Calculate score: percentage of passing tests
+    // Calculate score: passing + risk_accepted count as "ok"
     const totalTests = tests.length;
-    const passingCount = passingTests.length;
-    const score = totalTests > 0 ? Math.round((passingCount / totalTests) * 100) : 100;
+    const okCount = passingTests.length + riskAcceptedTests.length;
+    const score = totalTests > 0 ? Math.round((okCount / totalTests) * 100) : 100;
 
     return {
       tests,
       failingTests,
       passingTests,
       notConfiguredTests,
+      riskAcceptedTests,
       score,
       totalTests,
       isLoading: false,
     };
-  }, [allResources]);
+  }, [allResources, acceptances]);
 
   return {
     ...result,
-    isLoading,
+    isLoading: isLoading || isLoadingAcceptances,
   };
 }
