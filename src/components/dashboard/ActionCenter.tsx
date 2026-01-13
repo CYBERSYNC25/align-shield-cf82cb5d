@@ -10,6 +10,7 @@ import {
   ComplianceTest, 
   SeverityLevel 
 } from '@/hooks/useComplianceStatus';
+import { useComplianceAlerts } from '@/hooks/useComplianceAlerts';
 import { 
   AlertTriangle, 
   XCircle, 
@@ -20,6 +21,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { IssueDetailsSheet } from './IssueDetailsSheet';
+import { SLACountdown } from './SLACountdown';
 
 const ActionCenter = () => {
   const navigate = useNavigate();
@@ -32,8 +34,15 @@ const ActionCenter = () => {
     isLoading 
   } = useComplianceStatus();
 
+  const { alerts, overdueCount } = useComplianceAlerts();
+
   const [selectedTest, setSelectedTest] = useState<ComplianceTest | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  // Find corresponding alert for a test
+  const getAlertForTest = (testId: string) => {
+    return alerts.find(a => a.rule_id === testId && !a.resolved);
+  };
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-success';
@@ -234,63 +243,76 @@ const ActionCenter = () => {
               </div>
 
               <div className="space-y-3">
-                {failingTests.slice(0, 5).map((test) => (
-                  <div
-                    key={test.id}
-                    onClick={() => handleCardClick(test)}
-                    className={`flex items-center justify-between p-4 rounded-lg border transition-colors cursor-pointer ${
-                      test.severity === 'critical'
-                        ? 'bg-destructive/5 border-destructive/20 hover:bg-destructive/10'
-                        : test.severity === 'high'
-                        ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10'
-                        : 'bg-warning/5 border-warning/20 hover:bg-warning/10'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                      {/* Severity Icon */}
-                      <div className="flex-shrink-0">
-                        {getSeverityIcon(test.severity)}
+                {failingTests.slice(0, 5).map((test) => {
+                  const alert = getAlertForTest(test.id);
+                  return (
+                    <div
+                      key={test.id}
+                      onClick={() => handleCardClick(test)}
+                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors cursor-pointer ${
+                        test.severity === 'critical'
+                          ? 'bg-destructive/5 border-destructive/20 hover:bg-destructive/10'
+                          : test.severity === 'high'
+                          ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10'
+                          : 'bg-warning/5 border-warning/20 hover:bg-warning/10'
+                      }`}
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        {/* Severity Icon */}
+                        <div className="flex-shrink-0">
+                          {getSeverityIcon(test.severity)}
+                        </div>
+
+                        {/* Test Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-foreground truncate">
+                              {test.title}
+                            </span>
+                            {getSeverityBadge(test.severity)}
+                            {/* SLA Countdown */}
+                            {alert && (
+                              <SLACountdown
+                                deadline={alert.remediation_deadline}
+                                severity={test.severity as any}
+                                triggeredAt={alert.triggered_at}
+                                slaHours={alert.sla_hours}
+                                compact
+                              />
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            {test.integrationLogo && (
+                              <img
+                                src={test.integrationLogo}
+                                alt={test.integration}
+                                className="h-4 w-4 object-contain"
+                              />
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {test.integration}
+                            </span>
+                            {test.affectedResources > 0 && (
+                              <>
+                                <span className="text-muted-foreground">•</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {test.affectedResources} recurso
+                                  {test.affectedResources > 1 ? 's' : ''} afetado
+                                  {test.affectedResources > 1 ? 's' : ''}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Test Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-medium text-foreground truncate">
-                            {test.title}
-                          </span>
-                          {getSeverityBadge(test.severity)}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          {test.integrationLogo && (
-                            <img
-                              src={test.integrationLogo}
-                              alt={test.integration}
-                              className="h-4 w-4 object-contain"
-                            />
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {test.integration}
-                          </span>
-                          {test.affectedResources > 0 && (
-                            <>
-                              <span className="text-muted-foreground">•</span>
-                              <span className="text-xs text-muted-foreground">
-                                {test.affectedResources} recurso
-                                {test.affectedResources > 1 ? 's' : ''} afetado
-                                {test.affectedResources > 1 ? 's' : ''}
-                              </span>
-                            </>
-                          )}
-                        </div>
+                      {/* View Details Arrow */}
+                      <div className="flex-shrink-0 ml-4">
+                        <ArrowRight className="h-5 w-5 text-muted-foreground" />
                       </div>
                     </div>
-
-                    {/* View Details Arrow */}
-                    <div className="flex-shrink-0 ml-4">
-                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {failingTests.length > 5 && (

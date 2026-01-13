@@ -21,6 +21,15 @@ export interface ComplianceAlert {
   resolved: boolean;
   resolved_at: string | null;
   metadata: Record<string, any>;
+  // SLA fields
+  remediation_deadline: string | null;
+  sla_hours: number | null;
+  is_overdue: boolean;
+  overdue_notified_at: string | null;
+  external_ticket_id: string | null;
+  external_ticket_url: string | null;
+  resolved_by: string | null;
+  time_to_resolve_hours: number | null;
 }
 
 export function useComplianceAlerts() {
@@ -94,11 +103,26 @@ export function useComplianceAlerts() {
     mutationFn: async (alertId: string) => {
       if (!user?.id) throw new Error('Usuário não autenticado');
 
+      // Get the alert to calculate time to resolve
+      const { data: alertData, error: fetchError } = await supabase
+        .from('compliance_alerts')
+        .select('triggered_at')
+        .eq('id', alertId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const triggeredAt = new Date(alertData.triggered_at);
+      const resolvedAt = new Date();
+      const timeToResolveHours = Math.round((resolvedAt.getTime() - triggeredAt.getTime()) / (1000 * 60 * 60));
+
       const { data, error } = await supabase
         .from('compliance_alerts')
         .update({
           resolved: true,
-          resolved_at: new Date().toISOString(),
+          resolved_at: resolvedAt.toISOString(),
+          resolved_by: user.email || user.id,
+          time_to_resolve_hours: timeToResolveHours,
         })
         .eq('id', alertId)
         .eq('user_id', user.id)
@@ -110,6 +134,7 @@ export function useComplianceAlerts() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['compliance-alerts'] });
+      queryClient.invalidateQueries({ queryKey: ['mttr-metrics'] });
       toast.success('Alerta resolvido');
     },
     onError: (error: Error) => {
@@ -117,22 +142,97 @@ export function useComplianceAlerts() {
     },
   });
 
+  // Create external ticket
+  const createTicket = useMutation({
+    mutationFn: async ({ alertId, ruleId, ruleTitle, externalSystem = 'jira' }: { 
+      alertId: string; 
+      ruleId: string; 
+      ruleTitle: string;
+      externalSystem?: string;
+    }) => {
+      if (!user?.id) throw new Error('Usuário não autenticado');
+
+      // Generate simulated ticket ID
+      const ticketId = `${externalSystem.toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+      // Create remediation ticket record
+      const { error: ticketError } = await supabase
+        .from('remediation_tickets')
+        .insert({
+          user_id: user.id,
+          alert_id: alertId,
+          rule_id: ruleId,
+          external_system: externalSystem,
+          external_ticket_id: ticketId,
+          ticket_title: ruleTitle,
+          ticket_status: 'open',
+        });
+
+      if (ticketError) throw ticketError;
+
+      // Update compliance alert with ticket reference
+      const { data, error } = await supabase
+        .from('compliance_alerts')
+        .update({
+          external_ticket_id: ticketId,
+        })
+        .eq('id', alertId)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Log to audit
+      await supabase.from('system_audit_logs').insert({
+        user_id: user.id,
+        action_type: 'ticket_created',
+        action_category: 'remediation',
+        resource_type: 'remediation_ticket',
+        resource_id: alertId,
+        description: `Ticket ${ticketId} criado para: ${ruleTitle}`,
+        metadata: {
+          rule_id: ruleId,
+          external_system: externalSystem,
+          ticket_id: ticketId,
+        },
+        user_agent: navigator.userAgent,
+      });
+
+      return { ticketId, alert: data };
+    },
+    onSuccess: ({ ticketId }) => {
+      queryClient.invalidateQueries({ queryKey: ['compliance-alerts'] });
+      toast.success('Ticket de correção aberto!', {
+        description: `${ticketId} - Enviado para o board da equipe de TI.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error('Erro ao criar ticket', { description: error.message });
+    },
+  });
+
   // Computed values
   const unacknowledgedAlerts = alerts.filter(a => !a.acknowledged);
   const criticalAlerts = unacknowledgedAlerts.filter(a => a.severity === 'critical');
   const highAlerts = unacknowledgedAlerts.filter(a => a.severity === 'high');
+  const overdueAlerts = alerts.filter(a => a.is_overdue && !a.resolved);
 
   return {
     alerts,
     unacknowledgedAlerts,
     criticalAlerts,
     highAlerts,
+    overdueAlerts,
     unacknowledgedCount: unacknowledgedAlerts.length,
     criticalCount: criticalAlerts.length,
+    overdueCount: overdueAlerts.length,
     isLoading,
     refetch,
     acknowledgeAlert: acknowledgeAlert.mutateAsync,
     resolveAlert: resolveAlert.mutateAsync,
+    createTicket: createTicket.mutateAsync,
     isAcknowledging: acknowledgeAlert.isPending,
+    isCreatingTicket: createTicket.isPending,
   };
 }

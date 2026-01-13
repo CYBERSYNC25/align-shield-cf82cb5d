@@ -252,7 +252,17 @@ Deno.serve(async (req) => {
             newStatus: 'fail',
           });
 
-          // Create compliance alert
+          // Calculate SLA deadline based on severity
+          const SLA_HOURS: Record<string, number> = {
+            critical: 24,
+            high: 168,
+            medium: 720,
+            low: 2160,
+          };
+          const slaHours = SLA_HOURS[rule.severity] || 720;
+          const remediationDeadline = new Date(Date.now() + slaHours * 60 * 60 * 1000);
+
+          // Create compliance alert with SLA fields
           const { data: alertData, error: alertError } = await supabase
             .from('compliance_alerts')
             .insert({
@@ -265,6 +275,8 @@ Deno.serve(async (req) => {
               integration_name: rule.integrationId,
               affected_resources: failingResources.length,
               affected_items: failingResources.map(r => r.resource_id || r.id).slice(0, 10),
+              sla_hours: slaHours,
+              remediation_deadline: remediationDeadline.toISOString(),
               metadata: {
                 triggered_by: triggeredBy,
                 check_timestamp: new Date().toISOString(),

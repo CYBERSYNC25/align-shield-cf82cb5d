@@ -199,16 +199,24 @@ export type Database = {
           affected_items: Json | null
           affected_resources: number | null
           created_at: string | null
+          external_ticket_id: string | null
+          external_ticket_url: string | null
           id: string
           integration_name: string
+          is_overdue: boolean | null
           metadata: Json | null
           new_status: string
+          overdue_notified_at: string | null
           previous_status: string
+          remediation_deadline: string | null
           resolved: boolean | null
           resolved_at: string | null
+          resolved_by: string | null
           rule_id: string
           rule_title: string
           severity: string
+          sla_hours: number | null
+          time_to_resolve_hours: number | null
           triggered_at: string | null
           user_id: string
         }
@@ -219,16 +227,24 @@ export type Database = {
           affected_items?: Json | null
           affected_resources?: number | null
           created_at?: string | null
+          external_ticket_id?: string | null
+          external_ticket_url?: string | null
           id?: string
           integration_name: string
+          is_overdue?: boolean | null
           metadata?: Json | null
           new_status: string
+          overdue_notified_at?: string | null
           previous_status: string
+          remediation_deadline?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
+          resolved_by?: string | null
           rule_id: string
           rule_title: string
           severity: string
+          sla_hours?: number | null
+          time_to_resolve_hours?: number | null
           triggered_at?: string | null
           user_id: string
         }
@@ -239,16 +255,24 @@ export type Database = {
           affected_items?: Json | null
           affected_resources?: number | null
           created_at?: string | null
+          external_ticket_id?: string | null
+          external_ticket_url?: string | null
           id?: string
           integration_name?: string
+          is_overdue?: boolean | null
           metadata?: Json | null
           new_status?: string
+          overdue_notified_at?: string | null
           previous_status?: string
+          remediation_deadline?: string | null
           resolved?: boolean | null
           resolved_at?: string | null
+          resolved_by?: string | null
           rule_id?: string
           rule_title?: string
           severity?: string
+          sla_hours?: number | null
+          time_to_resolve_hours?: number | null
           triggered_at?: string | null
           user_id?: string
         }
@@ -1070,6 +1094,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      remediation_tickets: {
+        Row: {
+          alert_id: string | null
+          assigned_to: string | null
+          created_at: string | null
+          external_system: string
+          external_ticket_id: string
+          external_ticket_url: string | null
+          id: string
+          metadata: Json | null
+          resolved_at: string | null
+          rule_id: string
+          ticket_status: string | null
+          ticket_title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_id?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          external_system: string
+          external_ticket_id: string
+          external_ticket_url?: string | null
+          id?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          rule_id: string
+          ticket_status?: string | null
+          ticket_title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_id?: string | null
+          assigned_to?: string | null
+          created_at?: string | null
+          external_system?: string
+          external_ticket_id?: string
+          external_ticket_url?: string | null
+          id?: string
+          metadata?: Json | null
+          resolved_at?: string | null
+          rule_id?: string
+          ticket_status?: string | null
+          ticket_title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remediation_tickets_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "compliance_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       risk_acceptances: {
         Row: {
