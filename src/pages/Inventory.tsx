@@ -53,11 +53,12 @@ export default function Inventory() {
   }, [filteredAssets]);
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+<div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <div className="flex flex-1">
+      <div className="flex flex-1 pt-16">
         <Sidebar />
-        <PageContainer>
+        <main className="flex-1 ml-72 min-h-[calc(100vh-4rem)] overflow-y-auto">
+          <PageContainer>
           {/* Page Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
@@ -81,7 +82,7 @@ export default function Inventory() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -169,9 +170,10 @@ export default function Inventory() {
               Exibindo {filteredAssets.length} de {counts.total} ativos
             </p>
           )}
-        </PageContainer>
+          </PageContainer>
+          <Footer />
+        </main>
       </div>
-      <Footer />
     </div>
   );
 }
