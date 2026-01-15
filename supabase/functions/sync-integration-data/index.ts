@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit, isServiceRole, rateLimitExceededResponse, rateLimitHeaders } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,6 +68,23 @@ serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Authorization header required');
+    }
+
+    // Rate limiting - bypass for service_role (internal calls)
+    if (!isServiceRole(authHeader)) {
+      // Extract user ID from token for rate limiting
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+      const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+      const { data: { user: tempUser } } = await tempClient.auth.getUser();
+      const rateLimitId = tempUser?.id || req.headers.get('x-forwarded-for') || 'anonymous';
+
+      const rateLimit = await checkRateLimit(rateLimitId, 'sync-integration-data', 10, 60);
+      if (!rateLimit.allowed) {
+        return rateLimitExceededResponse(rateLimit, corsHeaders);
+      }
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -177,7 +195,7 @@ serve(async (req) => {
         provider,
         resourcesCollected 
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-RateLimit-Limit': '10' } }
     );
 
   } catch (error) {

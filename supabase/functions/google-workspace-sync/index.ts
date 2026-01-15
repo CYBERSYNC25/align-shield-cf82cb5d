@@ -22,6 +22,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { checkRateLimit, isServiceRole, rateLimitExceededResponse } from "../_shared/rate-limiter.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -307,6 +308,18 @@ serve(async (req) => {
         }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Rate limiting - bypass for service_role (internal calls)
+    if (!isServiceRole(authHeader)) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user: tempUser } } = await supabase.auth.getUser(token);
+      const rateLimitId = tempUser?.id || req.headers.get('x-forwarded-for') || 'anonymous';
+
+      const rateLimit = await checkRateLimit(rateLimitId, 'google-workspace-sync', 10, 60);
+      if (!rateLimit.allowed) {
+        return rateLimitExceededResponse(rateLimit, corsHeaders);
+      }
     }
 
     const token = authHeader.replace('Bearer ', '');
