@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { AuthContext } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useContext } from 'react';
 
 export interface CollectedResource {
   id: string;
@@ -22,9 +23,12 @@ export interface IntegrationDataFilters {
 /**
  * Hook para buscar dados coletados das integrações
  * Persiste os dados no banco de dados Supabase
+ * Seguro para usar fora do AuthProvider (retorna array vazio)
  */
 export function useIntegrationData(filters?: IntegrationDataFilters) {
-  const { user } = useAuth();
+  // Use context directly to avoid throwing when outside AuthProvider
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user ?? null;
   const { integrationName, resourceType } = filters || {};
 
   return useQuery({
@@ -62,9 +66,12 @@ export function useIntegrationData(filters?: IntegrationDataFilters) {
 
 /**
  * Hook para obter estatísticas agregadas dos dados coletados
+ * Seguro para usar fora do AuthProvider (retorna null)
  */
 export function useIntegrationDataStats() {
-  const { user } = useAuth();
+  // Use context directly to avoid throwing when outside AuthProvider
+  const authContext = useContext(AuthContext);
+  const user = authContext?.user ?? null;
 
   return useQuery({
     queryKey: ['integration-data-stats', user?.id],
