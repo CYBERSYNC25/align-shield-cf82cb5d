@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('IncidentsTest');
 
 const IncidentsTest = () => {
   useEffect(() => {
-    console.log('IncidentsTest component mounted successfully');
+    logger.debug('IncidentsTest component mounted successfully');
   }, []);
 
   return (

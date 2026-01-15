@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { checkRateLimit, isServiceRole, rateLimitExceededResponse, rateLimitHeaders } from "../_shared/rate-limiter.ts";
+import { createLogger } from "../_shared/logger.ts";
+
+const logger = createLogger('SyncIntegrationData');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,7 +111,7 @@ serve(async (req) => {
       throw new Error('Provider is required');
     }
 
-    console.log(`[Sync] Starting sync for provider: ${provider}, user: ${user.id}`);
+    logger.info(`Starting sync for provider: ${provider}, user: ${user.id}`);
 
     // Admin client for database operations
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
@@ -123,7 +126,7 @@ serve(async (req) => {
       .maybeSingle();
 
     if (fetchError) {
-      console.error('[Sync] Fetch error:', fetchError);
+      logger.error('Fetch error', fetchError);
       throw new Error('Failed to fetch integration');
     }
 
@@ -147,7 +150,7 @@ serve(async (req) => {
       }
     }
 
-    console.log(`[Sync] Credentials decrypted for ${provider}`);
+    logger.debug(`Credentials decrypted for ${provider}`);
 
     // Collect data based on provider
     let resourcesCollected = 0;
@@ -175,7 +178,7 @@ serve(async (req) => {
         resourcesCollected = await collectIntuneData(decryptedCredentials, user.id, supabaseAdmin);
         break;
       default:
-        console.log(`[Sync] No specific collector for ${provider}`);
+        logger.debug(`No specific collector for ${provider}`);
     }
 
     // Update integration status
@@ -187,7 +190,7 @@ serve(async (req) => {
       metadata: { resources_collected: resourcesCollected }
     }, { onConflict: 'user_id,integration_name' });
 
-    console.log(`[Sync] Completed: ${resourcesCollected} resources collected`);
+    logger.info(`Completed: ${resourcesCollected} resources collected`);
 
     return new Response(
       JSON.stringify({ 
@@ -199,7 +202,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('[Sync] Error:', error);
+    logger.error('Error', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -267,7 +270,7 @@ async function collectCloudflareData(credentials: Record<string, string>, userId
       }
     }
   } catch (error) {
-    console.error('[Cloudflare] Collection error:', error);
+    logger.error('Cloudflare collection error', error);
   }
 
   return count;
@@ -327,7 +330,7 @@ async function collectGitHubData(credentials: Record<string, string>, userId: st
       if (!error) count++;
     }
   } catch (error) {
-    console.error('[GitHub] Collection error:', error);
+    logger.error('GitHub collection error', error);
   }
 
   return count;
@@ -393,7 +396,7 @@ async function collectSlackData(credentials: Record<string, string>, userId: str
       }
     }
   } catch (error) {
-    console.error('[Slack] Collection error:', error);
+    logger.error('Slack collection error', error);
   }
 
   return count;
@@ -455,7 +458,7 @@ async function collectJiraData(credentials: Record<string, string>, userId: stri
       }
     }
   } catch (error) {
-    console.error('[Jira] Collection error:', error);
+    logger.error('Jira collection error', error);
   }
 
   return count;
@@ -495,7 +498,7 @@ async function collectBambooHRData(credentials: Record<string, string>, userId: 
       if (!error) count++;
     }
   } catch (error) {
-    console.error('[BambooHR] Collection error:', error);
+    logger.error('BambooHR collection error', error);
   }
 
   return count;

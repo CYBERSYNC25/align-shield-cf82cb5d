@@ -3,6 +3,9 @@ import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('usePolicies');
 
 type Policy = Database['public']['Tables']['policies']['Row'];
 type PolicyInsert = Database['public']['Tables']['policies']['Insert'];
@@ -101,7 +104,7 @@ export function usePolicies() {
 
       setPolicies(data || []);
     } catch (error) {
-      console.warn('Dados de políticas não disponíveis:', error);
+      logger.warn('Dados de políticas não disponíveis', error);
       // Use dados mocados se falhar
       setPolicies(getMockPolicies());
     } finally {
@@ -134,7 +137,7 @@ export function usePolicies() {
 
       return data;
     } catch (error: any) {
-      console.error('Erro ao criar política:', error);
+      logger.error('Erro ao criar política', error);
       
       // Fallback para dados mocados
       const newPolicy: Policy = {
@@ -194,7 +197,7 @@ export function usePolicies() {
         description: "Política atualizada com sucesso"
       });
     } catch (error: any) {
-      console.error('Erro ao atualizar política:', error);
+      logger.error('Erro ao atualizar política', error);
       
       // Fallback para atualização local
       setPolicies(prev => prev.map(policy => 
@@ -229,7 +232,7 @@ export function usePolicies() {
         description: "Política removida com sucesso"
       });
     } catch (error: any) {
-      console.error('Erro ao deletar política:', error);
+      logger.error('Erro ao deletar política', error);
       
       // Fallback para remoção local
       setPolicies(prev => prev.filter(policy => policy.id !== id));

@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('useUserRoles');
 
 export type AppRole = 'admin' | 'auditor' | 'compliance_officer' | 'viewer' | 'master_admin' | 'master_ti' | 'master_governance';
 
@@ -38,7 +41,7 @@ export const useUserRoles = () => {
 
       setRoles(data.map(r => r.role as AppRole));
     } catch (error) {
-      console.error('Error loading roles:', error);
+      logger.error('Error loading roles', error);
       toast({
         title: 'Erro ao carregar permissões',
         description: 'Não foi possível carregar suas permissões',
