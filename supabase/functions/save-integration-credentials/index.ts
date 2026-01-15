@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { encryptToken } from '../_shared/crypto-utils.ts';
+import { checkRateLimit, isServiceRole, rateLimitExceededResponse } from '../_shared/rate-limiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -893,6 +894,22 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: false, error: 'Não autorizado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Rate limiting - bypass for service_role (internal calls)
+    if (!isServiceRole(authHeader)) {
+      const supabaseTemp = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user: tempUser } } = await supabaseTemp.auth.getUser();
+      const rateLimitId = tempUser?.id || req.headers.get('x-forwarded-for') || 'anonymous';
+
+      const rateLimit = await checkRateLimit(rateLimitId, 'save-integration-credentials', 10, 60);
+      if (!rateLimit.allowed) {
+        return rateLimitExceededResponse(rateLimit, corsHeaders);
+      }
     }
 
     const supabaseClient = createClient(

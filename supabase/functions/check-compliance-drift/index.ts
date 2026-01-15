@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { checkRateLimit, isServiceRole, rateLimitExceededResponse } from '../_shared/rate-limiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -156,6 +157,18 @@ Deno.serve(async (req) => {
       triggeredBy = body?.triggered_by || 'scheduled';
     } catch {
       // No body provided, check all users
+    }
+
+    // Rate limiting - bypass for service_role (internal/scheduled calls)
+    // Lower limit (5 req/min) as this is a heavy batch operation
+    const authHeader = req.headers.get('Authorization');
+    if (!isServiceRole(authHeader)) {
+      const rateLimitId = targetUserId || req.headers.get('x-forwarded-for') || 'anonymous';
+
+      const rateLimit = await checkRateLimit(rateLimitId, 'check-compliance-drift', 5, 60);
+      if (!rateLimit.allowed) {
+        return rateLimitExceededResponse(rateLimit, corsHeaders);
+      }
     }
 
     // Get all users with integrations
