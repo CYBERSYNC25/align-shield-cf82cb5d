@@ -1,5 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { checkRateLimit, isServiceRole, rateLimitExceededResponse } from '../_shared/rate-limiter.ts';
+import { createLogger } from '../_shared/logger.ts';
+
+const logger = createLogger('CheckComplianceDrift');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -187,7 +190,7 @@ Deno.serve(async (req) => {
 
     const uniqueUserIds = [...new Set(integrationUsers?.map(i => i.user_id) || [])];
     
-    console.log(`Processing ${uniqueUserIds.length} users for compliance drift check`);
+    logger.info(`Processing ${uniqueUserIds.length} users for compliance drift check`);
 
     const results: any[] = [];
     const alertsCreated: any[] = [];
@@ -200,7 +203,7 @@ Deno.serve(async (req) => {
         .eq('user_id', userId);
 
       if (resourcesError) {
-        console.error(`Error fetching resources for user ${userId}:`, resourcesError);
+        logger.error(`Error fetching resources for user ${userId}`, resourcesError);
         continue;
       }
 
@@ -256,7 +259,7 @@ Deno.serve(async (req) => {
         // Check for drift (pass → fail)
         const previousStatus = previousResults[rule.id];
         if (previousStatus === 'pass' && status === 'fail') {
-          console.log(`Drift detected for rule ${rule.id}: pass → fail`);
+          logger.info(`Drift detected for rule ${rule.id}: pass → fail`);
 
           driftDetails.push({
             ruleId: rule.id,
@@ -299,7 +302,7 @@ Deno.serve(async (req) => {
             .single();
 
           if (alertError) {
-            console.error(`Error creating alert for rule ${rule.id}:`, alertError);
+            logger.error(`Error creating alert for rule ${rule.id}`, alertError);
           } else {
             alertsCreated.push(alertData);
 
@@ -343,7 +346,7 @@ Deno.serve(async (req) => {
         });
 
       if (historyError) {
-        console.error(`Error saving check history for user ${userId}:`, historyError);
+        logger.error(`Error saving check history for user ${userId}`, historyError);
       }
 
       // Log to system_audit_logs
@@ -373,7 +376,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Compliance drift check completed. ${alertsCreated.length} alerts created.`);
+    logger.info(`Compliance drift check completed. ${alertsCreated.length} alerts created.`);
 
     return new Response(
       JSON.stringify({
@@ -388,7 +391,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (error) {
-    console.error('Error in check-compliance-drift:', error);
+    logger.error('Error in check-compliance-drift', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

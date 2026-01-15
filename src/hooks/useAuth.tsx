@@ -30,6 +30,9 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('useAuth')
 
 /**
  * Interface do contexto de autenticação
@@ -70,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Erro ao verificar roles:', error);
+        logger.error('Erro ao verificar roles', error);
         return;
       }
 
@@ -81,13 +84,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .insert({ user_id: userId, role: 'viewer' });
 
         if (insertError) {
-          console.error('Erro ao atribuir role viewer:', insertError);
+          logger.error('Erro ao atribuir role viewer', insertError);
         } else {
-          console.log('Role viewer atribuída automaticamente');
+          logger.debug('Role viewer atribuída automaticamente');
         }
       }
     } catch (err) {
-      console.error('Erro ao verificar/atribuir role:', err);
+      logger.error('Erro ao verificar/atribuir role', err);
     }
   };
 

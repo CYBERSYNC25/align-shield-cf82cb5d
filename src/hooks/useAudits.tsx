@@ -3,6 +3,9 @@ import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('useAudits');
 
 // Tipos baseados no schema do Supabase
 type Audit = Database['public']['Tables']['audits']['Row'];
@@ -112,7 +115,7 @@ export function useAudits() {
       setAudits(auditsData);
       setEvidence(evidenceData);
     } catch (error) {
-      console.warn('Dados de auditoria não disponíveis:', error);
+      logger.warn('Dados de auditoria não disponíveis', error);
       // Use dados mocados se falhar
       setAudits(getMockAudits());
       setEvidence(getMockEvidence());
@@ -146,7 +149,7 @@ export function useAudits() {
 
       return data;
     } catch (error: any) {
-      console.error('Erro ao criar auditoria:', error);
+      logger.error('Erro ao criar auditoria', error);
       
       // Fallback para dados mocados
       const newAudit: Audit = {
@@ -178,8 +181,8 @@ export function useAudits() {
     if (!user) return null;
 
     try {
-      console.log('Creating evidence with data:', evidenceData);
-      console.log('User ID:', user.id);
+      logger.debug('Creating evidence with data', evidenceData);
+      logger.debug('User ID', user.id);
 
       const { data, error } = await supabase
         .from('evidence')
@@ -191,7 +194,7 @@ export function useAudits() {
         .single();
 
       if (error) {
-        console.error('Supabase error creating evidence:', error);
+        logger.error('Supabase error creating evidence', error);
         throw error;
       }
 
@@ -205,7 +208,7 @@ export function useAudits() {
 
       return data;
     } catch (error: any) {
-      console.error('Erro ao criar evidência:', error);
+      logger.error('Erro ao criar evidência', error);
       
       // Fallback para dados mocados
       const newEvidence: Evidence = {
@@ -255,7 +258,7 @@ export function useAudits() {
         description: "Status da auditoria atualizado com sucesso"
       });
     } catch (error: any) {
-      console.error('Erro ao atualizar status:', error);
+      logger.error('Erro ao atualizar status', error);
       
       // Fallback para atualização local
       setAudits(prev => prev.map(audit => 
@@ -313,7 +316,7 @@ export function useAudits() {
           : audit
       ));
     } catch (error) {
-      console.error('Error updating audit:', error);
+      logger.error('Error updating audit', error);
       toast({
         title: "Erro",
         description: "Falha ao atualizar auditoria",

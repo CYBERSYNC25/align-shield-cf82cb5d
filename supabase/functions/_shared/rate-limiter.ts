@@ -5,6 +5,10 @@
  * @module rate-limiter
  */
 
+import { createLogger } from './logger.ts';
+
+const logger = createLogger('RateLimit');
+
 export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
@@ -31,7 +35,7 @@ export async function checkRateLimit(
 
   // Fail-open if Redis is not configured (development mode)
   if (!url || !token) {
-    console.warn('[RateLimit] Upstash not configured, bypassing rate limit');
+    logger.warn('Upstash not configured, bypassing rate limit');
     return { allowed: true, remaining: maxRequests, resetAt: 0, limit: maxRequests };
   }
 
@@ -62,7 +66,7 @@ export async function checkRateLimit(
     });
 
     if (!response.ok) {
-      console.error('[RateLimit] Redis pipeline error:', response.status);
+      logger.error('Redis pipeline error', response.status);
       // Fail-open on Redis errors
       return { allowed: true, remaining: maxRequests, resetAt: 0, limit: maxRequests };
     }
@@ -76,12 +80,12 @@ export async function checkRateLimit(
     const resetAt = Math.ceil((now + windowSeconds * 1000) / 1000);
 
     if (!allowed) {
-      console.warn(`[RateLimit] Rate limit exceeded for ${userId} on ${endpoint}: ${requestCount}/${maxRequests}`);
+      logger.warn(`Rate limit exceeded for ${userId} on ${endpoint}: ${requestCount}/${maxRequests}`);
     }
 
     return { allowed, remaining, resetAt, limit: maxRequests };
   } catch (error) {
-    console.error('[RateLimit] Error:', error);
+    logger.error('Error checking rate limit', error);
     // Fail-open - allow request if Redis fails
     return { allowed: true, remaining: maxRequests, resetAt: 0, limit: maxRequests };
   }
