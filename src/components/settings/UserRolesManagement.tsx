@@ -24,7 +24,10 @@ const roleLabels = {
   viewer: 'Visualizador',
   master_admin: 'Master Admin',
   master_ti: 'Master TI',
-  master_governance: 'Master Governança'
+  master_governance: 'Master Governança',
+  // NEW Vanta-model roles
+  editor: 'Editor',
+  view_only_admin: 'Admin Somente Leitura'
 };
 
 const roleColors = {
@@ -34,8 +37,23 @@ const roleColors = {
   viewer: 'outline',
   master_admin: 'destructive',
   master_ti: 'destructive',
-  master_governance: 'destructive'
+  master_governance: 'destructive',
+  // NEW roles colors
+  editor: 'default',
+  view_only_admin: 'secondary'
 } as const;
+
+const roleDescriptions: Record<string, string> = {
+  master_admin: 'Acesso total à plataforma, incluindo gestão de usuários e configurações avançadas',
+  admin: 'Pode gerenciar usuários e editar todos os recursos',
+  editor: 'Pode editar recursos, mas não gerenciar usuários',
+  view_only_admin: 'Visualiza tudo, mas não pode editar nada',
+  compliance_officer: 'Pode editar recursos relacionados a compliance',
+  auditor: 'Acesso de leitura para auditoria',
+  viewer: 'Visualizador básico com acesso restrito',
+  master_ti: 'Acesso especial para área de TI',
+  master_governance: 'Acesso especial para área de Governança'
+};
 
 export default function UserRolesManagement() {
   const { toast } = useToast();

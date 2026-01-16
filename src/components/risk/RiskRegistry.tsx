@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useRisks } from '@/hooks/useRisks';
 import { useToast } from '@/hooks/use-toast';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import CreateRiskModal from './CreateRiskModal';
+import ManageAccessModal from '@/components/common/ManageAccessModal';
 import { 
   Plus, 
   AlertTriangle, 
@@ -13,12 +15,14 @@ import {
   Calendar,
   User,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Users
 } from 'lucide-react';
 
 const RiskRegistry = () => {
   const { risks, loading, updateRiskStatus } = useRisks();
   const { toast } = useToast();
+  const { canManageObjectPermissions, hasEditPermission, canEditResources } = useUserRoles();
 
   if (loading) {
     return (
@@ -136,6 +140,18 @@ const RiskRegistry = () => {
                 
                 <div className="flex items-center gap-2">
                   {getTrendIcon(risk.trend)}
+                  {canManageObjectPermissions('risk', risk.id) && (
+                    <ManageAccessModal
+                      objectType="risk"
+                      objectId={risk.id}
+                      objectTitle={risk.title}
+                      trigger={
+                        <Button variant="ghost" size="sm">
+                          <Users className="h-4 w-4" />
+                        </Button>
+                      }
+                    />
+                  )}
                   <Button 
                     variant="outline" 
                     size="sm"
