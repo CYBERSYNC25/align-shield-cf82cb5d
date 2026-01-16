@@ -18,12 +18,15 @@ import {
   Settings,
   MessageSquare,
   Upload,
-  Download
+  Download,
+  Users
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useFrameworks } from '@/hooks/useFrameworks';
+import { useUserRoles } from '@/hooks/useUserRoles';
 import EvidenceUploadModal from '@/components/audit/EvidenceUploadModal';
+import ManageAccessModal from '@/components/common/ManageAccessModal';
 
 interface Control {
   id: string;
@@ -78,8 +81,11 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
   const { toast } = useToast();
   const { user } = useAuth();
   const { updateControlStatus } = useFrameworks();
+  const { canManageObjectPermissions, hasEditPermission, isAdmin, isMasterAdmin } = useUserRoles();
 
   const userName = user?.user_metadata?.display_name || user?.email || 'Usuário';
+  const canManageAccess = canManageObjectPermissions('control', control.id);
+  const canEdit = hasEditPermission('control', control.id);
 
   // Initialize history with control creation
   useEffect(() => {
@@ -384,22 +390,45 @@ const ControlDetailsModal = ({ control, children }: ControlDetailsModalProps) =>
               {/* Quick Actions */}
               <Card className="bg-surface-elevated border-card-border">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Ações Rápidas</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium">Ações Rápidas</CardTitle>
+                    {canManageAccess && (
+                      <ManageAccessModal
+                        objectType="control"
+                        objectId={control.id}
+                        objectTitle={control.title}
+                        trigger={
+                          <Button size="sm" variant="outline">
+                            <Users className="w-4 h-4 mr-2" />
+                            Gerenciar Acesso
+                          </Button>
+                        }
+                      />
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus('implemented')}>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Marcar como Implementado
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => handleUpdateStatus('partial')}>
-                      <AlertTriangle className="w-4 h-4 mr-2" />
-                      Marcar como Parcial
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={() => setShowEvidenceUpload(true)}>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Carregar Evidência
-                    </Button>
+                    {canEdit ? (
+                      <>
+                        <Button size="sm" variant="outline" onClick={() => handleUpdateStatus('implemented')}>
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Marcar como Implementado
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleUpdateStatus('partial')}>
+                          <AlertTriangle className="w-4 h-4 mr-2" />
+                          Marcar como Parcial
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setShowEvidenceUpload(true)}>
+                          <Upload className="w-4 h-4 mr-2" />
+                          Carregar Evidência
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Você não tem permissão para editar este controle.
+                      </p>
+                    )}
                   </div>
                 </CardContent>
               </Card>

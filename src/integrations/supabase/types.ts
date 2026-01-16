@@ -1041,6 +1041,48 @@ export type Database = {
         }
         Relationships: []
       }
+      object_permissions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          granted_at: string | null
+          granted_by: string | null
+          id: string
+          notes: string | null
+          object_id: string
+          object_type: string
+          permission_level: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          object_id: string
+          object_type: string
+          permission_level: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          granted_at?: string | null
+          granted_by?: string | null
+          id?: string
+          notes?: string | null
+          object_id?: string
+          object_type?: string
+          permission_level?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       policies: {
         Row: {
           approval_status: string | null
@@ -1698,6 +1740,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_object_permission: {
+        Args: {
+          _object_id: string
+          _object_type: string
+          _required_level?: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           p_action_label?: string
@@ -1713,6 +1764,16 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      get_user_object_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          expires_at: string
+          id: string
+          object_id: string
+          object_type: string
+          permission_level: string
+        }[]
       }
       get_user_roles: {
         Args: { _user_id: string }
@@ -1737,6 +1798,8 @@ export type Database = {
         | "master_admin"
         | "master_ti"
         | "master_governance"
+        | "editor"
+        | "view_only_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1872,6 +1935,8 @@ export const Constants = {
         "master_admin",
         "master_ti",
         "master_governance",
+        "editor",
+        "view_only_admin",
       ],
     },
   },
