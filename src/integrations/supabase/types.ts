@@ -572,6 +572,116 @@ export type Database = {
           },
         ]
       }
+      custom_compliance_tests: {
+        Row: {
+          avg_execution_time_ms: number | null
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          execution_count: number | null
+          id: string
+          integration_name: string
+          last_error: string | null
+          last_run_at: string | null
+          resource_type: string
+          severity: string
+          sla_hours: number | null
+          test_description: string | null
+          test_logic: Json
+          test_name: string
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          avg_execution_time_ms?: number | null
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          execution_count?: number | null
+          id?: string
+          integration_name: string
+          last_error?: string | null
+          last_run_at?: string | null
+          resource_type: string
+          severity?: string
+          sla_hours?: number | null
+          test_description?: string | null
+          test_logic?: Json
+          test_name: string
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          avg_execution_time_ms?: number | null
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          execution_count?: number | null
+          id?: string
+          integration_name?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          resource_type?: string
+          severity?: string
+          sla_hours?: number | null
+          test_description?: string | null
+          test_logic?: Json
+          test_name?: string
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      custom_test_results: {
+        Row: {
+          affected_resources_count: number | null
+          error_message: string | null
+          executed_at: string
+          execution_time_ms: number | null
+          id: string
+          result_details: Json | null
+          status: string
+          test_id: string
+          triggered_by: string | null
+          user_id: string
+        }
+        Insert: {
+          affected_resources_count?: number | null
+          error_message?: string | null
+          executed_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          result_details?: Json | null
+          status: string
+          test_id: string
+          triggered_by?: string | null
+          user_id: string
+        }
+        Update: {
+          affected_resources_count?: number | null
+          error_message?: string | null
+          executed_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          result_details?: Json | null
+          status?: string
+          test_id?: string
+          triggered_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_test_results_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "custom_compliance_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_logs: {
         Row: {
           cpu_usage: number
@@ -2200,6 +2310,22 @@ export type Database = {
         | "master_governance"
         | "editor"
         | "view_only_admin"
+      condition_operator:
+        | "equals"
+        | "not_equals"
+        | "greater_than"
+        | "less_than"
+        | "greater_than_or_equals"
+        | "less_than_or_equals"
+        | "contains"
+        | "not_contains"
+        | "regex_match"
+        | "is_empty"
+        | "is_not_empty"
+        | "in_array"
+        | "not_in_array"
+        | "starts_with"
+        | "ends_with"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2337,6 +2463,23 @@ export const Constants = {
         "master_governance",
         "editor",
         "view_only_admin",
+      ],
+      condition_operator: [
+        "equals",
+        "not_equals",
+        "greater_than",
+        "less_than",
+        "greater_than_or_equals",
+        "less_than_or_equals",
+        "contains",
+        "not_contains",
+        "regex_match",
+        "is_empty",
+        "is_not_empty",
+        "in_array",
+        "not_in_array",
+        "starts_with",
+        "ends_with",
       ],
     },
   },
