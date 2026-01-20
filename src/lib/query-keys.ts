@@ -5,6 +5,7 @@ export const queryKeys = {
   // Integrations
   integrations: ['integrations'] as const,
   integrationStatus: (name: string) => ['integration-status', name] as const,
+  integrationData: ['integration-data'] as const,
   
   // AWS
   awsResources: (integrationId: string) => ['aws-resources', integrationId] as const,
@@ -18,6 +19,9 @@ export const queryKeys = {
   googleWorkspace: ['google-workspace'] as const,
   googleOAuthStatus: ['google-oauth-status'] as const,
   googleConnection: ['google-connection'] as const,
+
+  // Datadog
+  datadogResources: (integrationId: string) => ['datadog-resources', integrationId] as const,
   
   // Frameworks & Controls
   frameworks: ['frameworks'] as const,

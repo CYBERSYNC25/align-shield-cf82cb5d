@@ -358,6 +358,52 @@ const COMPLIANCE_RULES: ComplianceRule[] = [
     getAffectedName: (resource) => resource.resource_data?.displayName || 'Policy',
     fixAction: '/integrations',
   },
+
+  // Datadog Rules
+  {
+    id: 'datadog-no-critical-alerts',
+    title: 'Sem Alertas para Eventos Críticos',
+    description: 'Não há monitors configurados para detectar eventos de segurança críticos',
+    severity: 'high',
+    integrationId: 'datadog',
+    resourceType: 'monitor',
+    checkFn: (resource) => {
+      const data = resource.resource_data;
+      // Fail if NO security monitors or critical tags
+      return data?.is_security_monitor !== true && data?.has_critical_tag !== true;
+    },
+    getAffectedName: (resource) => resource.resource_data?.name || 'Monitor',
+    fixAction: '/integrations',
+  },
+  {
+    id: 'datadog-log-retention-short',
+    title: 'Pipeline de Logs Desabilitado',
+    description: 'Pipeline de logs desabilitada pode causar perda de dados de auditoria',
+    severity: 'medium',
+    integrationId: 'datadog',
+    resourceType: 'log_pipeline',
+    checkFn: (resource) => {
+      const data = resource.resource_data;
+      return data?.is_enabled === false;
+    },
+    getAffectedName: (resource) => resource.resource_data?.name || 'Pipeline',
+    fixAction: '/integrations',
+  },
+  {
+    id: 'datadog-pii-in-logs',
+    title: 'PII Potencialmente Exposto em Logs',
+    description: 'Pipeline de logs sem processador de mascaramento de dados sensíveis',
+    severity: 'critical',
+    integrationId: 'datadog',
+    resourceType: 'log_pipeline',
+    checkFn: (resource) => {
+      const data = resource.resource_data;
+      // Fail if enabled but no sensitive data processor
+      return data?.is_enabled === true && data?.has_sensitive_data_processor !== true;
+    },
+    getAffectedName: (resource) => resource.resource_data?.name || 'Pipeline',
+    fixAction: '/integrations',
+  },
 ];
 
 // Helper function to get resource name from custom test
