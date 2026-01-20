@@ -40,4 +40,9 @@ export const queryKeys = {
     ['questionnaire-questions', questionnaireId] as const,
   questionnaireTemplates: ['questionnaire-templates'] as const,
   answerLibrary: ['answer-library'] as const,
+
+  // Custom Compliance Tests
+  customTests: ['custom-tests'] as const,
+  customTestById: (id: string) => ['custom-test', id] as const,
+  customTestResults: (testId: string) => ['custom-test-results', testId] as const,
 };
