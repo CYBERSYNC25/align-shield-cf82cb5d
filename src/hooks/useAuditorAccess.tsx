@@ -6,7 +6,6 @@ import { useToast } from './use-toast';
 export interface AuditorToken {
   id: string;
   userId: string;
-  token: string;
   auditorEmail: string | null;
   auditorName: string | null;
   companyName: string | null;
@@ -21,6 +20,7 @@ export interface AuditorToken {
   accessCount: number;
   isRevoked: boolean;
   createdAt: string;
+  // Note: token is intentionally NOT included - it's only shown once during creation
 }
 
 export interface CreateAuditorTokenInput {
@@ -36,10 +36,28 @@ export interface CreateAuditorTokenInput {
   };
 }
 
+/**
+ * Generate a cryptographically secure random token
+ */
 function generateSecureToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
+ * Hash a token using SHA-256
+ * We use SHA-256 instead of bcrypt because:
+ * 1. Tokens are already 256 bits of entropy (not passwords that need slow hashing)
+ * 2. SHA-256 is faster and doesn't require additional dependencies
+ * 3. The high entropy makes rainbow table attacks infeasible
+ */
+async function hashToken(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export function useAuditorAccess() {
@@ -63,7 +81,7 @@ export function useAuditorAccess() {
       return (data || []).map(item => ({
         id: item.id,
         userId: item.user_id,
-        token: item.token,
+        // Note: We don't include the token in the returned data for security
         auditorEmail: item.auditor_email,
         auditorName: item.auditor_name,
         companyName: item.company_name,
@@ -83,7 +101,10 @@ export function useAuditorAccess() {
     mutationFn: async (input: CreateAuditorTokenInput) => {
       if (!user?.id) throw new Error('Usuário não autenticado');
 
+      // Generate secure token and hash it
       const token = generateSecureToken();
+      const tokenHash = await hashToken(token);
+      
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + input.expiresInDays);
 
@@ -91,7 +112,8 @@ export function useAuditorAccess() {
         .from('auditor_access_tokens')
         .insert({
           user_id: user.id,
-          token,
+          token: '', // Empty string for legacy column - will be removed in future migration
+          token_hash: tokenHash, // Store only the hash
           auditor_email: input.auditorEmail || null,
           auditor_name: input.auditorName || null,
           company_name: input.companyName || null,
@@ -124,13 +146,14 @@ export function useAuditorAccess() {
         },
       });
 
+      // Return the plaintext token ONLY ONCE - it cannot be retrieved again
       return { ...data, token };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auditor-tokens'] });
       toast({
         title: 'Token criado',
-        description: 'Link seguro gerado com sucesso. Copie e compartilhe com o auditor.',
+        description: 'Link seguro gerado com sucesso. Copie agora - ele não será exibido novamente.',
       });
     },
     onError: (error: Error) => {
@@ -197,17 +220,26 @@ export function useAuditorAccess() {
   };
 }
 
-// Hook to validate token (for public auditor portal)
+/**
+ * Hook to validate token (for public auditor portal)
+ * 
+ * SECURITY: This validates tokens by hashing the input and comparing with stored hashes.
+ * If the database is compromised, attackers cannot use the hashes to access the portal.
+ */
 export function useValidateAuditorToken(token: string | null) {
   return useQuery({
     queryKey: ['validate-auditor-token', token],
     queryFn: async () => {
       if (!token) return null;
 
+      // Hash the input token for comparison
+      const inputTokenHash = await hashToken(token);
+
+      // Find token by hash
       const { data, error } = await supabase
         .from('auditor_access_tokens')
         .select('*')
-        .eq('token', token)
+        .eq('token_hash', inputTokenHash)
         .eq('is_revoked', false)
         .gt('expires_at', new Date().toISOString())
         .single();
