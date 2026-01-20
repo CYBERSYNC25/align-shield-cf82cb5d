@@ -1,64 +1,68 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Cloud, 
-  Shield, 
-  GitBranch, 
-  Users, 
-  Laptop, 
-  Plug, 
-  Activity,
-  RefreshCw,
-  Lock
-} from "lucide-react";
-import Header from "@/components/layout/Header";
-import Sidebar from "@/components/layout/Sidebar";
-import Footer from "@/components/layout/Footer";
-import PageContainer from "@/components/layout/PageContainer";
-import { useIntegrationStatus } from "@/hooks/useIntegrationStatus";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Plug, 
+  ArrowRight, 
+  Zap,
+  CheckCircle2,
+  Loader2
+} from "lucide-react";
+import PageContainer from "@/components/layout/PageContainer";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 
-// Components
-import { IntegrationCard } from "@/components/integrations/IntegrationCard";
-import { FeatureRequestModal } from "@/components/integrations/FeatureRequestModal";
+// Marketplace Components
+import { MarketplaceFilters, IntegrationCategory, IntegrationStatus } from "@/components/integrations/MarketplaceFilters";
+import { MarketplaceIntegrationCard } from "@/components/integrations/MarketplaceIntegrationCard";
+import { PopularIntegrations } from "@/components/integrations/PopularIntegrations";
+import { ComingSoonSection } from "@/components/integrations/ComingSoonSection";
+
+// Modals
 import { ConnectAwsModal } from "@/components/integrations/ConnectAwsModal";
 import { MikroTikAgentModal } from "@/components/integrations/MikroTikAgentModal";
 import { AwsResourcesModal } from "@/components/integrations/AwsResourcesModal";
 import { GoogleOAuthValidator } from "@/components/integrations/GoogleOAuthValidator";
 import { AzureResourcesModal } from "@/components/integrations/AzureResourcesModal";
 import { GoogleWorkspaceResourcesModal } from "@/components/integrations/GoogleWorkspaceResourcesModal";
-import { Auth0Connector } from "@/components/integrations/Auth0Connector";
 import { Auth0ResourcesModal } from "@/components/integrations/Auth0ResourcesModal";
 import { ConnectAuth0Modal } from "@/components/integrations/ConnectAuth0Modal";
 import { ConnectOktaModal } from "@/components/integrations/ConnectOktaModal";
 import { ConnectionModal } from "@/components/integrations/ConnectionModal";
-import { Auth0Evidence } from "@/hooks/useAuth0Sync";
+import { DatadogResourcesModal } from "@/components/integrations/DatadogResourcesModal";
+import { IntegrationLogs } from "@/components/integrations/IntegrationLogs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Auth0Connector } from "@/components/integrations/Auth0Connector";
+import { Auth0Evidence } from "@/hooks/useAuth0Sync";
 
-// Catalog
+// Catalog & Utils
 import { 
   integrationsCatalog, 
   IntegrationDefinition,
-  IntegrationCategory,
-  CATEGORY_LABELS,
-  isIntegrationFunctional,
-  getIntegrationsByCategory
+  isIntegrationFunctional
 } from "@/lib/integrations-catalog";
+import { useIntegrationStatus } from "@/hooks/useIntegrationStatus";
+import { fuzzyMatch, getSearchScore, POPULAR_INTEGRATION_IDS, COMING_SOON_INTEGRATIONS } from "@/lib/marketplace-utils";
 
-const CATEGORY_ICONS: Record<IntegrationCategory, React.ReactNode> = {
-  cloud: <Cloud className="h-4 w-4" />,
-  iam: <Shield className="h-4 w-4" />,
-  sdlc: <GitBranch className="h-4 w-4" />,
-  productivity: <Users className="h-4 w-4" />,
-  endpoint: <Laptop className="h-4 w-4" />,
-};
+const TOTAL_AVAILABLE_INTEGRATIONS = 15;
 
 export default function IntegrationsHub() {
   const [searchParams] = useSearchParams();
-  const { aws, google, azure, mikrotik, auth0, okta, cloudflare, jira, github, gitlab, slack, bamboohr, crowdstrike, intune, loading, refetch } = useIntegrationStatus();
+  const { 
+    aws, google, azure, mikrotik, auth0, okta, cloudflare, 
+    jira, github, gitlab, slack, bamboohr, crowdstrike, intune, 
+    loading, refetch 
+  } = useIntegrationStatus();
+
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<IntegrationCategory | 'all'>('all');
+  const [statusFilter, setStatusFilter] = useState<IntegrationStatus>('all');
+  const [activeTab, setActiveTab] = useState('all');
 
   // Modal states
   const [showAwsModal, setShowAwsModal] = useState(false);
@@ -71,9 +75,9 @@ export default function IntegrationsHub() {
   const [showAuth0ManageModal, setShowAuth0ManageModal] = useState(false);
   const [showAuth0ResourcesModal, setShowAuth0ResourcesModal] = useState(false);
   const [showConnectOktaModal, setShowConnectOktaModal] = useState(false);
+  const [showDatadogResourcesModal, setShowDatadogResourcesModal] = useState(false);
   const [auth0Data, setAuth0Data] = useState<Auth0Evidence | null>(null);
-  const [featureRequestModal, setFeatureRequestModal] = useState<IntegrationDefinition | null>(null);
-  
+
   // Generic ConnectionModal state
   const [connectionModalConfig, setConnectionModalConfig] = useState<{
     open: boolean;
@@ -99,78 +103,101 @@ export default function IntegrationsHub() {
     if (!isIntegrationFunctional(id)) return 'coming_soon';
     
     switch (id) {
-      case 'aws':
-        return aws.connected ? 'connected' : 'available';
-      case 'google-workspace':
-        return google.connected ? 'connected' : 'available';
-      case 'azure-ad':
-        return azure.connected ? 'connected' : 'available';
-      case 'mikrotik':
-        return mikrotik.connected ? 'connected' : 'available';
-      case 'auth0':
-        return auth0.connected ? 'connected' : 'available';
-      case 'okta':
-        return okta.connected ? 'connected' : 'available';
-      case 'cloudflare':
-        return cloudflare.connected ? 'connected' : 'available';
-      case 'jira':
-        return jira.connected ? 'connected' : 'available';
-      case 'github':
-        return github.connected ? 'connected' : 'available';
-      case 'gitlab':
-        return gitlab.connected ? 'connected' : 'available';
-      case 'slack':
-        return slack.connected ? 'connected' : 'available';
-      case 'bamboohr':
-        return bamboohr.connected ? 'connected' : 'available';
-      case 'crowdstrike':
-        return crowdstrike.connected ? 'connected' : 'available';
-      case 'intune':
-        return intune.connected ? 'connected' : 'available';
-      default:
-        return 'available';
+      case 'aws': return aws.connected ? 'connected' : 'available';
+      case 'google-workspace': return google.connected ? 'connected' : 'available';
+      case 'azure-ad': return azure.connected ? 'connected' : 'available';
+      case 'mikrotik': return mikrotik.connected ? 'connected' : 'available';
+      case 'auth0': return auth0.connected ? 'connected' : 'available';
+      case 'okta': return okta.connected ? 'connected' : 'available';
+      case 'cloudflare': return cloudflare.connected ? 'connected' : 'available';
+      case 'jira': return jira.connected ? 'connected' : 'available';
+      case 'github': return github.connected ? 'connected' : 'available';
+      case 'gitlab': return gitlab.connected ? 'connected' : 'available';
+      case 'slack': return slack.connected ? 'connected' : 'available';
+      case 'bamboohr': return bamboohr.connected ? 'connected' : 'available';
+      case 'crowdstrike': return crowdstrike.connected ? 'connected' : 'available';
+      case 'intune': return intune.connected ? 'connected' : 'available';
+      default: return 'available';
     }
   };
 
-  const getLastSync = (id: string): Date | null => {
-    switch (id) {
-      case 'aws':
-        return aws.lastSync;
-      case 'google-workspace':
-        return google.lastSync;
-      case 'azure-ad':
-        return azure.lastSync;
-      case 'mikrotik':
-        return mikrotik.lastSync;
-      case 'auth0':
-        return auth0.lastSync;
-      case 'okta':
-        return okta.lastSync;
-      case 'cloudflare':
-        return cloudflare.lastSync;
-      case 'jira':
-        return jira.lastSync;
-      case 'github':
-        return github.lastSync;
-      case 'gitlab':
-        return gitlab.lastSync;
-      case 'slack':
-        return slack.lastSync;
-      case 'bamboohr':
-        return bamboohr.lastSync;
-      case 'crowdstrike':
-        return crowdstrike.lastSync;
-      case 'intune':
-        return intune.lastSync;
-      default:
-        return null;
-    }
+  // Check if connected
+  const isConnected = (id: string): boolean => getIntegrationStatus(id) === 'connected';
+
+  // Count connected
+  const connectedCount = useMemo(() => {
+    return integrationsCatalog.filter(i => isConnected(i.id)).length;
+  }, [aws, google, azure, mikrotik, auth0, okta, cloudflare, jira, github, gitlab, slack, bamboohr, crowdstrike, intune]);
+
+  // Filter integrations
+  const filteredIntegrations = useMemo(() => {
+    return integrationsCatalog
+      .filter(integration => {
+        // Search filter (fuzzy)
+        if (searchTerm) {
+          const nameMatch = fuzzyMatch(integration.name, searchTerm);
+          const descMatch = fuzzyMatch(integration.description, searchTerm);
+          if (!nameMatch && !descMatch) return false;
+        }
+        
+        // Category filter
+        if (categoryFilter !== 'all' && integration.category !== categoryFilter) {
+          return false;
+        }
+        
+        // Status filter based on tab
+        if (activeTab === 'connected' && !isConnected(integration.id)) {
+          return false;
+        }
+        if (activeTab === 'available' && isConnected(integration.id)) {
+          return false;
+        }
+        
+        return true;
+      })
+      .sort((a, b) => {
+        // Sort by search relevance if searching
+        if (searchTerm) {
+          const scoreA = Math.max(
+            getSearchScore(a.name, searchTerm),
+            getSearchScore(a.description, searchTerm)
+          );
+          const scoreB = Math.max(
+            getSearchScore(b.name, searchTerm),
+            getSearchScore(b.description, searchTerm)
+          );
+          return scoreB - scoreA;
+        }
+        // Otherwise sort connected first, then by name
+        const aConnected = isConnected(a.id) ? 1 : 0;
+        const bConnected = isConnected(b.id) ? 1 : 0;
+        if (aConnected !== bConnected) return bConnected - aConnected;
+        return a.name.localeCompare(b.name);
+      });
+  }, [searchTerm, categoryFilter, activeTab, aws, google, azure, mikrotik, auth0, okta, cloudflare, jira, github, gitlab, slack, bamboohr, crowdstrike, intune]);
+
+  // Popular integrations
+  const popularIntegrations = useMemo(() => {
+    return integrationsCatalog.filter(i => POPULAR_INTEGRATION_IDS.includes(i.id));
+  }, []);
+
+  // Active filters count
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (searchTerm) count++;
+    if (categoryFilter !== 'all') count++;
+    if (statusFilter !== 'all') count++;
+    return count;
+  }, [searchTerm, categoryFilter, statusFilter]);
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('all');
+    setStatusFilter('all');
   };
 
-
-  // Handlers for each integration
+  // Handle connect
   const handleConnect = (integration: IntegrationDefinition) => {
-    // Integrations with specific modals
     switch (integration.id) {
       case 'aws':
         setShowAwsModal(true);
@@ -187,7 +214,6 @@ export default function IntegrationsHub() {
       case 'okta':
         setShowConnectOktaModal(true);
         break;
-      // Self-service integrations use the generic ConnectionModal (including Azure AD)
       case 'azure-ad':
       case 'cloudflare':
       case 'jira':
@@ -197,327 +223,418 @@ export default function IntegrationsHub() {
       case 'bamboohr':
       case 'crowdstrike':
       case 'intune':
+      case 'datadog':
         setConnectionModalConfig({
           open: true,
-          provider: integration.provider,
+          provider: integration.id,
           integrationName: integration.name,
-          integrationLogo: integration.logo,
+          integrationLogo: integration.logo || '',
         });
         break;
       default:
-        setFeatureRequestModal(integration);
-    }
-  };
-
-  const handleManage = (integration: IntegrationDefinition) => {
-    switch (integration.id) {
-      case 'google-workspace':
-        setShowGoogleModal(true);
-        break;
-      case 'aws':
-        setShowAwsModal(true);
-        break;
-      case 'mikrotik':
-        setShowMikroTikModal(true);
-        break;
-      case 'auth0':
-        setShowConnectAuth0Modal(true);
-        break;
-      case 'okta':
-        setShowConnectOktaModal(true);
-        break;
-      // Self-service integrations use the generic ConnectionModal for management (including Azure AD)
-      case 'azure-ad':
-      case 'cloudflare':
-      case 'jira':
-      case 'github':
-      case 'gitlab':
-      case 'slack':
-      case 'bamboohr':
-      case 'crowdstrike':
-      case 'intune':
-        setConnectionModalConfig({
-          open: true,
-          provider: integration.provider,
-          integrationName: integration.name,
-          integrationLogo: integration.logo,
+        toast({
+          title: "Em breve",
+          description: `A integração com ${integration.name} estará disponível em breve.`,
         });
-        break;
     }
   };
 
-  const handleViewResources = (integration: IntegrationDefinition) => {
+  // Handle manage
+  const handleManage = (integration: IntegrationDefinition) => {
     switch (integration.id) {
       case 'aws':
         setShowAwsResourcesModal(true);
         break;
-      case 'google-workspace':
-        setShowGoogleResourcesModal(true);
-        break;
       case 'azure-ad':
         setShowAzureResourcesModal(true);
         break;
-      case 'auth0':
-        if (auth0Data) {
-          setShowAuth0ResourcesModal(true);
-        }
+      case 'google-workspace':
+        setShowGoogleResourcesModal(true);
         break;
+      case 'auth0':
+        setShowAuth0ResourcesModal(true);
+        break;
+      case 'datadog':
+        setShowDatadogResourcesModal(true);
+        break;
+      default:
+        toast({
+          title: "Gerenciar integração",
+          description: `Gerencie a integração ${integration.name} nas configurações.`,
+        });
     }
   };
 
-  const handleAuth0Connected = (data: Auth0Evidence) => {
-    setAuth0Data(data);
-    setShowConnectAuth0Modal(false);
-    // Optionally open the resources modal
-    setShowAuth0ResourcesModal(true);
+  // Tab counts
+  const tabCounts = useMemo(() => ({
+    all: integrationsCatalog.length,
+    connected: connectedCount,
+    available: integrationsCatalog.length - connectedCount,
+    coming_soon: COMING_SOON_INTEGRATIONS.length,
+  }), [connectedCount]);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.05 }
+    }
   };
 
-  const handleAuth0ViewResources = (data: Auth0Evidence) => {
-    setAuth0Data(data);
-    setShowAuth0ResourcesModal(true);
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
   };
 
-  // Stats
-  const connectedCount = integrationsCatalog.filter(i => getIntegrationStatus(i.id) === 'connected').length;
-  const availableCount = integrationsCatalog.filter(i => getIntegrationStatus(i.id) === 'available').length;
-  const comingSoonCount = integrationsCatalog.filter(i => getIntegrationStatus(i.id) === 'coming_soon').length;
-
-  const renderIntegrationCards = (integrations: IntegrationDefinition[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {integrations.map((integration) => {
-        const status = getIntegrationStatus(integration.id);
-        return (
-          <IntegrationCard
-            key={integration.id}
-            integration={integration}
-            status={status}
-            lastSync={getLastSync(integration.id)}
-            onConnect={() => handleConnect(integration)}
-            onManage={() => handleManage(integration)}
-            onViewResources={
-              ['aws', 'google-workspace', 'azure-ad'].includes(integration.id) && status === 'connected'
-                ? () => handleViewResources(integration)
-                : undefined
-            }
-            onRequestFeature={() => setFeatureRequestModal(integration)}
-          />
-        );
-      })}
-    </div>
-  );
+  if (loading) {
+    return (
+      <PageContainer 
+        title="Integrações" 
+        subtitle="Conecte suas ferramentas ao Apoc"
+        icon={<Plug className="h-6 w-6" />}
+      >
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <Header />
-      
-      <div className="flex flex-1 pt-16">
-        <Sidebar />
-        
-        <main className="flex-1 ml-72 min-h-[calc(100vh-4rem)] overflow-y-auto">
-          <PageContainer>
-            <div className="space-y-6">
-              {/* Header */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                    <Plug className="h-6 w-6 text-primary" />
-                    Hub de Integrações
-                  </h1>
-                  <p className="text-muted-foreground mt-1">
-                    Conecte suas ferramentas e automatize a coleta de evidências de compliance
-                  </p>
+    <PageContainer 
+      title="Marketplace de Integrações" 
+      subtitle="Conecte suas ferramentas e automatize compliance"
+      icon={<Plug className="h-6 w-6" />}
+    >
+      <div className="space-y-6">
+        {/* Progress Banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden"
+        >
+          <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20">
+            <CardContent className="p-4 md:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="hidden sm:flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10">
+                    <Zap className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <Progress 
+                        value={(connectedCount / TOTAL_AVAILABLE_INTEGRATIONS) * 100} 
+                        className="w-32 h-2"
+                      />
+                      <span className="text-sm font-medium">
+                        <span className="text-primary">{connectedCount}</span>
+                        <span className="text-muted-foreground">/{TOTAL_AVAILABLE_INTEGRATIONS}</span>
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {connectedCount === 0 
+                        ? "Comece conectando sua primeira integração"
+                        : connectedCount < 5
+                        ? "Continue conectando para aumentar a cobertura"
+                        : "Ótimo progresso! Continue automatizando"}
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="bg-card border-border">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-emerald-500/10">
-                      <Activity className="h-5 w-5 text-emerald-400" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">{connectedCount}</p>
-                      <p className="text-sm text-muted-foreground">Integrações Ativas</p>
-                    </div>
-                  </CardContent>
-                </Card>
                 
-                <Card className="bg-card border-border">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-primary/10">
-                      <RefreshCw className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">{availableCount}</p>
-                      <p className="text-sm text-muted-foreground">Disponíveis para Conectar</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card className="bg-card border-border">
-                  <CardContent className="p-4 flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-amber-500/10">
-                      <Lock className="h-5 w-5 text-amber-400" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-foreground">{comingSoonCount}</p>
-                      <p className="text-sm text-muted-foreground">Em Desenvolvimento</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                {connectedCount > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setActiveTab('connected')}
+                    className="shrink-0"
+                  >
+                    Ver conectadas
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                )}
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-              {/* Category Tabs */}
-              <Tabs defaultValue="all" className="w-full overflow-hidden">
-                <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1 overflow-x-auto">
-                  <TabsTrigger value="all" className="flex-1 min-w-[120px]">
-                    Todas
-                    <Badge variant="secondary" className="ml-2 text-[10px]">
-                      {integrationsCatalog.length}
-                    </Badge>
-                  </TabsTrigger>
-                  {(Object.keys(CATEGORY_LABELS) as IntegrationCategory[]).map((category) => (
-                    <TabsTrigger key={category} value={category} className="flex-1 min-w-[140px] gap-1.5">
-                      {CATEGORY_ICONS[category]}
-                      <span className="hidden sm:inline">{CATEGORY_LABELS[category]}</span>
-                      <Badge variant="secondary" className="ml-1 text-[10px]">
-                        {getIntegrationsByCategory(category).length}
-                      </Badge>
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
+        {/* Filters */}
+        <MarketplaceFilters
+          search={searchTerm}
+          onSearchChange={setSearchTerm}
+          category={categoryFilter}
+          onCategoryChange={setCategoryFilter}
+          status={statusFilter}
+          onStatusChange={setStatusFilter}
+          activeFiltersCount={activeFiltersCount}
+          onClearFilters={clearFilters}
+        />
 
-                <TabsContent value="all" className="mt-6">
-                  {renderIntegrationCards(integrationsCatalog)}
-                </TabsContent>
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-6 bg-muted/50">
+            <TabsTrigger value="all" className="gap-2">
+              Todas
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {tabCounts.all}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="connected" className="gap-2">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Conectadas
+              <Badge className="h-5 px-1.5 text-xs bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-0">
+                {tabCounts.connected}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="available" className="gap-2">
+              Disponíveis
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {tabCounts.available}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="coming_soon" className="gap-2">
+              Em Breve
+              <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                {tabCounts.coming_soon}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
 
-                {(Object.keys(CATEGORY_LABELS) as IntegrationCategory[]).map((category) => (
-                  <TabsContent key={category} value={category} className="mt-6">
-                    <div className="mb-4">
-                      <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                        {CATEGORY_ICONS[category]}
-                        {CATEGORY_LABELS[category]}
-                      </h2>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {category === 'cloud' && 'Monitore sua infraestrutura de nuvem e redes'}
-                        {category === 'iam' && 'Gerencie identidades, acessos e políticas de segurança'}
-                        {category === 'sdlc' && 'Audite repositórios, pipelines e práticas de desenvolvimento seguro'}
-                        {category === 'productivity' && 'Integre ferramentas de produtividade e gestão de pessoas'}
-                        {category === 'endpoint' && 'Monitore dispositivos, endpoints e proteção contra ameaças'}
-                      </p>
-                    </div>
-                    {renderIntegrationCards(getIntegrationsByCategory(category))}
-                  </TabsContent>
+          {/* All Tab */}
+          <TabsContent value="all" className="space-y-8">
+            {/* Popular Section - only show when not filtering */}
+            {!searchTerm && categoryFilter === 'all' && (
+              <PopularIntegrations>
+                {popularIntegrations.map((integration) => (
+                  <MarketplaceIntegrationCard
+                    key={integration.id}
+                    integration={integration}
+                    isConnected={isConnected(integration.id)}
+                    onConnect={() => handleConnect(integration)}
+                    onManage={() => handleManage(integration)}
+                  />
                 ))}
-              </Tabs>
+              </PopularIntegrations>
+            )}
 
-              {/* Security Info */}
-              <Card className="bg-muted/30 border-border">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Lock className="h-4 w-4 text-primary" />
-                    Segurança e Privacidade
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-xs text-muted-foreground">
-                    Todas as credenciais são criptografadas em repouso. Os tokens de acesso OAuth são 
-                    armazenados de forma segura e renovados automaticamente. Nunca armazenamos senhas 
-                    em texto claro.
+            {/* All Integrations Grid */}
+            <div>
+              {!searchTerm && categoryFilter === 'all' && (
+                <h2 className="text-lg font-semibold mb-4">Todas as Integrações</h2>
+              )}
+              
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={`${searchTerm}-${categoryFilter}`}
+                  variants={containerVariants}
+                  initial="hidden"
+                  animate="visible"
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+                >
+                  {filteredIntegrations.map((integration) => (
+                    <motion.div key={integration.id} variants={itemVariants}>
+                      <MarketplaceIntegrationCard
+                        integration={integration}
+                        isConnected={isConnected(integration.id)}
+                        onConnect={() => handleConnect(integration)}
+                        onManage={() => handleManage(integration)}
+                      />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+
+              {filteredIntegrations.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-12"
+                >
+                  <p className="text-muted-foreground">
+                    Nenhuma integração encontrada para "{searchTerm}"
                   </p>
-                </CardContent>
-              </Card>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearFilters}
+                    className="mt-2"
+                  >
+                    Limpar filtros
+                  </Button>
+                </motion.div>
+              )}
             </div>
-          </PageContainer>
-        </main>
+          </TabsContent>
+
+          {/* Connected Tab */}
+          <TabsContent value="connected">
+            <AnimatePresence mode="wait">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
+                {filteredIntegrations.map((integration) => (
+                  <motion.div key={integration.id} variants={itemVariants}>
+                    <MarketplaceIntegrationCard
+                      integration={integration}
+                      isConnected={true}
+                      onConnect={() => handleConnect(integration)}
+                      onManage={() => handleManage(integration)}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
+
+            {filteredIntegrations.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-12"
+              >
+                <Plug className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="font-medium mb-2">Nenhuma integração conectada</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  Conecte sua primeira integração para começar a automatizar compliance
+                </p>
+                <Button onClick={() => setActiveTab('available')}>
+                  Ver disponíveis
+                </Button>
+              </motion.div>
+            )}
+          </TabsContent>
+
+          {/* Available Tab */}
+          <TabsContent value="available">
+            <AnimatePresence mode="wait">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              >
+                {filteredIntegrations.map((integration) => (
+                  <motion.div key={integration.id} variants={itemVariants}>
+                    <MarketplaceIntegrationCard
+                      integration={integration}
+                      isConnected={false}
+                      onConnect={() => handleConnect(integration)}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            </AnimatePresence>
+          </TabsContent>
+
+          {/* Coming Soon Tab */}
+          <TabsContent value="coming_soon">
+            <ComingSoonSection integrations={COMING_SOON_INTEGRATIONS} />
+          </TabsContent>
+        </Tabs>
+
+        {/* Integration Logs */}
+        <IntegrationLogs />
       </div>
 
-      <Footer />
-
       {/* Modals */}
-      <ConnectAwsModal 
-        open={showAwsModal} 
-        onOpenChange={setShowAwsModal} 
+      <ConnectAwsModal
+        isOpen={showAwsModal}
+        onClose={() => setShowAwsModal(false)}
+        onSuccess={() => {
+          setShowAwsModal(false);
+          refetch();
+        }}
       />
-      
-      <MikroTikAgentModal 
-        open={showMikroTikModal} 
-        onOpenChange={setShowMikroTikModal} 
+
+      <MikroTikAgentModal
+        isOpen={showMikroTikModal}
+        onClose={() => setShowMikroTikModal(false)}
       />
-      
-      <AwsResourcesModal 
-        open={showAwsResourcesModal} 
-        onOpenChange={setShowAwsResourcesModal}
-        integrationId={aws.connected ? 'aws' : ''}
+
+      <AwsResourcesModal
+        isOpen={showAwsResourcesModal}
+        onClose={() => setShowAwsResourcesModal(false)}
       />
 
       <Dialog open={showGoogleModal} onOpenChange={setShowGoogleModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Google Workspace</DialogTitle>
+            <DialogTitle>Conectar Google Workspace</DialogTitle>
           </DialogHeader>
-          <GoogleOAuthValidator />
+          <GoogleOAuthValidator onValidationComplete={() => {
+            setShowGoogleModal(false);
+            refetch();
+          }} />
         </DialogContent>
       </Dialog>
 
       <GoogleWorkspaceResourcesModal
-        open={showGoogleResourcesModal}
-        onOpenChange={setShowGoogleResourcesModal}
+        isOpen={showGoogleResourcesModal}
+        onClose={() => setShowGoogleResourcesModal(false)}
       />
 
-
       <AzureResourcesModal
-        open={showAzureResourcesModal}
-        onOpenChange={setShowAzureResourcesModal}
+        isOpen={showAzureResourcesModal}
+        onClose={() => setShowAzureResourcesModal(false)}
       />
 
       <ConnectAuth0Modal
-        open={showConnectAuth0Modal}
-        onOpenChange={setShowConnectAuth0Modal}
-        onSuccess={handleAuth0Connected}
+        isOpen={showConnectAuth0Modal}
+        onClose={() => setShowConnectAuth0Modal(false)}
+        onSuccess={() => {
+          setShowConnectAuth0Modal(false);
+          refetch();
+        }}
       />
 
       <Dialog open={showAuth0ManageModal} onOpenChange={setShowAuth0ManageModal}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Auth0</DialogTitle>
+            <DialogTitle>Gerenciar Auth0</DialogTitle>
           </DialogHeader>
-          <Auth0Connector onViewResources={handleAuth0ViewResources} />
+          <Auth0Connector 
+            onDataCollected={(data) => {
+              setAuth0Data(data);
+              setShowAuth0ManageModal(false);
+              setShowAuth0ResourcesModal(true);
+            }}
+          />
         </DialogContent>
       </Dialog>
 
       <Auth0ResourcesModal
-        open={showAuth0ResourcesModal}
-        onOpenChange={setShowAuth0ResourcesModal}
-        data={auth0Data}
+        isOpen={showAuth0ResourcesModal}
+        onClose={() => setShowAuth0ResourcesModal(false)}
       />
 
       <ConnectOktaModal
-        open={showConnectOktaModal}
-        onOpenChange={setShowConnectOktaModal}
-        onConnected={refetch}
+        isOpen={showConnectOktaModal}
+        onClose={() => setShowConnectOktaModal(false)}
+        onSuccess={() => {
+          setShowConnectOktaModal(false);
+          refetch();
+        }}
       />
 
-      <FeatureRequestModal
-        open={!!featureRequestModal}
-        onOpenChange={(open) => !open && setFeatureRequestModal(null)}
-        integration={featureRequestModal}
+      <DatadogResourcesModal
+        isOpen={showDatadogResourcesModal}
+        onClose={() => setShowDatadogResourcesModal(false)}
       />
 
-      {/* Generic Connection Modal for Self-Service Integrations */}
       {connectionModalConfig && (
         <ConnectionModal
-          open={connectionModalConfig.open}
-          onOpenChange={(open) => {
-            if (!open) setConnectionModalConfig(null);
-          }}
+          isOpen={connectionModalConfig.open}
+          onClose={() => setConnectionModalConfig(null)}
           provider={connectionModalConfig.provider}
           integrationName={connectionModalConfig.integrationName}
           integrationLogo={connectionModalConfig.integrationLogo}
-          onSuccess={refetch}
+          onSuccess={() => {
+            setConnectionModalConfig(null);
+            refetch();
+          }}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
