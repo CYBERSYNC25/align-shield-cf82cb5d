@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +12,7 @@ import {
   SeverityLevel 
 } from '@/hooks/useComplianceStatus';
 import { useComplianceAlerts } from '@/hooks/useComplianceAlerts';
+import { useRealtimeComplianceAlerts } from '@/hooks/useRealtimeComplianceAlerts';
 import { 
   AlertTriangle, 
   XCircle, 
@@ -18,10 +20,39 @@ import {
   ArrowRight,
   AlertOctagon,
   Info,
-  ShieldCheck
+  ShieldCheck,
+  Radio,
+  WifiOff,
+  Clock
 } from 'lucide-react';
 import { IssueDetailsSheet } from './IssueDetailsSheet';
 import { SLACountdown } from './SLACountdown';
+import { cn } from '@/lib/utils';
+
+// Animation variants for cards
+const cardVariants = {
+  hidden: { 
+    opacity: 0, 
+    x: -20, 
+    scale: 0.95 
+  },
+  visible: { 
+    opacity: 1, 
+    x: 0, 
+    scale: 1,
+    transition: {
+      type: "spring" as const,
+      stiffness: 500,
+      damping: 30
+    }
+  },
+  exit: { 
+    opacity: 0, 
+    x: 20, 
+    scale: 0.95,
+    transition: { duration: 0.2 }
+  }
+};
 
 const ActionCenter = () => {
   const navigate = useNavigate();
@@ -35,6 +66,13 @@ const ActionCenter = () => {
   } = useComplianceStatus();
 
   const { alerts, overdueCount } = useComplianceAlerts();
+  
+  // Realtime subscription hook
+  const { 
+    isConnected, 
+    relativeTime, 
+    newAlertIds 
+  } = useRealtimeComplianceAlerts();
 
   const [selectedTest, setSelectedTest] = useState<ComplianceTest | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -138,6 +176,21 @@ const ActionCenter = () => {
     <>
       <Card className="bg-surface-elevated border-card-border">
         <CardHeader className="pb-4">
+          {/* Connection Status Banner */}
+          {!isConnected && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="flex items-center gap-2 p-3 bg-warning/10 border border-warning/20 rounded-lg mb-4"
+            >
+              <WifiOff className="h-4 w-4 text-warning" />
+              <span className="text-sm text-warning">
+                Conexão em tempo real interrompida. Tentando reconectar...
+              </span>
+            </motion.div>
+          )}
+
           <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
             {/* Score Section */}
             <div className="flex items-center gap-6">
@@ -164,12 +217,42 @@ const ActionCenter = () => {
                 </div>
               </div>
               <div>
-                <CardTitle className="text-xl font-bold text-foreground">
-                  Score de Conformidade
-                </CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {passingTests.length} de {totalTests} testes aprovados
-                </p>
+                <div className="flex items-center gap-3">
+                  <CardTitle className="text-xl font-bold text-foreground">
+                    Score de Conformidade
+                  </CardTitle>
+                  
+                  {/* LIVE Badge */}
+                  {isConnected && (
+                    <Badge 
+                      className={cn(
+                        "bg-success/10 text-success border-success/20 flex items-center gap-1.5",
+                        "animate-pulse"
+                      )}
+                    >
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+                      </span>
+                      LIVE
+                    </Badge>
+                  )}
+                </div>
+                
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-sm text-muted-foreground">
+                    {passingTests.length} de {totalTests} testes aprovados
+                  </p>
+                  
+                  {/* Relative timestamp */}
+                  {relativeTime && (
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Atualizado há {relativeTime}
+                    </span>
+                  )}
+                </div>
+                
                 <Progress
                   value={score}
                   className={`h-2 w-48 mt-3 ${getScoreBgColor(score)}`}
@@ -212,7 +295,11 @@ const ActionCenter = () => {
         <CardContent>
           {failingTests.length === 0 ? (
             /* All Tests Passing */
-            <div className="flex flex-col items-center justify-center py-12 text-center">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center py-12 text-center"
+            >
               <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mb-4">
                 <CheckCircle2 className="h-8 w-8 text-success" />
               </div>
@@ -223,7 +310,7 @@ const ActionCenter = () => {
                 Sua organização está em conformidade com todas as políticas monitoradas.
                 Continue monitorando para manter esse status.
               </p>
-            </div>
+            </motion.div>
           ) : (
             /* Failing Tests List */
             <div className="space-y-6">
@@ -242,78 +329,98 @@ const ActionCenter = () => {
                 </Button>
               </div>
 
-              <div className="space-y-3">
-                {failingTests.slice(0, 5).map((test) => {
-                  const alert = getAlertForTest(test.id);
-                  return (
-                    <div
-                      key={test.id}
-                      onClick={() => handleCardClick(test)}
-                      className={`flex items-center justify-between p-4 rounded-lg border transition-colors cursor-pointer ${
-                        test.severity === 'critical'
-                          ? 'bg-destructive/5 border-destructive/20 hover:bg-destructive/10'
-                          : test.severity === 'high'
-                          ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10'
-                          : 'bg-warning/5 border-warning/20 hover:bg-warning/10'
-                      }`}
-                    >
-                      <div className="flex items-center gap-4 flex-1 min-w-0">
-                        {/* Severity Icon */}
-                        <div className="flex-shrink-0">
-                          {getSeverityIcon(test.severity)}
+              <AnimatePresence mode="popLayout">
+                <div className="space-y-3">
+                  {failingTests.slice(0, 5).map((test, index) => {
+                    const alert = getAlertForTest(test.id);
+                    const isNew = newAlertIds.includes(test.id);
+                    
+                    return (
+                      <motion.div
+                        key={test.id}
+                        variants={cardVariants}
+                        initial={isNew ? "hidden" : false}
+                        animate="visible"
+                        exit="exit"
+                        layout
+                        transition={{ delay: isNew ? index * 0.1 : 0 }}
+                        onClick={() => handleCardClick(test)}
+                        className={cn(
+                          `flex items-center justify-between p-4 rounded-lg border transition-all cursor-pointer`,
+                          test.severity === 'critical'
+                            ? 'bg-destructive/5 border-destructive/20 hover:bg-destructive/10'
+                            : test.severity === 'high'
+                            ? 'bg-orange-500/5 border-orange-500/20 hover:bg-orange-500/10'
+                            : 'bg-warning/5 border-warning/20 hover:bg-warning/10',
+                          isNew && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+                        )}
+                      >
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          {/* Severity Icon */}
+                          <div className="flex-shrink-0">
+                            {getSeverityIcon(test.severity)}
+                          </div>
+
+                          {/* Test Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-foreground truncate">
+                                {test.title}
+                              </span>
+                              {getSeverityBadge(test.severity)}
+                              
+                              {/* New Badge for recently added */}
+                              {isNew && (
+                                <Badge className="bg-primary/10 text-primary border-primary/20 text-xs animate-pulse">
+                                  NOVO
+                                </Badge>
+                              )}
+                              
+                              {/* SLA Countdown */}
+                              {alert && (
+                                <SLACountdown
+                                  deadline={alert.remediation_deadline}
+                                  severity={test.severity as any}
+                                  triggeredAt={alert.triggered_at}
+                                  slaHours={alert.sla_hours}
+                                  compact
+                                />
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {test.integrationLogo && (
+                                <img
+                                  src={test.integrationLogo}
+                                  alt={test.integration}
+                                  className="h-4 w-4 object-contain"
+                                />
+                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {test.integration}
+                              </span>
+                              {test.affectedResources > 0 && (
+                                <>
+                                  <span className="text-muted-foreground">•</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {test.affectedResources} recurso
+                                    {test.affectedResources > 1 ? 's' : ''} afetado
+                                    {test.affectedResources > 1 ? 's' : ''}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
-                        {/* Test Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-foreground truncate">
-                              {test.title}
-                            </span>
-                            {getSeverityBadge(test.severity)}
-                            {/* SLA Countdown */}
-                            {alert && (
-                              <SLACountdown
-                                deadline={alert.remediation_deadline}
-                                severity={test.severity as any}
-                                triggeredAt={alert.triggered_at}
-                                slaHours={alert.sla_hours}
-                                compact
-                              />
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            {test.integrationLogo && (
-                              <img
-                                src={test.integrationLogo}
-                                alt={test.integration}
-                                className="h-4 w-4 object-contain"
-                              />
-                            )}
-                            <span className="text-xs text-muted-foreground">
-                              {test.integration}
-                            </span>
-                            {test.affectedResources > 0 && (
-                              <>
-                                <span className="text-muted-foreground">•</span>
-                                <span className="text-xs text-muted-foreground">
-                                  {test.affectedResources} recurso
-                                  {test.affectedResources > 1 ? 's' : ''} afetado
-                                  {test.affectedResources > 1 ? 's' : ''}
-                                </span>
-                              </>
-                            )}
-                          </div>
+                        {/* View Details Arrow */}
+                        <div className="flex-shrink-0 ml-4">
+                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
                         </div>
-                      </div>
-
-                      {/* View Details Arrow */}
-                      <div className="flex-shrink-0 ml-4">
-                        <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </AnimatePresence>
 
               {failingTests.length > 5 && (
                 <div className="text-center">
