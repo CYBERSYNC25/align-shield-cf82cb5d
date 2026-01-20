@@ -156,7 +156,8 @@ export type Database = {
           is_revoked: boolean | null
           last_accessed_at: string | null
           permissions: Json | null
-          token: string
+          token: string | null
+          token_hash: string | null
           user_id: string
         }
         Insert: {
@@ -171,7 +172,8 @@ export type Database = {
           is_revoked?: boolean | null
           last_accessed_at?: string | null
           permissions?: Json | null
-          token: string
+          token?: string | null
+          token_hash?: string | null
           user_id: string
         }
         Update: {
@@ -186,7 +188,8 @@ export type Database = {
           is_revoked?: boolean | null
           last_accessed_at?: string | null
           permissions?: Json | null
-          token?: string
+          token?: string | null
+          token_hash?: string | null
           user_id?: string
         }
         Relationships: []
