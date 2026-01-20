@@ -19,6 +19,7 @@ import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
 import UserRolesManagement from '@/components/settings/UserRolesManagement';
 import { SeedDatabaseCard } from '@/components/settings/SeedDatabaseCard';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
+import TrustCenterSettings from '@/components/settings/TrustCenterSettings';
 import {
   User,
   Shield,
@@ -28,6 +29,7 @@ import {
   Activity,
   Trash2,
   Key,
+  Globe,
 } from 'lucide-react';
 
 const Settings = () => {
@@ -73,6 +75,10 @@ const Settings = () => {
                     <TabsTrigger value="permissions">Permissões</TabsTrigger>
                     <TabsTrigger value="audit">Auditoria</TabsTrigger>
                     <TabsTrigger value="system">Sistema</TabsTrigger>
+                    <TabsTrigger value="trustcenter" className="gap-1">
+                      <Globe className="w-4 h-4" />
+                      Trust Center
+                    </TabsTrigger>
                   </TabsList>
 
                   {/* Account Tab */}
@@ -306,6 +312,11 @@ const Settings = () => {
                   {/* System Tab */}
                   <TabsContent value="system" className="space-y-6">
                     <SeedDatabaseCard />
+                  </TabsContent>
+
+                  {/* Trust Center Tab */}
+                  <TabsContent value="trustcenter">
+                    <TrustCenterSettings />
                   </TabsContent>
                 </Tabs>
               </div>
