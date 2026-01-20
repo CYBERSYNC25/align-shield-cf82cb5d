@@ -59,6 +59,51 @@ export type Database = {
         }
         Relationships: []
       }
+      answer_library: {
+        Row: {
+          applies_to_frameworks: string[] | null
+          created_at: string
+          id: string
+          is_approved: boolean | null
+          last_used: string | null
+          question_keywords: string[]
+          question_pattern: string | null
+          standard_answer: string
+          tags: string[] | null
+          updated_at: string
+          use_count: number | null
+          user_id: string
+        }
+        Insert: {
+          applies_to_frameworks?: string[] | null
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          last_used?: string | null
+          question_keywords: string[]
+          question_pattern?: string | null
+          standard_answer: string
+          tags?: string[] | null
+          updated_at?: string
+          use_count?: number | null
+          user_id: string
+        }
+        Update: {
+          applies_to_frameworks?: string[] | null
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          last_used?: string | null
+          question_keywords?: string[]
+          question_pattern?: string | null
+          standard_answer?: string
+          tags?: string[] | null
+          updated_at?: string
+          use_count?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -1185,6 +1230,119 @@ export type Database = {
         }
         Relationships: []
       }
+      questionnaire_questions: {
+        Row: {
+          ai_reasoning: string | null
+          answer_status: string | null
+          answer_text: string | null
+          category: string | null
+          confidence_score: number | null
+          created_at: string
+          evidence_links: string[] | null
+          id: string
+          question_number: string
+          question_text: string
+          question_type: string | null
+          questionnaire_id: string
+          related_controls: string[] | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          reviewer_notes: string | null
+          subcategory: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          answer_status?: string | null
+          answer_text?: string | null
+          category?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          evidence_links?: string[] | null
+          id?: string
+          question_number: string
+          question_text: string
+          question_type?: string | null
+          questionnaire_id: string
+          related_controls?: string[] | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          subcategory?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_reasoning?: string | null
+          answer_status?: string | null
+          answer_text?: string | null
+          category?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          evidence_links?: string[] | null
+          id?: string
+          question_number?: string
+          question_text?: string
+          question_type?: string | null
+          questionnaire_id?: string
+          related_controls?: string[] | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          reviewer_notes?: string | null
+          subcategory?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_questions_questionnaire_id_fkey"
+            columns: ["questionnaire_id"]
+            isOneToOne: false
+            referencedRelation: "security_questionnaires"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionnaire_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          questions_data: Json
+          template_type: string
+          total_questions: number | null
+          updated_at: string
+          version: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          questions_data?: Json
+          template_type: string
+          total_questions?: number | null
+          updated_at?: string
+          version?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          questions_data?: Json
+          template_type?: string
+          total_questions?: number | null
+          updated_at?: string
+          version?: string | null
+        }
+        Relationships: []
+      }
       remediation_tickets: {
         Row: {
           alert_id: string | null
@@ -1462,6 +1620,60 @@ export type Database = {
           trend?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      security_questionnaires: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          name: string
+          notes: string | null
+          questions_count: number | null
+          requester_email: string | null
+          requester_name: string | null
+          shared_with: string[] | null
+          source: string
+          status: string
+          updated_at: string
+          user_id: string
+          version: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          questions_count?: number | null
+          requester_email?: string | null
+          requester_name?: string | null
+          shared_with?: string[] | null
+          source: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          version?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          questions_count?: number | null
+          requester_email?: string | null
+          requester_name?: string | null
+          shared_with?: string[] | null
+          source?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          version?: string | null
         }
         Relationships: []
       }
@@ -1965,6 +2177,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      search_answer_library: {
+        Args: { p_limit?: number; p_search_text: string; p_user_id: string }
+        Returns: {
+          applies_to_frameworks: string[]
+          id: string
+          question_keywords: string[]
+          similarity_score: number
+          standard_answer: string
+        }[]
       }
     }
     Enums: {
