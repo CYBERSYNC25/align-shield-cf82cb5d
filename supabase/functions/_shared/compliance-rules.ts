@@ -118,18 +118,6 @@ export const COMPLIANCE_RULES: ComplianceRule[] = [
       return data.public_access_block_enabled !== false;
     },
   },
-        const statements = (policy as any).Statement || [];
-        const hasPublicStatement = statements.some((s: any) => 
-          s.Principal === '*' || 
-          s.Principal?.AWS === '*' ||
-          (Array.isArray(s.Principal?.AWS) && s.Principal.AWS.includes('*'))
-        );
-        if (hasPublicStatement && s.Effect === 'Allow') return false;
-      }
-      
-      return data.public_access_block_enabled !== false;
-    },
-  },
   {
     id: 'aws-unencrypted-bucket',
     name: 'Unencrypted S3 Bucket',
