@@ -28,6 +28,7 @@ import PolicyDocuments from "./pages/PolicyDocuments";
 import Welcome from "./pages/Welcome";
 import Inventory from "./pages/Inventory";
 import AuditorPortalPage from "./pages/AuditorPortalPage";
+import TrustCenter from "./pages/TrustCenter";
 
 const queryClient = new QueryClient();
 
@@ -140,6 +141,8 @@ const App = () => (
           {/* Auditor Portal - Public Route (no auth required) */}
           <Route path="/auditor-portal" element={<AuditorPortalPage />} />
           <Route path="/auditor-portal/:auditId" element={<AuditorPortalPage />} />
+          {/* Trust Center - Public Route (no auth required) */}
+          <Route path="/trust/:slug" element={<TrustCenter />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
