@@ -32,4 +32,12 @@ export const queryKeys = {
   // Profiles (Responsáveis)
   profiles: ['profiles'] as const,
   profileById: (userId: string) => ['profiles', userId] as const,
+
+  // Questionnaires
+  questionnaires: ['questionnaires'] as const,
+  questionnaireById: (id: string) => ['questionnaire', id] as const,
+  questionnaireQuestions: (questionnaireId: string) => 
+    ['questionnaire-questions', questionnaireId] as const,
+  questionnaireTemplates: ['questionnaire-templates'] as const,
+  answerLibrary: ['answer-library'] as const,
 };
