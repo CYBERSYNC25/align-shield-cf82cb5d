@@ -141,7 +141,7 @@ export function useCustomTests() {
           severity: input.severity,
           integration_name: input.integration_name,
           resource_type: input.resource_type,
-          test_logic: input.test_logic as unknown as Record<string, unknown>,
+          test_logic: JSON.parse(JSON.stringify(input.test_logic)),
           sla_hours: input.sla_hours || null,
           enabled: input.enabled ?? false,
           version: (current?.version || 0) + 1,
@@ -153,7 +153,7 @@ export function useCustomTests() {
         .single();
 
       if (error) throw error;
-      return data as CustomTest;
+      return { ...data, test_logic: data.test_logic as unknown as TestLogic } as CustomTest;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.customTests });
@@ -205,7 +205,7 @@ export function useCustomTests() {
         .single();
 
       if (error) throw error;
-      return data as CustomTest;
+      return { ...data, test_logic: data.test_logic as unknown as TestLogic } as CustomTest;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.customTests });
