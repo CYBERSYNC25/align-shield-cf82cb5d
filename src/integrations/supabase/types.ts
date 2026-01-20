@@ -1549,6 +1549,107 @@ export type Database = {
         }
         Relationships: []
       }
+      trust_center_frameworks: {
+        Row: {
+          certificate_url: string | null
+          certification_date: string | null
+          created_at: string | null
+          display_name: string | null
+          framework_id: string
+          id: string
+          show_public: boolean
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          certificate_url?: string | null
+          certification_date?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          framework_id: string
+          id?: string
+          show_public?: boolean
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          certificate_url?: string | null
+          certification_date?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          framework_id?: string
+          id?: string
+          show_public?: boolean
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trust_center_frameworks_framework_id_fkey"
+            columns: ["framework_id"]
+            isOneToOne: false
+            referencedRelation: "frameworks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trust_center_settings: {
+        Row: {
+          company_slug: string
+          created_at: string | null
+          custom_domain: string | null
+          custom_message: string | null
+          enabled: boolean
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          seo_description: string | null
+          seo_title: string | null
+          show_controls: boolean
+          show_frameworks: boolean
+          show_last_audit: boolean
+          show_score: boolean
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_slug: string
+          created_at?: string | null
+          custom_domain?: string | null
+          custom_message?: string | null
+          enabled?: boolean
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          show_controls?: boolean
+          show_frameworks?: boolean
+          show_last_audit?: boolean
+          show_score?: boolean
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_slug?: string
+          created_at?: string | null
+          custom_domain?: string | null
+          custom_message?: string | null
+          enabled?: boolean
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          show_controls?: boolean
+          show_frameworks?: boolean
+          show_last_audit?: boolean
+          show_score?: boolean
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_deletion_requests: {
         Row: {
           completed_at: string | null
@@ -1737,7 +1838,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      trust_center_public_data: {
+        Row: {
+          company_slug: string | null
+          compliance_score: number | null
+          controls_summary: Json | null
+          custom_domain: string | null
+          custom_message: string | null
+          last_audit: Json | null
+          last_updated: string | null
+          logo_url: string | null
+          primary_color: string | null
+          public_frameworks: Json | null
+          seo_description: string | null
+          seo_title: string | null
+          show_controls: boolean | null
+          show_frameworks: boolean | null
+          show_last_audit: boolean | null
+          show_score: boolean | null
+        }
+        Insert: {
+          company_slug?: string | null
+          compliance_score?: never
+          controls_summary?: never
+          custom_domain?: string | null
+          custom_message?: string | null
+          last_audit?: never
+          last_updated?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          public_frameworks?: never
+          seo_description?: string | null
+          seo_title?: string | null
+          show_controls?: boolean | null
+          show_frameworks?: boolean | null
+          show_last_audit?: boolean | null
+          show_score?: boolean | null
+        }
+        Update: {
+          company_slug?: string | null
+          compliance_score?: never
+          controls_summary?: never
+          custom_domain?: string | null
+          custom_message?: string | null
+          last_audit?: never
+          last_updated?: string | null
+          logo_url?: string | null
+          primary_color?: string | null
+          public_frameworks?: never
+          seo_description?: string | null
+          seo_title?: string | null
+          show_controls?: boolean | null
+          show_frameworks?: boolean | null
+          show_last_audit?: boolean | null
+          show_score?: boolean | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_object_permission: {
@@ -1764,6 +1921,27 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      get_trust_center_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          company_slug: string
+          compliance_score: number
+          controls_summary: Json
+          custom_domain: string
+          custom_message: string
+          last_audit: Json
+          last_updated: string
+          logo_url: string
+          primary_color: string
+          public_frameworks: Json
+          seo_description: string
+          seo_title: string
+          show_controls: boolean
+          show_frameworks: boolean
+          show_last_audit: boolean
+          show_score: boolean
+        }[]
       }
       get_user_object_permissions: {
         Args: { _user_id: string }
