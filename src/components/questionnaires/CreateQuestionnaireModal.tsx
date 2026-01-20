@@ -125,8 +125,11 @@ export default function CreateQuestionnaireModal({
     }
   };
 
-  const handleFileUpload = async (fileUrl: string) => {
+  const handleFileUpload = async (urls: string[]) => {
+    if (urls.length === 0) return;
+    
     setIsProcessing(true);
+    const fileUrl = urls[0];
 
     try {
       // Extract filename for questionnaire name

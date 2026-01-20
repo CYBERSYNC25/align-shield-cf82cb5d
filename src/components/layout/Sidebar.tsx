@@ -19,7 +19,8 @@ import {
   ShieldCheck,
   Target,
   Activity,
-  Package
+  Package,
+  ClipboardList
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -64,6 +65,13 @@ const sidebarItems: SidebarItem[] = [
         label: 'Auditorias',
         icon: ClipboardCheck,
         href: '/audit'
+      },
+      {
+        id: 'questionnaires',
+        label: 'Questionários',
+        icon: ClipboardList,
+        href: '/questionnaires',
+        badge: 'Novo'
       }
     ]
   },
