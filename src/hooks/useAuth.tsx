@@ -257,3 +257,20 @@ export function useAuth() {
   }
   return context
 }
+
+// Safe version that doesn't throw - returns null values when outside AuthProvider
+export function useAuthSafe() {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    return {
+      user: null,
+      session: null,
+      loading: false,
+      signIn: async () => {},
+      signUp: async () => {},
+      signOut: async () => {},
+      resetPassword: async () => {},
+    }
+  }
+  return context
+}
