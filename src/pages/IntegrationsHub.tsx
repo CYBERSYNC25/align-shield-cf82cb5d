@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Plug, 
@@ -35,6 +36,7 @@ import { ConnectOktaModal } from "@/components/integrations/ConnectOktaModal";
 import { ConnectionModal } from "@/components/integrations/ConnectionModal";
 import { DatadogResourcesModal } from "@/components/integrations/DatadogResourcesModal";
 import { IntegrationLogs } from "@/components/integrations/IntegrationLogs";
+import { ManualEntryModal } from "@/components/integrations/ManualEntryModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Auth0Connector } from "@/components/integrations/Auth0Connector";
 import { Auth0Evidence } from "@/hooks/useAuth0Sync";
@@ -52,6 +54,7 @@ const TOTAL_AVAILABLE_INTEGRATIONS = 15;
 
 export default function IntegrationsHub() {
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const { 
     aws, google, azure, mikrotik, auth0, okta, cloudflare, 
     jira, github, gitlab, slack, bamboohr, crowdstrike, intune, 
@@ -77,7 +80,7 @@ export default function IntegrationsHub() {
   const [showConnectOktaModal, setShowConnectOktaModal] = useState(false);
   const [showDatadogResourcesModal, setShowDatadogResourcesModal] = useState(false);
   const [auth0Data, setAuth0Data] = useState<Auth0Evidence | null>(null);
-
+  const [showManualEntryModal, setShowManualEntryModal] = useState(false);
   // Generic ConnectionModal state
   const [connectionModalConfig, setConnectionModalConfig] = useState<{
     open: boolean;
@@ -117,6 +120,7 @@ export default function IntegrationsHub() {
       case 'bamboohr': return bamboohr.connected ? 'connected' : 'available';
       case 'crowdstrike': return crowdstrike.connected ? 'connected' : 'available';
       case 'intune': return intune.connected ? 'connected' : 'available';
+      case 'manual-entry': return 'available'; // Always available, users click to add resources
       default: return 'available';
     }
   };
@@ -213,6 +217,9 @@ export default function IntegrationsHub() {
         break;
       case 'okta':
         setShowConnectOktaModal(true);
+        break;
+      case 'manual-entry':
+        setShowManualEntryModal(true);
         break;
       case 'azure-ad':
       case 'cloudflare':
@@ -636,6 +643,16 @@ export default function IntegrationsHub() {
           }}
         />
       )}
+
+      <ManualEntryModal
+        open={showManualEntryModal}
+        onOpenChange={setShowManualEntryModal}
+        onSuccess={() => {
+          setShowManualEntryModal(false);
+          queryClient.invalidateQueries({ queryKey: ['integration-data'] });
+          refetch();
+        }}
+      />
     </PageContainer>
   );
 }

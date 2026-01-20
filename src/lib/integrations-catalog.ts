@@ -168,6 +168,16 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     isNew: true,
     provider: 'intune',
   },
+  
+  // Manual Entry
+  {
+    id: 'manual-entry',
+    name: 'Manual Entry',
+    description: 'Add resources manually without API integration',
+    category: 'productivity',
+    logo: '/placeholder.svg',
+    provider: 'manual',
+  },
 ];
 
 export const getIntegrationsByCategory = (category: IntegrationCategory): IntegrationDefinition[] => {
@@ -179,7 +189,7 @@ export const getIntegrationById = (id: string): IntegrationDefinition | undefine
 };
 
 // IDs das integrações que já estão funcionais
-export const FUNCTIONAL_INTEGRATIONS = ['aws', 'azure-ad', 'google-workspace', 'mikrotik', 'auth0', 'okta', 'cloudflare', 'jira', 'github', 'gitlab', 'slack', 'bamboohr', 'crowdstrike', 'intune', 'datadog'];
+export const FUNCTIONAL_INTEGRATIONS = ['aws', 'azure-ad', 'google-workspace', 'mikrotik', 'auth0', 'okta', 'cloudflare', 'jira', 'github', 'gitlab', 'slack', 'bamboohr', 'crowdstrike', 'intune', 'datadog', 'manual-entry'];
 
 export const isIntegrationFunctional = (id: string): boolean => {
   return FUNCTIONAL_INTEGRATIONS.includes(id);
