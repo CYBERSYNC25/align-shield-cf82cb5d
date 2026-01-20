@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   Loader2
 } from "lucide-react";
-import PageContainer from "@/components/layout/PageContainer";
+import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -295,16 +295,16 @@ export default function IntegrationsHub() {
 
   if (loading) {
     return (
-      <PageContainer>
+      <MainLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </PageContainer>
+      </MainLayout>
     );
   }
 
   return (
-    <PageContainer>
+    <MainLayout>
       {/* Page Header */}
       <div className="flex items-center gap-3 mb-2">
         <div className="p-2 rounded-lg bg-primary/10">
@@ -653,6 +653,6 @@ export default function IntegrationsHub() {
           refetch();
         }}
       />
-    </PageContainer>
+    </MainLayout>
   );
 }
