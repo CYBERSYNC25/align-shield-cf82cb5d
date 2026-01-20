@@ -18,6 +18,7 @@ import IncidentsManagement from "./pages/IncidentsManagement";
 import IncidentsTest from "./pages/IncidentsTest";
 import ReportsExports from "./pages/ReportsExports";
 import Analytics from "./pages/Analytics";
+import AdvancedAnalytics from "./pages/AdvancedAnalytics";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 import FileManagement from "./pages/FileManagement";
@@ -102,6 +103,11 @@ const App = () => (
           <Route path="/analytics" element={
             <ProtectedRoute>
               <Analytics />
+            </ProtectedRoute>
+          } />
+          <Route path="/advanced-analytics" element={
+            <ProtectedRoute>
+              <AdvancedAnalytics />
             </ProtectedRoute>
           } />
           <Route path="/settings" element={

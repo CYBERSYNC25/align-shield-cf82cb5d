@@ -147,6 +147,13 @@ const sidebarItems: SidebarItem[] = [
         href: '/analytics'
       },
       {
+        id: 'advanced-analytics',
+        label: 'Analytics Avançado',
+        icon: TrendingUp,
+        href: '/advanced-analytics',
+        badge: 'Novo'
+      },
+      {
         id: 'reports',
         label: 'Relatórios',
         icon: BarChart3,
