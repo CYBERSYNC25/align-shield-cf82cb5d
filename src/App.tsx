@@ -29,6 +29,7 @@ import Welcome from "./pages/Welcome";
 import Inventory from "./pages/Inventory";
 import AuditorPortalPage from "./pages/AuditorPortalPage";
 import TrustCenter from "./pages/TrustCenter";
+import Questionnaires from "./pages/Questionnaires";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +137,11 @@ const App = () => (
           <Route path="/inventory" element={
             <ProtectedRoute>
               <Inventory />
+            </ProtectedRoute>
+          } />
+          <Route path="/questionnaires" element={
+            <ProtectedRoute>
+              <Questionnaires />
             </ProtectedRoute>
           } />
           {/* Auditor Portal - Public Route (no auth required) */}
