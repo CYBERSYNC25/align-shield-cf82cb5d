@@ -4,7 +4,7 @@
  * Displays comprehensive details about a specific integration including:
  * - Connection status and health metrics
  * - OAuth tokens and credentials (masked)
- * - Recent webhook logs
+ * - Webhook configuration and history
  * - Configuration options
  * - Connect/Disconnect actions
  */
@@ -25,6 +25,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import WebhookConfigurationModal from './WebhookConfigurationModal';
 import {
   Link,
   Unlink,
@@ -39,6 +40,7 @@ import {
   Copy,
   ExternalLink,
   Loader2,
+  Webhook,
 } from 'lucide-react';
 
 interface Integration {
@@ -299,36 +301,10 @@ const IntegrationDetailsModal = ({
 
             {/* Webhooks Tab */}
             <TabsContent value="webhooks" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Webhooks Recentes</CardTitle>
-                  <CardDescription>
-                    Últimos eventos recebidos desta integração
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[300px]">
-                    <div className="space-y-2">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">user.created</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date().toLocaleString()}
-                            </p>
-                          </div>
-                          <Badge variant="default">Processado</Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-
-                  <Button variant="outline" size="sm" className="w-full mt-4">
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    Ver todos os webhooks
-                  </Button>
-                </CardContent>
-              </Card>
+              <WebhookConfigurationModal
+                integrationName={integration.name}
+                integrationId={integration.id}
+              />
             </TabsContent>
 
             {/* Configuration Tab */}
