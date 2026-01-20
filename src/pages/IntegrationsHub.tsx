@@ -288,11 +288,7 @@ export default function IntegrationsHub() {
 
   if (loading) {
     return (
-      <PageContainer 
-        title="Integrações" 
-        subtitle="Conecte suas ferramentas ao Apoc"
-        icon={<Plug className="h-6 w-6" />}
-      >
+      <PageContainer>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
@@ -301,11 +297,18 @@ export default function IntegrationsHub() {
   }
 
   return (
-    <PageContainer 
-      title="Marketplace de Integrações" 
-      subtitle="Conecte suas ferramentas e automatize compliance"
-      icon={<Plug className="h-6 w-6" />}
-    >
+    <PageContainer>
+      {/* Page Header */}
+      <div className="flex items-center gap-3 mb-2">
+        <div className="p-2 rounded-lg bg-primary/10">
+          <Plug className="h-6 w-6 text-primary" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Marketplace de Integrações</h1>
+          <p className="text-sm text-muted-foreground">Conecte suas ferramentas e automatize compliance</p>
+        </div>
+      </div>
+
       <div className="space-y-6">
         {/* Progress Banner */}
         <motion.div
@@ -381,7 +384,7 @@ export default function IntegrationsHub() {
             <TabsTrigger value="connected" className="gap-2">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Conectadas
-              <Badge className="h-5 px-1.5 text-xs bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-0">
+              <Badge className="h-5 px-1.5 text-xs bg-primary/20 text-primary border-0">
                 {tabCounts.connected}
               </Badge>
             </TabsTrigger>
@@ -539,8 +542,8 @@ export default function IntegrationsHub() {
 
       {/* Modals */}
       <ConnectAwsModal
-        isOpen={showAwsModal}
-        onClose={() => setShowAwsModal(false)}
+        open={showAwsModal}
+        onOpenChange={setShowAwsModal}
         onSuccess={() => {
           setShowAwsModal(false);
           refetch();
@@ -548,13 +551,14 @@ export default function IntegrationsHub() {
       />
 
       <MikroTikAgentModal
-        isOpen={showMikroTikModal}
-        onClose={() => setShowMikroTikModal(false)}
+        open={showMikroTikModal}
+        onOpenChange={setShowMikroTikModal}
       />
 
       <AwsResourcesModal
-        isOpen={showAwsResourcesModal}
-        onClose={() => setShowAwsResourcesModal(false)}
+        open={showAwsResourcesModal}
+        onOpenChange={setShowAwsResourcesModal}
+        integrationId=""
       />
 
       <Dialog open={showGoogleModal} onOpenChange={setShowGoogleModal}>
@@ -562,28 +566,24 @@ export default function IntegrationsHub() {
           <DialogHeader>
             <DialogTitle>Conectar Google Workspace</DialogTitle>
           </DialogHeader>
-          <GoogleOAuthValidator onValidationComplete={() => {
-            setShowGoogleModal(false);
-            refetch();
-          }} />
+          <GoogleOAuthValidator />
         </DialogContent>
       </Dialog>
 
       <GoogleWorkspaceResourcesModal
-        isOpen={showGoogleResourcesModal}
-        onClose={() => setShowGoogleResourcesModal(false)}
+        open={showGoogleResourcesModal}
+        onOpenChange={setShowGoogleResourcesModal}
       />
 
       <AzureResourcesModal
-        isOpen={showAzureResourcesModal}
-        onClose={() => setShowAzureResourcesModal(false)}
+        open={showAzureResourcesModal}
+        onOpenChange={setShowAzureResourcesModal}
       />
 
       <ConnectAuth0Modal
-        isOpen={showConnectAuth0Modal}
-        onClose={() => setShowConnectAuth0Modal(false)}
+        open={showConnectAuth0Modal}
+        onOpenChange={setShowConnectAuth0Modal}
         onSuccess={() => {
-          setShowConnectAuth0Modal(false);
           refetch();
         }}
       />
@@ -594,7 +594,7 @@ export default function IntegrationsHub() {
             <DialogTitle>Gerenciar Auth0</DialogTitle>
           </DialogHeader>
           <Auth0Connector 
-            onDataCollected={(data) => {
+            onViewResources={(data) => {
               setAuth0Data(data);
               setShowAuth0ManageModal(false);
               setShowAuth0ResourcesModal(true);
@@ -604,28 +604,29 @@ export default function IntegrationsHub() {
       </Dialog>
 
       <Auth0ResourcesModal
-        isOpen={showAuth0ResourcesModal}
-        onClose={() => setShowAuth0ResourcesModal(false)}
+        open={showAuth0ResourcesModal}
+        onOpenChange={setShowAuth0ResourcesModal}
+        data={auth0Data}
       />
 
       <ConnectOktaModal
-        isOpen={showConnectOktaModal}
-        onClose={() => setShowConnectOktaModal(false)}
-        onSuccess={() => {
-          setShowConnectOktaModal(false);
+        open={showConnectOktaModal}
+        onOpenChange={setShowConnectOktaModal}
+        onConnected={() => {
           refetch();
         }}
       />
 
       <DatadogResourcesModal
-        isOpen={showDatadogResourcesModal}
-        onClose={() => setShowDatadogResourcesModal(false)}
+        open={showDatadogResourcesModal}
+        onOpenChange={setShowDatadogResourcesModal}
+        integrationId=""
       />
 
       {connectionModalConfig && (
         <ConnectionModal
-          isOpen={connectionModalConfig.open}
-          onClose={() => setConnectionModalConfig(null)}
+          open={connectionModalConfig.open}
+          onOpenChange={(open) => !open && setConnectionModalConfig(null)}
           provider={connectionModalConfig.provider}
           integrationName={connectionModalConfig.integrationName}
           integrationLogo={connectionModalConfig.integrationLogo}
