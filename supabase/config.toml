@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.create-remediation-ticket]
 verify_jwt = false
+
+[functions.integration-webhook-handler]
+verify_jwt = false
