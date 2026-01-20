@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useIntegrationData, CollectedResource } from './useIntegrationData';
 import { getIntegrationById } from '@/lib/integrations-catalog';
 import { useRiskAcceptances } from './useRiskAcceptances';
-import { useAuth } from './useAuth';
+import { useAuthSafe } from './useAuth';
 import { 
   TestLogic, 
   Condition, 
@@ -450,7 +450,7 @@ function evaluateCustomTest(
 }
 
 export function useComplianceStatus(): ComplianceStatusResult {
-  const { user } = useAuth();
+  const { user } = useAuthSafe();
   const queryClient = useQueryClient();
   const { data: allResources, isLoading } = useIntegrationData();
   const { acceptances, isLoading: isLoadingAcceptances } = useRiskAcceptances();
