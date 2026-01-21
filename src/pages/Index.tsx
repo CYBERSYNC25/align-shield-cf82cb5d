@@ -7,7 +7,7 @@ import PassingTestsSummary from '@/components/dashboard/PassingTestsSummary';
 import MetricsGrid from '@/components/dashboard/MetricsGrid';
 import TasksPanel from '@/components/dashboard/TasksPanel';
 import ConnectionStatus from '@/components/dashboard/ConnectionStatus';
-import ComplianceHub from '@/components/dashboard/ComplianceHub';
+
 import CreateTaskModal from '@/components/tasks/CreateTaskModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -102,8 +102,6 @@ const Index = () => {
             {/* Metrics Grid */}
             <MetricsGrid />
 
-            {/* Compliance Hub - Detailed Controls */}
-            <ComplianceHub />
 
             {/* Tasks Panel */}
             <TasksPanel />
