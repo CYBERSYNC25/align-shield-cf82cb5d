@@ -1,5 +1,4 @@
 import { Badge } from '@/components/ui/badge';
-import { ModeToggle } from '@/components/theme/ModeToggle';
 import { ShieldCheck, Eye } from 'lucide-react';
 
 const AuditorPortalHeader = () => {
@@ -23,9 +22,6 @@ const AuditorPortalHeader = () => {
           <span className="hidden sm:inline">VISÃO DO AUDITOR EXTERNO - </span>
           MODO LEITURA
         </Badge>
-
-        {/* Theme Toggle Only */}
-        <ModeToggle />
       </div>
     </header>
   );
