@@ -38,14 +38,6 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     provider: 'aws',
   },
   {
-    id: 'mikrotik',
-    name: 'AgentAPOC',
-    description: 'Monitoramento de roteadores, firewalls e configurações de rede',
-    category: 'cloud',
-    logo: 'https://cdn.simpleicons.org/mikrotik/293239',
-    provider: 'mikrotik',
-  },
-  {
     id: 'cloudflare',
     name: 'Cloudflare',
     description: 'WAF, DNS, proteção DDoS e análise de tráfego',
@@ -189,7 +181,7 @@ export const getIntegrationById = (id: string): IntegrationDefinition | undefine
 };
 
 // IDs das integrações que já estão funcionais
-export const FUNCTIONAL_INTEGRATIONS = ['aws', 'azure-ad', 'google-workspace', 'mikrotik', 'auth0', 'okta', 'cloudflare', 'jira', 'github', 'gitlab', 'slack', 'bamboohr', 'crowdstrike', 'intune', 'datadog', 'manual-entry'];
+export const FUNCTIONAL_INTEGRATIONS = ['aws', 'azure-ad', 'google-workspace', 'auth0', 'okta', 'cloudflare', 'jira', 'github', 'gitlab', 'slack', 'bamboohr', 'crowdstrike', 'intune', 'datadog', 'manual-entry'];
 
 export const isIntegrationFunctional = (id: string): boolean => {
   return FUNCTIONAL_INTEGRATIONS.includes(id);
