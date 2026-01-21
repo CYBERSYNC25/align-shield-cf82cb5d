@@ -1,4 +1,5 @@
-import { Zap, ExternalLink, Check, Settings } from "lucide-react";
+import { useState } from "react";
+import { Zap, ExternalLink, Check, Settings, Upload } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ interface MarketplaceIntegrationCardProps {
     name: string;
     description: string;
     category: string;
-    logo?: string;
+    logo?: string | null;
     isNew?: boolean;
     isBeta?: boolean;
   };
@@ -48,12 +49,45 @@ export const MarketplaceIntegrationCard = ({
   onManage,
   disabled = false,
 }: MarketplaceIntegrationCardProps) => {
+  const [logoError, setLogoError] = useState(false);
   const categoryConfig = CATEGORY_CONFIG[integration.category] || { 
     label: integration.category, 
     icon: '📦', 
     color: 'bg-muted text-muted-foreground' 
   };
   const controlsCount = getControlsCount(integration.id);
+
+  const renderLogo = () => {
+    // Manual entry uses icon instead of logo
+    if (integration.id === 'manual-entry' || !integration.logo) {
+      return (
+        <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+          <Upload className="h-7 w-7 text-primary" />
+        </div>
+      );
+    }
+
+    // Logo failed to load, show fallback
+    if (logoError) {
+      return (
+        <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+          <span className="text-3xl">{categoryConfig.icon}</span>
+        </div>
+      );
+    }
+
+    // Normal logo rendering
+    return (
+      <div className="w-14 h-14 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 group-hover:border-primary/30 transition-colors">
+        <img 
+          src={integration.logo} 
+          alt={integration.name} 
+          className="w-full h-full object-contain"
+          onError={() => setLogoError(true)}
+        />
+      </div>
+    );
+  };
 
   return (
     <HoverCard openDelay={300} closeDelay={100}>
@@ -101,19 +135,7 @@ export const MarketplaceIntegrationCard = ({
             <CardContent className="p-6">
               {/* Logo */}
               <div className="mb-4">
-                {integration.logo ? (
-                  <div className="w-14 h-14 rounded-xl bg-background border border-border/50 flex items-center justify-center p-2 group-hover:border-primary/30 transition-colors">
-                    <img 
-                      src={integration.logo} 
-                      alt={integration.name} 
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <span className="text-3xl">{categoryConfig.icon}</span>
-                  </div>
-                )}
+                {renderLogo()}
               </div>
 
               {/* Name & Category */}
