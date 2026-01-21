@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Settings, Zap, ExternalLink } from "lucide-react";
+import { CheckCircle2, Clock, Settings, Zap, ExternalLink, Upload, Package } from "lucide-react";
 import { IntegrationDefinition, IntegrationStatus } from "@/lib/integrations-catalog";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -93,22 +94,47 @@ export function IntegrationCard({
     }
   };
 
+  const [logoError, setLogoError] = useState(false);
+
+  const renderLogo = () => {
+    // Manual entry uses icon instead of logo
+    if (integration.id === 'manual-entry' || !integration.logo) {
+      return (
+        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <Upload className="h-5 w-5 text-primary" />
+        </div>
+      );
+    }
+
+    // Logo failed to load, show fallback
+    if (logoError) {
+      return (
+        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+          <Package className="h-5 w-5 text-muted-foreground" />
+        </div>
+      );
+    }
+
+    // Normal logo rendering
+    return (
+      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden p-1.5">
+        <img 
+          src={integration.logo} 
+          alt={`${integration.name} logo`}
+          className="w-full h-full object-contain"
+          onError={() => setLogoError(true)}
+        />
+      </div>
+    );
+  };
+
   return (
     <Card className="h-full flex flex-col bg-card border-border hover:border-primary/30 transition-colors group">
       <CardContent className="p-5 flex flex-col h-full">
         {/* Header with logo and badges */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center overflow-hidden p-1.5">
-              <img 
-                src={integration.logo} 
-                alt={`${integration.name} logo`}
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/placeholder.svg';
-                }}
-              />
-            </div>
+            {renderLogo()}
             <div className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-foreground text-sm leading-tight">

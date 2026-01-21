@@ -6,7 +6,7 @@ export interface IntegrationDefinition {
   name: string;
   description: string;
   category: IntegrationCategory;
-  logo: string;
+  logo: string | null;
   isNew?: boolean;
   provider: string;
 }
@@ -34,7 +34,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Amazon Web Services',
     description: 'Auditoria de IAM, S3, CloudTrail e conformidade AWS',
     category: 'cloud',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/9/93/Amazon_Web_Services_Logo.svg',
+    logo: 'https://cdn.simpleicons.org/amazonaws/FF9900',
     provider: 'aws',
   },
   {
@@ -42,7 +42,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'AgentAPOC',
     description: 'Monitoramento de roteadores, firewalls e configurações de rede',
     category: 'cloud',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Mikrotik-logo.svg/512px-Mikrotik-logo.svg.png',
+    logo: 'https://cdn.simpleicons.org/mikrotik/293239',
     provider: 'mikrotik',
   },
   {
@@ -50,7 +50,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Cloudflare',
     description: 'WAF, DNS, proteção DDoS e análise de tráfego',
     category: 'cloud',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/4/4b/Cloudflare_Logo.svg',
+    logo: 'https://cdn.simpleicons.org/cloudflare/F38020',
     isNew: true,
     provider: 'cloudflare',
   },
@@ -59,7 +59,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Datadog',
     description: 'Monitors, security signals, log pipelines e synthetic tests',
     category: 'cloud',
-    logo: 'https://imgix.datadoghq.com/img/dd_logo_n_70x75.png',
+    logo: 'https://cdn.simpleicons.org/datadog/632CA6',
     isNew: true,
     provider: 'datadog',
   },
@@ -70,7 +70,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Microsoft Entra ID',
     description: 'Usuários, grupos, MFA e políticas de acesso condicional',
     category: 'iam',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Microsoft_Azure.svg/150px-Microsoft_Azure.svg.png',
+    logo: 'https://cdn.simpleicons.org/microsoftazure/0078D4',
     provider: 'azure-ad',
   },
   {
@@ -78,7 +78,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Google Workspace',
     description: 'Diretório de usuários, permissões e políticas de segurança',
     category: 'iam',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg',
+    logo: 'https://cdn.simpleicons.org/google/4285F4',
     provider: 'google',
   },
   {
@@ -86,7 +86,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Auth0',
     description: 'Gestão de identidades, SSO, MFA e conexões de autenticação',
     category: 'iam',
-    logo: 'https://cdn.auth0.com/website/assets/pages/press/img/auth0-logo-3D7CE7F9A0-logo.svg',
+    logo: 'https://cdn.simpleicons.org/auth0/EB5424',
     isNew: true,
     provider: 'auth0',
   },
@@ -95,7 +95,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Okta',
     description: 'SSO, MFA, lifecycle de identidades e gestão de acessos',
     category: 'iam',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/5/5c/Okta_logo.svg',
+    logo: 'https://cdn.simpleicons.org/okta/007DC1',
     isNew: true,
     provider: 'okta',
   },
@@ -106,7 +106,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'GitHub',
     description: 'Branch protection, PRs, secrets scanning e CODEOWNERS',
     category: 'sdlc',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg',
+    logo: 'https://cdn.simpleicons.org/github/181717',
     isNew: true,
     provider: 'github',
   },
@@ -115,7 +115,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'GitLab',
     description: 'Pipelines CI/CD, compliance de repositórios e SAST',
     category: 'sdlc',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/GitLab_logo.svg',
+    logo: 'https://cdn.simpleicons.org/gitlab/FC6D26',
     isNew: true,
     provider: 'gitlab',
   },
@@ -126,7 +126,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Jira',
     description: 'Tickets de segurança, vulnerabilidades e SLAs de resposta',
     category: 'productivity',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/8/8a/Jira_Logo.svg',
+    logo: 'https://cdn.simpleicons.org/jira/0052CC',
     isNew: true,
     provider: 'jira',
   },
@@ -135,7 +135,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Slack',
     description: 'Auditoria de canais, retenção de mensagens e DLP',
     category: 'productivity',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/d/d5/Slack_icon_2019.svg',
+    logo: 'https://cdn.simpleicons.org/slack/4A154B',
     isNew: true,
     provider: 'slack',
   },
@@ -144,7 +144,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'BambooHR',
     description: 'Onboarding/offboarding e compliance de dados de RH',
     category: 'productivity',
-    logo: 'https://www.bamboohr.com/resources/images/logo.svg',
+    logo: 'https://cdn.simpleicons.org/bamboo/0052CC',
     isNew: true,
     provider: 'bamboohr',
   },
@@ -155,7 +155,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'CrowdStrike Falcon',
     description: 'EDR, detecção de ameaças e postura de segurança',
     category: 'endpoint',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/f/fb/CrowdStrike_logo.svg',
+    logo: 'https://cdn.simpleicons.org/crowdstrike/F85149',
     isNew: true,
     provider: 'crowdstrike',
   },
@@ -164,7 +164,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Microsoft Intune',
     description: 'MDM, políticas de dispositivos e compliance de endpoints',
     category: 'endpoint',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Microsoft_Azure.svg/150px-Microsoft_Azure.svg.png',
+    logo: 'https://cdn.simpleicons.org/microsoftazure/0078D4',
     isNew: true,
     provider: 'intune',
   },
@@ -175,7 +175,7 @@ export const integrationsCatalog: IntegrationDefinition[] = [
     name: 'Manual Entry',
     description: 'Add resources manually without API integration',
     category: 'productivity',
-    logo: '/placeholder.svg',
+    logo: null,
     provider: 'manual',
   },
 ];
