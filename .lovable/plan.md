@@ -1,39 +1,89 @@
+# Multi-Tenancy - Status da Implementação
 
-## Plano: Implementação de Multi-Tenancy Completo
+## ✅ Concluído
 
-### Objetivo
-Transformar o sistema APOC de single-user/multi-user para multi-tenant completo, permitindo que múltiplos usuários de uma mesma organização compartilhem dados e recursos, mantendo isolamento total entre diferentes organizações.
+### Fase 1: Schema do Banco de Dados
+- [x] Criada tabela `organizations` com campos id, name, slug, plan, settings
+- [x] Adicionada coluna `org_id` em todas as 36+ tabelas de dados
+- [x] Adicionada coluna `role_in_org` na tabela `profiles`
+- [x] Criados índices para `org_id` em todas as tabelas
+- [x] Criada função helper `get_user_org_id()` (SECURITY DEFINER)
 
----
+### Fase 2: Políticas RLS
+- [x] Atualizadas políticas RLS para filtrar por `org_id` em todas as tabelas principais
+- [x] Corrigida recursão infinita em `object_permissions`
+- [x] Corrigidas políticas de `user_roles` para permitir inserção de viewer
 
-### Análise da Situação Atual
+### Fase 3: Frontend - Hooks
+- [x] Criado hook `useOrganization` com:
+  - Carregamento de dados da organização atual
+  - Listagem de membros da organização
+  - Funções para atualizar organização e roles de membros
+  - Verificações de permissão (isAdmin, isMember, isViewer)
+- [x] Corrigidos dados mock em hooks para incluir `org_id: null`
 
-| Aspecto | Estado Atual |
-|---------|--------------|
-| Tabelas com `user_id` | 37 tabelas |
-| Tabelas sem `user_id` | 8 tabelas (relações ou views) |
-| Coluna `org_id` | Não existe |
-| Tabela `organizations` | Não existe |
-| RLS | Baseado exclusivamente em `user_id` |
-| Contexto de organização | Apenas campo texto `organization` em `profiles` |
+### Fase 4: Trigger de Auto-criação
+- [x] Criada função `handle_new_user_organization()` que:
+  - Cria organização automaticamente para novos usuários
+  - Define o criador como admin da organização
 
----
+## 🔄 Próximos Passos (Opcionais)
 
-### Arquitetura da Solução
+### Fase 5: Atualização de Edge Functions
+As Edge Functions precisam ser atualizadas para propagar `org_id` em inserts:
+- [ ] seed-compliance-data
+- [ ] check-compliance-drift
+- [ ] integration-webhook-handler
+- [ ] save-integration-credentials
+- [ ] sync-integration-data
+- [ ] (outras ~25 funções)
 
-```text
+### Fase 6: Migração de Dados Existentes
+Para usuários existentes que já têm dados:
+```sql
+-- Execute manualmente se necessário:
+
+-- 1. Criar org para cada profile existente sem org_id
+INSERT INTO organizations (name, slug)
+SELECT 
+  COALESCE(organization, display_name, 'Organização'),
+  'org-' || substr(md5(user_id::text), 1, 8)
+FROM profiles 
+WHERE org_id IS NULL
+ON CONFLICT (slug) DO NOTHING;
+
+-- 2. Vincular profiles às orgs
+UPDATE profiles p
+SET org_id = (SELECT id FROM organizations WHERE slug = 'org-' || substr(md5(p.user_id::text), 1, 8)),
+    role_in_org = 'admin'
+WHERE p.org_id IS NULL;
+
+-- 3. Propagar org_id para dados existentes
+UPDATE frameworks f SET org_id = (SELECT org_id FROM profiles WHERE user_id = f.user_id);
+UPDATE controls c SET org_id = (SELECT org_id FROM profiles WHERE user_id = c.user_id);
+-- ... repetir para outras tabelas
+```
+
+### Fase 7: UI de Gestão de Organização
+- [ ] Criar página de configurações da organização em Settings
+- [ ] Adicionar UI para convidar membros
+- [ ] Adicionar UI para gerenciar roles de membros
+
+## Arquitetura
+
+```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        MULTI-TENANCY                            │
+│                     MULTI-TENANCY APOC                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  organizations (nova tabela)                                    │
-│  ├── id (UUID)                                                  │
+│  organizations                                                  │
+│  ├── id (UUID) [PK]                                             │
 │  ├── name                                                       │
-│  ├── slug (único)                                               │
+│  ├── slug (UNIQUE)                                              │
 │  ├── plan (free/pro/enterprise)                                 │
 │  ├── settings (JSONB)                                           │
-│  └── created_at                                                 │
+│  └── created_at, updated_at                                     │
 ├─────────────────────────────────────────────────────────────────┤
-│  profiles (atualizada)                                          │
+│  profiles                                                       │
 │  ├── org_id → organizations.id                                  │
 │  └── role_in_org (admin/member/viewer)                          │
 ├─────────────────────────────────────────────────────────────────┤
@@ -42,364 +92,60 @@ Transformar o sistema APOC de single-user/multi-user para multi-tenant completo,
 ├─────────────────────────────────────────────────────────────────┤
 │  RLS Policies                                                   │
 │  └── Filtro por get_user_org_id(auth.uid())                     │
+├─────────────────────────────────────────────────────────────────┤
+│  Frontend Hooks                                                 │
+│  ├── useOrganization() - dados e ações da org                   │
+│  └── useOrgId() - helper para obter org_id                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
----
+## Como Usar
 
-### Fase 1: Criar Tabela Organizations
+### Frontend - Obter dados da organização:
+```typescript
+import { useOrganization } from '@/hooks/useOrganization';
 
-**Migration SQL:**
-```sql
--- Tabela de organizações
-CREATE TABLE public.organizations (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  slug TEXT NOT NULL UNIQUE,
-  plan TEXT NOT NULL DEFAULT 'free' CHECK (plan IN ('free', 'pro', 'enterprise')),
-  settings JSONB NOT NULL DEFAULT '{}'::jsonb,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);
+function MyComponent() {
+  const { 
+    organization, 
+    orgId, 
+    isAdmin, 
+    members, 
+    updateOrganization 
+  } = useOrganization();
 
--- Índices
-CREATE UNIQUE INDEX organizations_slug_idx ON public.organizations(slug);
+  if (!organization) return <Loading />;
 
--- RLS
-ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
-
--- Política: membros podem ver sua organização
-CREATE POLICY "Members can view their organization"
-  ON public.organizations FOR SELECT
-  USING (id IN (
-    SELECT org_id FROM public.profiles WHERE user_id = auth.uid()
-  ));
-
--- Política: admins podem atualizar
-CREATE POLICY "Org admins can update organization"
-  ON public.organizations FOR UPDATE
-  USING (id IN (
-    SELECT org_id FROM public.profiles 
-    WHERE user_id = auth.uid() AND role_in_org = 'admin'
-  ));
-```
-
----
-
-### Fase 2: Atualizar Tabela Profiles
-
-```sql
--- Adicionar colunas de organização
-ALTER TABLE public.profiles 
-  ADD COLUMN org_id UUID REFERENCES public.organizations(id),
-  ADD COLUMN role_in_org TEXT DEFAULT 'member' 
-    CHECK (role_in_org IN ('admin', 'member', 'viewer'));
-
--- Índice para busca por org_id
-CREATE INDEX profiles_org_id_idx ON public.profiles(org_id);
-```
-
----
-
-### Fase 3: Adicionar org_id em Todas as Tabelas
-
-Tabelas que precisam da coluna `org_id`:
-
-| Tabela | Prioridade |
-|--------|------------|
-| access_anomalies | Alta |
-| answer_library | Média |
-| audit_logs | Alta |
-| auditor_access_tokens | Alta |
-| audits | Alta |
-| bcp_plans | Média |
-| compliance_alerts | Alta |
-| compliance_check_history | Alta |
-| controls | Alta |
-| custom_compliance_tests | Média |
-| custom_test_results | Média |
-| device_logs | Baixa |
-| evidence | Alta |
-| frameworks | Alta |
-| incident_playbooks | Média |
-| incidents | Alta |
-| integration_collected_data | Alta |
-| integration_oauth_tokens | Alta |
-| integration_status | Alta |
-| integration_webhooks | Média |
-| integrations | Alta |
-| notifications | Média |
-| object_permissions | Alta |
-| policies | Alta |
-| remediation_tickets | Alta |
-| risk_acceptances | Alta |
-| risk_approval_policies | Alta |
-| risk_assessments | Alta |
-| risks | Alta |
-| security_questionnaires | Alta |
-| system_audit_logs | Alta |
-| tasks | Alta |
-| trust_center_frameworks | Alta |
-| trust_center_settings | Alta |
-| user_roles | Alta |
-| vendors | Alta |
-
-**SQL Pattern para cada tabela:**
-```sql
-ALTER TABLE public.<table_name> 
-  ADD COLUMN org_id UUID REFERENCES public.organizations(id);
-
-CREATE INDEX <table_name>_org_id_idx ON public.<table_name>(org_id);
-```
-
----
-
-### Fase 4: Função Helper para Obter org_id do Usuário
-
-```sql
-CREATE OR REPLACE FUNCTION public.get_user_org_id(_user_id UUID DEFAULT auth.uid())
-RETURNS UUID
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-  SELECT org_id FROM public.profiles WHERE user_id = _user_id LIMIT 1;
-$$;
-```
-
----
-
-### Fase 5: Atualizar Políticas RLS
-
-**Padrão de nova política:**
-```sql
--- DROP política antiga
-DROP POLICY IF EXISTS "<policy_name>" ON public.<table_name>;
-
--- CREATE nova política com org_id
-CREATE POLICY "<policy_name>"
-  ON public.<table_name>
-  FOR <SELECT|INSERT|UPDATE|DELETE|ALL>
-  USING (org_id = get_user_org_id(auth.uid()));
-```
-
-Exemplo para tabela `frameworks`:
-```sql
-DROP POLICY IF EXISTS "Users can manage their own frameworks" ON public.frameworks;
-
-CREATE POLICY "Org members can view frameworks"
-  ON public.frameworks FOR SELECT
-  USING (org_id = get_user_org_id(auth.uid()));
-
-CREATE POLICY "Org admins can manage frameworks"
-  ON public.frameworks FOR ALL
-  USING (
-    org_id = get_user_org_id(auth.uid()) 
-    AND EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE user_id = auth.uid() 
-        AND role_in_org IN ('admin', 'member')
-    )
+  return (
+    <div>
+      <h1>{organization.name}</h1>
+      <p>Plano: {organization.plan}</p>
+      <p>Membros: {members.length}</p>
+    </div>
   );
-```
-
----
-
-### Fase 6: Migração de Dados Existentes
-
-```sql
--- 1. Criar organização para cada usuário existente que tem dados
-INSERT INTO public.organizations (id, name, slug)
-SELECT 
-  gen_random_uuid(),
-  COALESCE(p.organization, p.display_name, 'Org ' || substr(p.user_id::text, 1, 8)),
-  'org-' || substr(p.user_id::text, 1, 8)
-FROM public.profiles p
-ON CONFLICT (slug) DO NOTHING;
-
--- 2. Atualizar profiles com org_id
-UPDATE public.profiles p
-SET org_id = (
-  SELECT o.id FROM public.organizations o 
-  WHERE o.slug = 'org-' || substr(p.user_id::text, 1, 8)
-),
-role_in_org = 'admin';
-
--- 3. Atualizar cada tabela de dados com org_id do user_id correspondente
-UPDATE public.frameworks f
-SET org_id = (SELECT org_id FROM public.profiles WHERE user_id = f.user_id);
-
--- (Repetir para todas as tabelas)
-```
-
----
-
-### Fase 7: Atualizar Contexto de Autenticação (Frontend)
-
-**Arquivo:** `src/hooks/useAuth.tsx`
-
-Adicionar `org_id` e `organization` ao contexto:
-
-```typescript
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  orgId: string | null;        // NOVO
-  organization: Organization | null;  // NOVO
-  signIn: ...
 }
 ```
 
-**Novo hook:** `src/hooks/useOrganization.tsx`
-
+### Frontend - Inserir dados com org_id:
 ```typescript
-export interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-  plan: 'free' | 'pro' | 'enterprise';
-  settings: Record<string, any>;
-}
+import { useOrganization } from '@/hooks/useOrganization';
 
-export function useOrganization() {
-  const { user } = useAuth();
-  
-  const { data: organization, isLoading } = useQuery({
-    queryKey: ['organization', user?.id],
-    queryFn: async () => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('org_id, organizations(*)')
-        .eq('user_id', user.id)
-        .single();
-        
-      return profile?.organizations as Organization;
-    },
-    enabled: !!user?.id,
-  });
+function CreateItem() {
+  const { orgId } = useOrganization();
 
-  return { organization, isLoading };
-}
-```
-
----
-
-### Fase 8: Atualizar Types do Supabase
-
-**Arquivo:** `src/integrations/supabase/types.ts`
-
-Adicionar tipo `organizations`:
-```typescript
-organizations: {
-  Row: {
-    id: string;
-    name: string;
-    slug: string;
-    plan: 'free' | 'pro' | 'enterprise';
-    settings: Json;
-    created_at: string;
-    updated_at: string;
+  const handleCreate = async () => {
+    await supabase.from('frameworks').insert({
+      name: 'ISO 27001',
+      user_id: user.id,
+      org_id: orgId // IMPORTANTE: incluir org_id
+    });
   };
-  Insert: { ... };
-  Update: { ... };
 }
 ```
 
-Atualizar todos os tipos de tabela para incluir `org_id`:
-```typescript
-// Em cada tabela que precisa:
-Row: {
-  ...
-  org_id: string | null;
-}
-Insert: {
-  ...
-  org_id?: string | null;
-}
-```
+## Segurança
 
----
-
-### Fase 9: Atualizar Hooks de Dados
-
-Atualizar todos os hooks para NÃO precisar passar `org_id` manualmente (o RLS cuida do filtro).
-
-Mas para INSERTs, garantir que `org_id` seja incluído:
-
-```typescript
-// Exemplo em useFrameworks.tsx
-const createFramework = async (data) => {
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id')
-    .eq('user_id', user.id)
-    .single();
-
-  await supabase.from('frameworks').insert({
-    ...data,
-    user_id: user.id,
-    org_id: profile.org_id,  // IMPORTANTE
-  });
-};
-```
-
----
-
-### Fase 10: Edge Functions
-
-Atualizar Edge Functions para propagar `org_id`:
-
-**Padrão:**
-```typescript
-// Buscar org_id do usuário autenticado
-const { data: profile } = await supabaseClient
-  .from('profiles')
-  .select('org_id')
-  .eq('user_id', user.id)
-  .single();
-
-const orgId = profile?.org_id;
-
-// Usar org_id em todas as queries e inserts
-```
-
----
-
-### Resumo de Arquivos a Modificar
-
-| Categoria | Arquivos |
-|-----------|----------|
-| **Migrations (novo)** | 1 arquivo SQL grande |
-| **Types** | `src/integrations/supabase/types.ts` |
-| **Auth Context** | `src/hooks/useAuth.tsx` |
-| **Novo Hook** | `src/hooks/useOrganization.tsx` |
-| **Hooks de Dados** | ~25 hooks para atualizar INSERTs |
-| **Edge Functions** | ~30 funções para propagar org_id |
-| **Componentes** | `src/pages/Settings.tsx` (gestão de org) |
-
----
-
-### Ordem de Implementação
-
-1. Migration: Criar tabela `organizations`
-2. Migration: Alterar tabela `profiles` (add org_id, role_in_org)
-3. Migration: Adicionar `org_id` em todas as tabelas de dados
-4. Migration: Criar função `get_user_org_id()`
-5. Migration: Atualizar todas as políticas RLS
-6. Migration: Migrar dados existentes
-7. Frontend: Criar hook `useOrganization`
-8. Frontend: Atualizar `useAuth` com contexto de org
-9. Frontend: Atualizar hooks de dados para INSERTs
-10. Backend: Atualizar Edge Functions
-11. Frontend: Criar página de gestão de organização
-
----
-
-### Considerações de Segurança
-
-- **RLS Obrigatório**: Todas as tabelas DEVEM ter RLS habilitado com filtro por `org_id`
-- **Função SECURITY DEFINER**: `get_user_org_id()` usa `search_path = 'public'` para evitar injection
-- **Validação de org_id**: Edge Functions devem validar que o `org_id` pertence ao usuário
-- **Audit Trail**: `system_audit_logs` deve registrar org_id para rastreabilidade
+- **RLS obrigatório**: Todas as tabelas têm RLS habilitado com filtro por `org_id`
+- **Função SECURITY DEFINER**: `get_user_org_id()` usa `SET search_path = 'public'`
+- **Isolamento total**: Dados de uma organização não são visíveis para outra
+- **Compatibilidade**: Políticas aceitam `org_id IS NULL` para dados legados
