@@ -2,6 +2,13 @@
  * Centralized React Query keys for consistent cache management
  */
 export const queryKeys = {
+  // Job Queue
+  jobQueue: ['job-queue'] as const,
+  jobs: (status?: string | string[], jobType?: string) => 
+    ['job-queue', 'list', status, jobType] as const,
+  jobStatus: (jobId: string) => ['job-queue', 'status', jobId] as const,
+  pendingJobsCount: ['job-queue', 'pending-count'] as const,
+
   // Integrations
   integrations: ['integrations'] as const,
   integrationStatus: (name: string) => ['integration-status', name] as const,

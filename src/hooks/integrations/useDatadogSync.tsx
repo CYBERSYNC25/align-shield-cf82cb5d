@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { queryKeys } from '@/lib/query-keys';
+import { useCreateJob, useJobStatus } from '@/hooks/useJobQueue';
+import { useState, useEffect } from 'react';
 
 export interface DatadogMonitor {
   id: number;
@@ -158,4 +160,38 @@ export function useDatadogSync(integrationId: string) {
       });
     },
   });
+}
+
+// New: Async sync via job queue
+export function useDatadogSyncAsync(integrationId: string) {
+  const [jobId, setJobId] = useState<string | null>(null);
+  const createJob = useCreateJob();
+  const { data: jobStatus } = useJobStatus(jobId);
+
+  useEffect(() => {
+    if (jobStatus?.status === 'completed' || jobStatus?.status === 'failed') {
+      const timer = setTimeout(() => setJobId(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [jobStatus?.status]);
+
+  const enqueue = () => {
+    createJob.mutate(
+      {
+        jobType: 'sync_integration',
+        payload: { provider: 'datadog', integration_id: integrationId },
+        priority: 4,
+        metadata: { triggered_by: 'user_action' }
+      },
+      { onSuccess: (id) => setJobId(id) }
+    );
+  };
+
+  return {
+    enqueue,
+    isEnqueuing: createJob.isPending,
+    jobId,
+    jobStatus,
+    isProcessing: jobStatus?.status === 'pending' || jobStatus?.status === 'processing',
+  };
 }
