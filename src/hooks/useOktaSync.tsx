@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useCreateJob, useJobStatus } from '@/hooks/useJobQueue';
+import { useState, useEffect } from 'react';
 
 export interface OktaUser {
   id: string;
@@ -133,4 +135,38 @@ export function useOktaSync() {
       });
     }
   });
+}
+
+// New: Async sync via job queue
+export function useOktaSyncAsync() {
+  const [jobId, setJobId] = useState<string | null>(null);
+  const createJob = useCreateJob();
+  const { data: jobStatus } = useJobStatus(jobId);
+
+  useEffect(() => {
+    if (jobStatus?.status === 'completed' || jobStatus?.status === 'failed') {
+      const timer = setTimeout(() => setJobId(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [jobStatus?.status]);
+
+  const enqueue = () => {
+    createJob.mutate(
+      {
+        jobType: 'sync_integration',
+        payload: { provider: 'okta' },
+        priority: 4,
+        metadata: { triggered_by: 'user_action' }
+      },
+      { onSuccess: (id) => setJobId(id) }
+    );
+  };
+
+  return {
+    enqueue,
+    isEnqueuing: createJob.isPending,
+    jobId,
+    jobStatus,
+    isProcessing: jobStatus?.status === 'pending' || jobStatus?.status === 'processing',
+  };
 }

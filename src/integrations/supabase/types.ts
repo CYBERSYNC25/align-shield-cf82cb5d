@@ -1403,6 +1403,74 @@ export type Database = {
           },
         ]
       }
+      job_queue: {
+        Row: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          last_error_at: string | null
+          max_attempts: number
+          metadata: Json | null
+          org_id: string | null
+          payload: Json
+          priority: number
+          result: Json | null
+          scheduled_for: string
+          started_at: string | null
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type: string
+          last_error_at?: string | null
+          max_attempts?: number
+          metadata?: Json | null
+          org_id?: string | null
+          payload?: Json
+          priority?: number
+          result?: Json | null
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          attempts?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          last_error_at?: string | null
+          max_attempts?: number
+          metadata?: Json | null
+          org_id?: string | null
+          payload?: Json
+          priority?: number
+          result?: Json | null
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_queue_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_label: string | null
@@ -2708,6 +2776,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_next_retry: {
+        Args: { p_attempts: number; p_max_attempts?: number }
+        Returns: string
+      }
       check_object_permission: {
         Args: {
           _object_id: string
@@ -2715,6 +2787,38 @@ export type Database = {
           _required_level?: string
           _user_id: string
         }
+        Returns: boolean
+      }
+      claim_pending_jobs: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          job_type: string
+          last_error_at: string | null
+          max_attempts: number
+          metadata: Json | null
+          org_id: string | null
+          payload: Json
+          priority: number
+          result: Json | null
+          scheduled_for: string
+          started_at: string | null
+          status: string
+          user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "job_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      complete_job: {
+        Args: { p_job_id: string; p_result?: Json }
         Returns: boolean
       }
       create_notification: {
@@ -2732,6 +2836,20 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      enqueue_job: {
+        Args: {
+          p_job_type: string
+          p_metadata?: Json
+          p_payload?: Json
+          p_priority?: number
+          p_scheduled_for?: string
+        }
+        Returns: string
+      }
+      fail_job: {
+        Args: { p_error_message: string; p_job_id: string }
+        Returns: boolean
       }
       get_trust_center_by_slug: {
         Args: { p_slug: string }
@@ -2778,6 +2896,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      reset_stuck_jobs: { Args: never; Returns: number }
       search_answer_library: {
         Args: { p_limit?: number; p_search_text: string; p_user_id: string }
         Returns: {
