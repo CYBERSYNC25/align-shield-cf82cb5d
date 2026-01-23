@@ -353,6 +353,33 @@ export type Database = {
           },
         ]
       }
+      cache_store: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          key: string
+          org_id: string | null
+          user_id: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          key: string
+          org_id?: string | null
+          user_id?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          key?: string
+          org_id?: string | null
+          user_id?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       compliance_alerts: {
         Row: {
           acknowledged: boolean | null
@@ -2932,6 +2959,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      cleanup_expired_cache: { Args: never; Returns: number }
       cleanup_old_system_logs: {
         Args: { p_days_to_keep?: number }
         Returns: number
@@ -2970,6 +2998,7 @@ export type Database = {
         Args: { p_error_message: string; p_job_id: string }
         Returns: boolean
       }
+      get_cache: { Args: { p_key: string }; Returns: Json }
       get_log_statistics: {
         Args: { p_hours?: number; p_org_id?: string }
         Returns: {
@@ -3023,6 +3052,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      invalidate_cache: { Args: { p_key_pattern: string }; Returns: number }
       reset_stuck_jobs: { Args: never; Returns: number }
       search_answer_library: {
         Args: { p_limit?: number; p_search_text: string; p_user_id: string }
@@ -3033,6 +3063,16 @@ export type Database = {
           similarity_score: number
           standard_answer: string
         }[]
+      }
+      set_cache: {
+        Args: {
+          p_key: string
+          p_org_id?: string
+          p_ttl_seconds: number
+          p_user_id?: string
+          p_value: Json
+        }
+        Returns: undefined
       }
     }
     Enums: {

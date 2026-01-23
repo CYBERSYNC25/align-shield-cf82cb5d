@@ -64,6 +64,14 @@ export const queryKeys = {
   systemLogsStatistics: ['system-logs', 'statistics'] as const,
   systemLogsCount: (filters: Record<string, unknown>) => 
     ['system-logs', 'count', filters] as const,
+
+  // Cache keys
+  cachedComplianceScore: (userId: string) => 
+    ['cached-compliance-score', userId] as const,
+  cachedIssuesBySeverity: (userId: string) => 
+    ['cached-issues-by-severity', userId] as const,
+  cachedCollectedResources: (userId: string) => 
+    ['cached-collected-resources', userId] as const,
 };
 
 // Legacy export for compatibility

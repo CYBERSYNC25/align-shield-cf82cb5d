@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,8 @@ import {
 } from '@/hooks/useComplianceStatus';
 import { useComplianceAlerts } from '@/hooks/useComplianceAlerts';
 import { useRealtimeComplianceAlerts } from '@/hooks/useRealtimeComplianceAlerts';
+import { useCachedIssuesBySeverity } from '@/hooks/useCachedIssuesBySeverity';
+import { useUpdateComplianceScoreCache, type CachedComplianceScore } from '@/hooks/useCachedComplianceScore';
 import { 
   AlertTriangle, 
   XCircle, 
@@ -23,7 +25,8 @@ import {
   ShieldCheck,
   Radio,
   WifiOff,
-  Clock
+  Clock,
+  Database
 } from 'lucide-react';
 import { IssueDetailsSheet } from './IssueDetailsSheet';
 import { SLACountdown } from './SLACountdown';
@@ -67,6 +70,12 @@ const ActionCenter = () => {
 
   const { alerts, overdueCount } = useComplianceAlerts();
   
+  // Cached issues for quick stats (TTL: 2 min)
+  const { data: cachedIssues } = useCachedIssuesBySeverity();
+  
+  // Cache update hook
+  const { updateCache: updateScoreCache } = useUpdateComplianceScoreCache();
+  
   // Realtime subscription hook
   const { 
     isConnected, 
@@ -76,6 +85,21 @@ const ActionCenter = () => {
 
   const [selectedTest, setSelectedTest] = useState<ComplianceTest | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  
+  // Update cache when compliance data changes
+  useEffect(() => {
+    if (!isLoading && score !== undefined) {
+      const cacheData: CachedComplianceScore = {
+        score,
+        passingTests: passingTests.length,
+        failingTests: failingTests.length,
+        riskAcceptedTests: riskAcceptedTests.length,
+        totalTests,
+        lastCalculated: new Date().toISOString()
+      };
+      updateScoreCache(cacheData);
+    }
+  }, [score, passingTests.length, failingTests.length, riskAcceptedTests.length, totalTests, isLoading]);
 
   // Find corresponding alert for a test
   const getAlertForTest = (testId: string) => {

@@ -39,6 +39,8 @@ import { useRisks } from '@/hooks/useRisks';
 import { useAudits } from '@/hooks/useAudits';
 import { useTasks } from '@/hooks/useTasks';
 import { usePolicies } from '@/hooks/usePolicies';
+import { useCachedIssuesBySeverity } from '@/hooks/useCachedIssuesBySeverity';
+import { useCachedCollectedResources } from '@/hooks/useCachedCollectedResources';
 import { useMemo } from 'react';
 
 /**
@@ -70,6 +72,10 @@ const MetricsGrid = () => {
   const { audits, loading: auditsLoading } = useAudits();
   const { tasks, loading: tasksLoading } = useTasks();
   const { policies, loading: policiesLoading } = usePolicies();
+  
+  // Cached hooks for performance
+  const { data: cachedIssues } = useCachedIssuesBySeverity();
+  const { data: cachedResources } = useCachedCollectedResources();
 
   /**
    * Calcula métricas agregadas em tempo real
