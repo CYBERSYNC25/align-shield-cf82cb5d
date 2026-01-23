@@ -45,7 +45,8 @@ export function useFrameworks() {
       passed_controls: 3,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: user?.id || 'mock-user'
+      user_id: user?.id || 'mock-user',
+      org_id: null
     },
     {
       id: '2',
@@ -58,7 +59,8 @@ export function useFrameworks() {
       passed_controls: 4,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: user?.id || 'mock-user'
+      user_id: user?.id || 'mock-user',
+      org_id: null
     },
     {
       id: '3',
@@ -71,7 +73,8 @@ export function useFrameworks() {
       passed_controls: 4,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: user?.id || 'mock-user'
+      user_id: user?.id || 'mock-user',
+      org_id: null
     }
   ];
 
@@ -385,7 +388,8 @@ export function useFrameworks() {
         passed_controls: frameworkData.passed_controls || 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        user_id: user.id
+        user_id: user.id,
+        org_id: null
       };
       setFrameworks(prev => [newFramework, ...prev]);
       toast({

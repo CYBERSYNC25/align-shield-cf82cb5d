@@ -27,7 +27,8 @@ const AuditPortal = () => {
     auditor: 'Demo Auditor',
     user_id: 'demo',
     created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    updated_at: new Date().toISOString(),
+    org_id: null
   };
 
   return (
