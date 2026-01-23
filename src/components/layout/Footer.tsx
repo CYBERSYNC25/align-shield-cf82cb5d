@@ -1,4 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -30,12 +31,12 @@ const Footer = () => {
             <a href="#" className="hover:text-primary transition-colors">
               Suporte
             </a>
-            <a href="#" className="hover:text-primary transition-colors">
+            <Link to="/legal/privacy" className="hover:text-primary transition-colors">
               Privacidade
-            </a>
-            <a href="#" className="hover:text-primary transition-colors">
+            </Link>
+            <Link to="/legal/terms" className="hover:text-primary transition-colors">
               Termos de Uso
-            </a>
+            </Link>
           </div>
         </div>
       </div>

@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
@@ -30,6 +32,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
     displayName: '',
     organization: ''
   });
+  const [termsAccepted, setTermsAccepted] = useState(false);
   
   // Estados de validação
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
@@ -65,6 +68,11 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignupErrors({});
+    
+    if (!termsAccepted) {
+      setSignupErrors({ terms: 'Você deve aceitar os termos para continuar' });
+      return;
+    }
     
     const validation = signUpSchema.safeParse(signupData);
     if (!validation.success) {
@@ -262,7 +270,57 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                       </p>
                     )}
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  
+                  {/* Checkbox de aceite dos termos */}
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Checkbox 
+                        id="terms-accept" 
+                        checked={termsAccepted}
+                        onCheckedChange={(checked) => {
+                          setTermsAccepted(checked === true);
+                          if (signupErrors.terms) {
+                            setSignupErrors(prev => {
+                              const { terms, ...rest } = prev;
+                              return rest;
+                            });
+                          }
+                        }}
+                        className="mt-0.5"
+                      />
+                      <Label 
+                        htmlFor="terms-accept" 
+                        className="text-xs text-muted-foreground leading-relaxed cursor-pointer"
+                      >
+                        Li e aceito os{" "}
+                        <Link 
+                          to="/legal/terms" 
+                          target="_blank" 
+                          className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Termos de Serviço
+                        </Link>{" "}
+                        e a{" "}
+                        <Link 
+                          to="/legal/privacy" 
+                          target="_blank" 
+                          className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Política de Privacidade
+                        </Link>
+                      </Label>
+                    </div>
+                    {signupErrors.terms && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {signupErrors.terms}
+                      </p>
+                    )}
+                  </div>
+                  
+                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted}>
                     {loading ? "Criando..." : "Criar conta"}
                   </Button>
                 </form>
