@@ -10,12 +10,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/hooks/useAuth';
+import { useDataExport } from '@/hooks/useDataExport';
 import { ChangePasswordModal } from '@/components/settings/ChangePasswordModal';
 import { Setup2FAModal } from '@/components/settings/Setup2FAModal';
 import { ManageSessionsModal } from '@/components/settings/ManageSessionsModal';
 import { BackupDataModal } from '@/components/settings/BackupDataModal';
 import { ViewLogsModal } from '@/components/settings/ViewLogsModal';
 import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
+import { ExportDataModal } from '@/components/settings/ExportDataModal';
 import UserRolesManagement from '@/components/settings/UserRolesManagement';
 import { SeedDatabaseCard } from '@/components/settings/SeedDatabaseCard';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
@@ -32,16 +34,24 @@ import {
   Key,
   Globe,
   Terminal,
+  Download,
+  Scale,
+  FileJson,
+  AlertTriangle,
 } from 'lucide-react';
+import { formatDistanceToNow, format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const Settings = () => {
   const { user } = useAuth();
+  const { lastCompletedExport, deletionStatus } = useDataExport();
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showSetup2FAModal, setShowSetup2FAModal] = useState(false);
   const [showManageSessionsModal, setShowManageSessionsModal] = useState(false);
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -173,6 +183,78 @@ const Settings = () => {
                       </CardContent>
                     </Card>
                     
+                    {/* LGPD Data Rights */}
+                    <Card className="border-primary/20">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-foreground">
+                          <Scale className="w-5 h-5 text-primary" />
+                          Seus Direitos (LGPD)
+                        </CardTitle>
+                        <CardDescription>
+                          Gerencie seus dados conforme a Lei Geral de Proteção de Dados
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between flex-wrap gap-4">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-medium text-foreground">Exportar Meus Dados</p>
+                            <p className="text-sm text-muted-foreground">
+                              Baixe todos os seus dados em formato JSON (portabilidade)
+                            </p>
+                          </div>
+                          <Button variant="outline" onClick={() => setShowExportModal(true)}>
+                            <Download className="w-4 h-4 mr-2" />
+                            Exportar
+                          </Button>
+                        </div>
+                        
+                        {lastCompletedExport && (
+                          <>
+                            <Separator />
+                            <div className="bg-muted p-3 rounded-lg text-sm flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <FileJson className="h-4 w-4 text-muted-foreground" />
+                                <span>
+                                  Última exportação: {formatDistanceToNow(new Date(lastCompletedExport.completed_at!), { addSuffix: true, locale: ptBR })}
+                                </span>
+                              </div>
+                              {lastCompletedExport.file_url && lastCompletedExport.expires_at && new Date(lastCompletedExport.expires_at) > new Date() && (
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="h-auto p-0"
+                                  onClick={() => window.open(lastCompletedExport.file_url!, '_blank')}
+                                >
+                                  Baixar novamente
+                                </Button>
+                              )}
+                            </div>
+                          </>
+                        )}
+                        
+                        {deletionStatus.isScheduled && deletionStatus.scheduledFor && (
+                          <>
+                            <Separator />
+                            <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-sm flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2 text-amber-600">
+                                <AlertTriangle className="h-4 w-4" />
+                                <span>
+                                  Exclusão agendada para {format(deletionStatus.scheduledFor, "dd/MM/yyyy", { locale: ptBR })}
+                                </span>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowDeleteModal(true)}
+                              >
+                                Gerenciar
+                              </Button>
+                            </div>
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
                     {/* Data Management */}
                     <Card>
                       <CardHeader>
@@ -223,7 +305,7 @@ const Settings = () => {
                           Zona de Perigo
                         </CardTitle>
                         <CardDescription>
-                          Ações irreversíveis de conta
+                          Ações que podem resultar em exclusão de dados
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
@@ -231,12 +313,12 @@ const Settings = () => {
                           <div className="min-w-0 flex-1">
                             <p className="font-medium text-foreground">Excluir Conta</p>
                             <p className="text-sm text-muted-foreground">
-                              Remova permanentemente sua conta e todos os dados
+                              Agende a exclusão da sua conta (30 dias de retenção)
                             </p>
                           </div>
                           <Button variant="destructive" onClick={() => setShowDeleteModal(true)}>
                             <Trash2 className="w-4 h-4 mr-2" />
-                            Excluir Conta
+                            {deletionStatus.isScheduled ? 'Gerenciar Exclusão' : 'Excluir Conta'}
                           </Button>
                         </div>
                       </CardContent>
@@ -362,6 +444,10 @@ const Settings = () => {
       <DeleteAccountModal 
         open={showDeleteModal} 
         onOpenChange={setShowDeleteModal} 
+      />
+      <ExportDataModal
+        open={showExportModal}
+        onOpenChange={setShowExportModal}
       />
     </div>
   );
