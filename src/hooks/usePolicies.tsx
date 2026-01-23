@@ -39,7 +39,8 @@ export function usePolicies() {
       approval_status: 'approved',
       approved_by: 'mock-approver-id',
       approved_at: new Date(Date.now() - 55 * 24 * 60 * 60 * 1000).toISOString(),
-      version_history: []
+      version_history: [],
+      org_id: null
     },
     {
       id: '2',
@@ -61,7 +62,8 @@ export function usePolicies() {
       approval_status: 'approved',
       approved_by: 'mock-approver-id',
       approved_at: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(),
-      version_history: []
+      version_history: [],
+      org_id: null
     },
     {
       id: '3',
@@ -83,7 +85,8 @@ export function usePolicies() {
       approval_status: 'pending',
       approved_by: null,
       approved_at: null,
-      version_history: []
+      version_history: [],
+      org_id: null
     }
   ];
 
@@ -160,7 +163,8 @@ export function usePolicies() {
         approval_status: 'draft',
         approved_by: null,
         approved_at: null,
-        version_history: []
+        version_history: [],
+        org_id: null
       };
 
       setPolicies(prev => [newPolicy, ...prev]);

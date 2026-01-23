@@ -34,7 +34,8 @@ export function useTasks() {
         category: 'SOC 2',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        user_id: user.id
+        user_id: user.id,
+        org_id: null
       },
       {
         id: '2',
@@ -47,7 +48,8 @@ export function useTasks() {
         category: 'ISO 27001',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        user_id: user.id
+        user_id: user.id,
+        org_id: null
       }
     ]);
 

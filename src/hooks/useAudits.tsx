@@ -36,7 +36,8 @@ export function useAudits() {
       auditor: 'Maria Auditora',
       created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id'
+      user_id: 'mock-user-id',
+      org_id: null
     },
     {
       id: '2',
@@ -49,7 +50,8 @@ export function useAudits() {
       auditor: 'João Compliance',
       created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id'
+      user_id: 'mock-user-id',
+      org_id: null
     }
   ];
 
@@ -64,7 +66,8 @@ export function useAudits() {
       audit_id: '1',
       created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id'
+      user_id: 'mock-user-id',
+      org_id: null
     },
     {
       id: '2',
@@ -76,7 +79,8 @@ export function useAudits() {
       audit_id: '1',
       created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id'
+      user_id: 'mock-user-id',
+      org_id: null
     }
   ];
 
@@ -163,7 +167,8 @@ export function useAudits() {
         progress: 0,
         start_date: auditData.start_date || null,
         end_date: auditData.end_date || null,
-        auditor: auditData.auditor || null
+        auditor: auditData.auditor || null,
+        org_id: null
       };
 
       setAudits(prev => [newAudit, ...prev]);
@@ -221,7 +226,8 @@ export function useAudits() {
         status: 'pending',
         audit_id: evidenceData.audit_id || null,
         file_url: evidenceData.file_url || null,
-        uploaded_by: evidenceData.uploaded_by || null
+        uploaded_by: evidenceData.uploaded_by || null,
+        org_id: null
       };
 
       setEvidence(prev => [newEvidence, ...prev]);
