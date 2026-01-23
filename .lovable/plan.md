@@ -1,394 +1,510 @@
 
-## Plano: Sistema de Cache para Otimização do Dashboard
+## Plano: Wizard de Onboarding para Novos Usuarios
 
 ### Objetivo
-Implementar caching no nível de banco de dados para melhorar a performance do dashboard, reduzindo consultas repetitivas e agregando dados pré-computados com invalidação automática.
+Criar um wizard de onboarding fullscreen em 5 passos que guia novos usuarios na configuracao inicial do APOC: apresentacao, selecao de frameworks, primeira integracao, primeiro scan de compliance e proximos passos.
 
 ---
 
-### Arquitetura do Sistema de Cache
+### Arquitetura do Sistema
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ FRONTEND - Dashboard                                                        │
+│ FRONTEND - Onboarding Wizard                                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  useCachedComplianceScore()    useCachedIssuesBySerity()                    │
-│         │                              │                                    │
-│         └──────────────┬───────────────┘                                    │
-│                        ▼                                                    │
-│              useCacheStore() hook                                           │
-│         ┌─────────────┴─────────────┐                                       │
-│         ▼                           ▼                                       │
-│   get_cache(key)             set_cache(key, val, ttl)                       │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │ Barra de Progresso (5 steps)                                        │    │
+│  │ [●──●──●──●──●] Step 3 de 5                                         │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
 │                                                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ DATABASE                                                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │                                                                     │    │
+│  │  Step 1: Bem-vindo (30s apresentacao)                               │    │
+│  │  Step 2: Escolha Frameworks (LGPD, ISO 27001, SOC 2...)             │    │
+│  │  Step 3: Conecte Integracao (GitHub, AWS, Google)                   │    │
+│  │  Step 4: Primeiro Scan (executar check + resultados)                │    │
+│  │  Step 5: Proximos Passos (checklist)                                │    │
+│  │                                                                     │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
 │                                                                             │
-│  ┌────────────────────────────────────────────────────────────────────┐     │
-│  │ cache_store                                                        │     │
-│  │ ─────────────────────────────────────────────────────────────────  │     │
-│  │ key (PK)          │ value (JSONB)  │ expires_at   │ created_at    │     │
-│  │ ─────────────────────────────────────────────────────────────────  │     │
-│  │ compliance_score:user123   │ {score: 87...}  │ +5min    │ now()   │     │
-│  │ issues_by_severity:user123 │ {critical:2...} │ +2min    │ now()   │     │
-│  │ collected_resources:user123│ [{...}]         │ +10min   │ now()   │     │
-│  └────────────────────────────────────────────────────────────────────┘     │
-│                                                                             │
-│  Funções SQL:                                                               │
-│  ├── set_cache(key, value, ttl_seconds)                                     │
-│  ├── get_cache(key) → JSONB ou NULL se expirado                             │
-│  └── invalidate_cache(key_pattern) → LIKE pattern matching                  │
-│                                                                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ TRIGGERS DE INVALIDAÇÃO                                                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  integration_collected_data  ──► invalidate: collected_resources:*          │
-│  compliance_alerts           ──► invalidate: compliance_score:*             │
-│                                  invalidate: issues_by_severity:*           │
-│  integration_status          ──► invalidate: collected_resources:*          │
+│  [Pular]                                     [Voltar] [Continuar/Concluir]  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Fase 1: Migração de Banco de Dados
+### Fase 1: Migracao de Banco de Dados
 
-Criar tabela `cache_store` e funções auxiliares:
+Adicionar colunas na tabela `profiles` para controlar o onboarding:
 
-**Estrutura da tabela:**
 ```sql
-CREATE TABLE cache_store (
-  key TEXT PRIMARY KEY,
-  value JSONB NOT NULL,
-  expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  user_id UUID,  -- Para filtro por usuário (RLS)
-  org_id UUID    -- Para filtro por organização
-);
+-- Novas colunas para onboarding
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_step INTEGER DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_data JSONB DEFAULT '{}';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_skipped BOOLEAN DEFAULT false;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ;
 
--- Índices para performance
-CREATE INDEX idx_cache_store_expires_at ON cache_store(expires_at);
-CREATE INDEX idx_cache_store_user_id ON cache_store(user_id);
-CREATE INDEX idx_cache_store_key_pattern ON cache_store(key text_pattern_ops);
+-- Indice para queries
+CREATE INDEX IF NOT EXISTS idx_profiles_onboarding ON profiles(onboarding_completed);
 ```
 
-**Função set_cache:**
-```sql
-CREATE OR REPLACE FUNCTION set_cache(
-  p_key TEXT,
-  p_value JSONB,
-  p_ttl_seconds INTEGER,
-  p_user_id UUID DEFAULT NULL,
-  p_org_id UUID DEFAULT NULL
-) RETURNS VOID AS $$
-BEGIN
-  INSERT INTO cache_store (key, value, expires_at, user_id, org_id)
-  VALUES (
-    p_key, 
-    p_value, 
-    now() + (p_ttl_seconds || ' seconds')::INTERVAL,
-    p_user_id,
-    p_org_id
-  )
-  ON CONFLICT (key) DO UPDATE SET
-    value = EXCLUDED.value,
-    expires_at = EXCLUDED.expires_at,
-    created_at = now();
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
-**Função get_cache:**
-```sql
-CREATE OR REPLACE FUNCTION get_cache(p_key TEXT)
-RETURNS JSONB AS $$
-DECLARE
-  v_result JSONB;
-BEGIN
-  SELECT value INTO v_result
-  FROM cache_store
-  WHERE key = p_key AND expires_at > now();
-  
-  RETURN v_result;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
-**Função invalidate_cache:**
-```sql
-CREATE OR REPLACE FUNCTION invalidate_cache(p_key_pattern TEXT)
-RETURNS INTEGER AS $$
-DECLARE
-  v_deleted INTEGER;
-BEGIN
-  DELETE FROM cache_store 
-  WHERE key LIKE p_key_pattern;
-  
-  GET DIAGNOSTICS v_deleted = ROW_COUNT;
-  RETURN v_deleted;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+**Dados salvos em `onboarding_data`:**
+```json
+{
+  "selected_frameworks": ["soc2", "iso27001", "lgpd"],
+  "connected_integration": "github",
+  "first_scan_completed": true,
+  "first_scan_results": {
+    "score": 78,
+    "passing": 12,
+    "failing": 3
+  }
+}
 ```
 
 ---
 
-### Fase 2: Triggers de Invalidação Automática
+### Fase 2: Hook useOnboardingWizard
 
-**Trigger para integration_collected_data:**
-```sql
-CREATE OR REPLACE FUNCTION invalidate_cache_on_collected_data_change()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Invalidar cache de recursos coletados do usuário
-  PERFORM invalidate_cache('collected_resources:' || COALESCE(NEW.user_id, OLD.user_id)::TEXT || '%');
-  
-  -- Também invalidar score pois pode ter mudado
-  PERFORM invalidate_cache('compliance_score:' || COALESCE(NEW.user_id, OLD.user_id)::TEXT || '%');
-  PERFORM invalidate_cache('issues_by_severity:' || COALESCE(NEW.user_id, OLD.user_id)::TEXT || '%');
-  
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
+Criar hook centralizado para gerenciar todo o estado do wizard:
 
-CREATE TRIGGER trigger_invalidate_cache_collected_data
-AFTER INSERT OR UPDATE OR DELETE ON integration_collected_data
-FOR EACH ROW EXECUTE FUNCTION invalidate_cache_on_collected_data_change();
-```
-
-**Trigger para compliance_alerts:**
-```sql
-CREATE OR REPLACE FUNCTION invalidate_cache_on_alert_change()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Invalidar caches de compliance
-  PERFORM invalidate_cache('compliance_score:' || COALESCE(NEW.user_id, OLD.user_id)::TEXT || '%');
-  PERFORM invalidate_cache('issues_by_severity:' || COALESCE(NEW.user_id, OLD.user_id)::TEXT || '%');
-  
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_invalidate_cache_alerts
-AFTER INSERT OR UPDATE ON compliance_alerts
-FOR EACH ROW EXECUTE FUNCTION invalidate_cache_on_alert_change();
-```
-
-**Trigger para integration_status (sync):**
-```sql
-CREATE OR REPLACE FUNCTION invalidate_cache_on_sync()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Quando uma integração sincroniza, invalidar todos os caches do usuário
-  IF NEW.last_sync_at IS DISTINCT FROM OLD.last_sync_at THEN
-    PERFORM invalidate_cache('collected_resources:' || COALESCE(NEW.user_id, OLD.user_id)::TEXT || '%');
-    PERFORM invalidate_cache('compliance_score:' || COALESCE(NEW.user_id, OLD.user_id)::TEXT || '%');
-    PERFORM invalidate_cache('issues_by_severity:' || COALESCE(NEW.user_id, OLD.user_id)::TEXT || '%');
-  END IF;
-  
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_invalidate_cache_on_sync
-AFTER UPDATE ON integration_status
-FOR EACH ROW EXECUTE FUNCTION invalidate_cache_on_sync();
-```
-
-**Job de limpeza automática (cron):**
-```sql
--- Limpar entradas expiradas a cada hora
-CREATE OR REPLACE FUNCTION cleanup_expired_cache()
-RETURNS INTEGER AS $$
-DECLARE
-  v_deleted INTEGER;
-BEGIN
-  DELETE FROM cache_store WHERE expires_at < now();
-  GET DIAGNOSTICS v_deleted = ROW_COUNT;
-  RETURN v_deleted;
-END;
-$$ LANGUAGE plpgsql;
-```
-
----
-
-### Fase 3: Hook useCacheStore
-
-Criar hook React para interagir com o cache:
-
-**Arquivo:** `src/hooks/useCacheStore.tsx`
+**Arquivo:** `src/hooks/useOnboardingWizard.tsx`
 
 ```typescript
-interface CacheOptions {
-  ttlSeconds: number;
-  bypassCache?: boolean;
+interface OnboardingWizardState {
+  currentStep: number;          // 0-4 (5 steps)
+  isActive: boolean;            // Wizard esta ativo
+  isLoading: boolean;           // Carregando dados do DB
+  hasCompleted: boolean;        // Usuario ja completou
+  wasSkipped: boolean;          // Usuario pulou
+  data: OnboardingData;         // Dados coletados
 }
 
-interface UseCacheStoreReturn {
-  getCache: <T>(key: string) => Promise<T | null>;
-  setCache: <T>(key: string, value: T, ttlSeconds: number) => Promise<void>;
-  invalidateCache: (keyPattern: string) => Promise<number>;
+interface OnboardingData {
+  selectedFrameworks: string[];
+  connectedIntegration: string | null;
+  firstScanCompleted: boolean;
+  firstScanResults: ScanResults | null;
+}
+
+interface UseOnboardingWizardReturn {
+  // Estado
+  state: OnboardingWizardState;
+  
+  // Navegacao
+  nextStep: () => Promise<void>;
+  prevStep: () => void;
+  goToStep: (step: number) => void;
+  
+  // Acoes
+  skipOnboarding: () => Promise<void>;
+  completeOnboarding: () => Promise<void>;
+  resetOnboarding: () => Promise<void>;
+  
+  // Data
+  updateData: (data: Partial<OnboardingData>) => Promise<void>;
+  
+  // Helpers
+  canProceed: boolean;  // Step atual permite avancar
+  stepProgress: number; // 0-100%
 }
 ```
 
 **Funcionalidades:**
-- `getCache<T>(key)`: Busca valor do cache, retorna `null` se expirado/não existir
-- `setCache<T>(key, value, ttl)`: Salva valor com TTL em segundos
-- `invalidateCache(pattern)`: Invalida chaves que correspondem ao pattern
+- Carrega estado do onboarding do banco na inicializacao
+- Persiste progresso e dados a cada step
+- Suporta navegacao bidirecional
+- Valida se usuario pode avancar (ex: selecionou framework?)
+- Sincroniza com React Query para invalidacao de cache
 
 ---
 
-### Fase 4: Hooks de Cache Específicos
+### Fase 3: Componentes do Wizard
 
-**1. useCachedComplianceScore (TTL: 5 minutos)**
-
-**Arquivo:** `src/hooks/useCachedComplianceScore.tsx`
-
-```typescript
-interface CachedComplianceScore {
-  score: number;
-  passingTests: number;
-  failingTests: number;
-  riskAcceptedTests: number;
-  totalTests: number;
-  lastCalculated: string;
-}
-
-export function useCachedComplianceScore() {
-  const { user } = useAuth();
-  const { getCache, setCache } = useCacheStore();
-  const cacheKey = `compliance_score:${user?.id}`;
-  const TTL_SECONDS = 300; // 5 minutos
-  
-  return useQuery({
-    queryKey: ['cached-compliance-score', user?.id],
-    queryFn: async () => {
-      // Tentar buscar do cache primeiro
-      const cached = await getCache<CachedComplianceScore>(cacheKey);
-      if (cached) return cached;
-      
-      // Se não houver cache, calcular e salvar
-      const freshData = await calculateComplianceScore(user?.id);
-      await setCache(cacheKey, freshData, TTL_SECONDS);
-      return freshData;
-    },
-    staleTime: TTL_SECONDS * 1000,
-  });
-}
+**Estrutura de arquivos:**
 ```
-
-**2. useCachedIssuesBySeverity (TTL: 2 minutos)**
-
-**Arquivo:** `src/hooks/useCachedIssuesBySeverity.tsx`
-
-```typescript
-interface IssuesBySeverity {
-  critical: number;
-  high: number;
-  medium: number;
-  low: number;
-  total: number;
-  overdue: number;
-  lastUpdated: string;
-}
-
-export function useCachedIssuesBySeverity() {
-  const { user } = useAuth();
-  const { getCache, setCache } = useCacheStore();
-  const cacheKey = `issues_by_severity:${user?.id}`;
-  const TTL_SECONDS = 120; // 2 minutos
-  
-  return useQuery({
-    queryKey: ['cached-issues-by-severity', user?.id],
-    queryFn: async () => {
-      const cached = await getCache<IssuesBySeverity>(cacheKey);
-      if (cached) return cached;
-      
-      const freshData = await countIssuesBySeverity(user?.id);
-      await setCache(cacheKey, freshData, TTL_SECONDS);
-      return freshData;
-    },
-    staleTime: TTL_SECONDS * 1000,
-  });
-}
-```
-
-**3. useCachedCollectedResources (TTL: 10 minutos)**
-
-**Arquivo:** `src/hooks/useCachedCollectedResources.tsx`
-
-```typescript
-interface CachedResourcesSummary {
-  totalResources: number;
-  byIntegration: Record<string, number>;
-  byType: Record<string, number>;
-  lastSync: string | null;
-}
-
-export function useCachedCollectedResources() {
-  const { user } = useAuth();
-  const { getCache, setCache } = useCacheStore();
-  const cacheKey = `collected_resources:${user?.id}`;
-  const TTL_SECONDS = 600; // 10 minutos
-  
-  return useQuery({
-    queryKey: ['cached-collected-resources', user?.id],
-    queryFn: async () => {
-      const cached = await getCache<CachedResourcesSummary>(cacheKey);
-      if (cached) return cached;
-      
-      const freshData = await aggregateCollectedResources(user?.id);
-      await setCache(cacheKey, freshData, TTL_SECONDS);
-      return freshData;
-    },
-    staleTime: TTL_SECONDS * 1000,
-  });
-}
+src/components/onboarding/
+├── OnboardingWizard.tsx           # Container principal
+├── OnboardingProgress.tsx         # Barra de progresso
+├── steps/
+│   ├── WelcomeStep.tsx            # Step 1: Bem-vindo
+│   ├── FrameworksStep.tsx         # Step 2: Selecao frameworks
+│   ├── IntegrationStep.tsx        # Step 3: Primeira integracao
+│   ├── FirstScanStep.tsx          # Step 4: Primeiro scan
+│   └── NextStepsStep.tsx          # Step 5: Proximos passos
+└── shared/
+    ├── StepContainer.tsx          # Layout padrao de step
+    ├── StepNavigation.tsx         # Botoes Voltar/Continuar
+    └── SkipButton.tsx             # Botao Pular
 ```
 
 ---
 
-### Fase 5: Integração com Dashboard
+### Step 1: Bem-vindo (WelcomeStep.tsx)
 
-**Atualizar componentes do dashboard:**
+Apresentacao rapida do APOC (30 segundos):
 
-| Componente | Antes | Depois |
-|------------|-------|--------|
-| ActionCenter | `useComplianceStatus()` | `useCachedComplianceScore()` + `useCachedIssuesBySeverity()` |
-| MetricsGrid | Múltiplas queries | Cached hooks + fallback |
-| PassingTestsSummary | Query direta | `useCachedComplianceScore()` |
-
-**Atualização do ActionCenter.tsx:**
 ```typescript
-// Usar cache para score e contagens
-const { data: cachedScore } = useCachedComplianceScore();
-const { data: issuesCounts } = useCachedIssuesBySeverity();
+// Features apresentadas com icones animados
+const features = [
+  { icon: Shield, title: 'Compliance Automatizado', 
+    desc: 'Monitore ISO 27001, SOC 2 e LGPD automaticamente' },
+  { icon: Zap, title: 'Integracoes Nativas', 
+    desc: 'Conecte AWS, GitHub, Google e mais' },
+  { icon: Eye, title: 'Visibilidade Total', 
+    desc: 'Dashboard unificado de riscos e conformidade' },
+  { icon: Bell, title: 'Alertas Proativos', 
+    desc: 'Notificacoes em tempo real de desvios' },
+];
 
-// Fallback para dados em tempo real se cache estiver vazio
-const { score, failingTests } = useComplianceStatus();
-
-const displayScore = cachedScore?.score ?? score;
+// Animacao de entrada com Framer Motion
+// Auto-avancar apos 30s (opcional) ou botao "Comecar"
 ```
 
 ---
 
-### Fase 6: Atualização dos query-keys
+### Step 2: Escolha Frameworks (FrameworksStep.tsx)
 
-Adicionar chaves de cache ao arquivo centralizado:
-
-**Arquivo:** `src/lib/query-keys.ts`
+Cards clicaveis para selecao de frameworks:
 
 ```typescript
-export const queryKeys = {
-  // ... keys existentes
+const availableFrameworks = [
+  { 
+    id: 'soc2', 
+    name: 'SOC 2 Type II', 
+    description: 'System and Organization Controls para servicos',
+    icon: '🛡️',
+    popular: true,
+    controlsCount: 64,
+  },
+  { 
+    id: 'iso27001', 
+    name: 'ISO 27001:2022', 
+    description: 'Sistema de Gestao de Seguranca da Informacao',
+    icon: '📋',
+    popular: true,
+    controlsCount: 114,
+  },
+  { 
+    id: 'lgpd', 
+    name: 'LGPD', 
+    description: 'Lei Geral de Protecao de Dados',
+    icon: '🇧🇷',
+    popular: true,
+    controlsCount: 42,
+  },
+  { 
+    id: 'gdpr', 
+    name: 'GDPR', 
+    description: 'General Data Protection Regulation (UE)',
+    icon: '🇪🇺',
+    popular: false,
+    controlsCount: 38,
+  },
+  { 
+    id: 'pci-dss', 
+    name: 'PCI DSS', 
+    description: 'Payment Card Industry Data Security Standard',
+    icon: '💳',
+    popular: false,
+    controlsCount: 251,
+  },
+  { 
+    id: 'hipaa', 
+    name: 'HIPAA', 
+    description: 'Health Insurance Portability and Accountability',
+    icon: '🏥',
+    popular: false,
+    controlsCount: 75,
+  },
+];
+
+// Multi-select com visual de checked state
+// Minimo 1 framework para avancar
+// Badge "Popular" nos mais usados
+```
+
+---
+
+### Step 3: Conecte Integracao (IntegrationStep.tsx)
+
+Cards das integracoes mais populares:
+
+```typescript
+const popularIntegrations = [
+  { 
+    id: 'github', 
+    name: 'GitHub', 
+    logo: '...', 
+    category: 'SDLC',
+    description: 'Repositorios, branch protection, vulnerabilidades',
+    benefit: 'Detecta repos publicos e branches desprotegidas',
+  },
+  { 
+    id: 'aws', 
+    name: 'AWS', 
+    logo: '...', 
+    category: 'Cloud',
+    description: 'IAM, S3, EC2, CloudTrail',
+    benefit: 'Monitora buckets publicos e permissoes',
+  },
+  { 
+    id: 'google-workspace', 
+    name: 'Google Workspace', 
+    logo: '...', 
+    category: 'IAM',
+    description: 'Usuarios, grupos, Drive, MFA',
+    benefit: 'Verifica MFA e acessos compartilhados',
+  },
+  { 
+    id: 'azure-ad', 
+    name: 'Azure AD', 
+    logo: '...', 
+    category: 'IAM',
+    description: 'Identidades, grupos, conditional access',
+    benefit: 'Analisa usuarios sem MFA e privilegios',
+  },
+];
+
+// Ao clicar, abre modal de conexao (reutiliza ConnectionModal)
+// Mostra status de conexao em real-time
+// "Pular por agora" disponivel
+// Apos conectar com sucesso, habilita avancar
+```
+
+---
+
+### Step 4: Primeiro Scan (FirstScanStep.tsx)
+
+Executar compliance check e mostrar resultados:
+
+```typescript
+// Estados do step
+type ScanState = 'idle' | 'running' | 'completed' | 'error';
+
+// UI Flow:
+// 1. "idle": Mostra botao "Executar Primeiro Scan"
+// 2. "running": Progress bar + mensagens animadas
+//    - "Analisando repositorios GitHub..."
+//    - "Verificando configuracoes AWS..."
+//    - "Aplicando regras de compliance..."
+// 3. "completed": Mostra resultados em cards
+//    - Score geral (ex: 78%)
+//    - Passing tests (12)
+//    - Failing tests (3)
+//    - Preview de 2-3 issues encontradas
+// 4. "error": Mensagem + retry
+
+// Usa useComplianceStatus() internamente
+// Salva resultados em onboarding_data
+```
+
+**Cards de resultado:**
+```typescript
+<div className="grid grid-cols-3 gap-6">
+  <Card className="bg-success/10 border-success/20">
+    <CardContent>
+      <div className="text-4xl font-bold text-success">78%</div>
+      <p>Score de Compliance</p>
+    </CardContent>
+  </Card>
   
-  // Cache keys
-  cachedComplianceScore: (userId: string) => ['cached-compliance-score', userId] as const,
-  cachedIssuesBySeverity: (userId: string) => ['cached-issues-by-severity', userId] as const,
-  cachedCollectedResources: (userId: string) => ['cached-collected-resources', userId] as const,
+  <Card className="bg-info/10 border-info/20">
+    <CardContent>
+      <div className="text-4xl font-bold text-info">12</div>
+      <p>Controles Passando</p>
+    </CardContent>
+  </Card>
+  
+  <Card className="bg-warning/10 border-warning/20">
+    <CardContent>
+      <div className="text-4xl font-bold text-warning">3</div>
+      <p>Issues Detectadas</p>
+    </CardContent>
+  </Card>
+</div>
+```
+
+---
+
+### Step 5: Proximos Passos (NextStepsStep.tsx)
+
+Checklist interativo do que fazer depois:
+
+```typescript
+const nextSteps = [
+  {
+    id: 'invite-team',
+    title: 'Convide sua Equipe',
+    description: 'Adicione membros para colaborar na conformidade',
+    icon: Users,
+    link: '/settings?tab=permissions',
+    action: 'Convidar Membros',
+    priority: 'high',
+  },
+  {
+    id: 'configure-slas',
+    title: 'Configure SLAs',
+    description: 'Defina prazos de remediacao por severidade',
+    icon: Clock,
+    link: '/settings?tab=system',
+    action: 'Configurar',
+    priority: 'medium',
+  },
+  {
+    id: 'more-integrations',
+    title: 'Conecte Mais Integracoes',
+    description: 'Quanto mais integracoes, maior a visibilidade',
+    icon: Plug,
+    link: '/integrations',
+    action: 'Ver Catalogo',
+    priority: 'medium',
+  },
+  {
+    id: 'review-policies',
+    title: 'Revise Politicas',
+    description: 'Personalize politicas de seguranca da empresa',
+    icon: FileText,
+    link: '/policies',
+    action: 'Ver Politicas',
+    priority: 'low',
+  },
+  {
+    id: 'schedule-audit',
+    title: 'Agende uma Auditoria',
+    description: 'Prepare-se para certificacoes com auditorias internas',
+    icon: Calendar,
+    link: '/audit',
+    action: 'Agendar',
+    priority: 'low',
+  },
+];
+
+// Checkboxes de "Ja fiz isso" (salva em onboarding_data)
+// Botao "Ir para Dashboard" ao final
+// Animacao de confetti ao concluir
+```
+
+---
+
+### Fase 4: Integracao no App
+
+**Atualizar ProtectedRoute.tsx:**
+
+```typescript
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { user, loading: authLoading } = useAuth();
+  const { state: onboardingState, isLoading: onboardingLoading } = useOnboardingWizard();
+  
+  // Mostrar wizard se:
+  // 1. Usuario autenticado
+  // 2. Onboarding nao completado
+  // 3. Onboarding nao foi pulado
+  const shouldShowWizard = user && 
+    !onboardingState.hasCompleted && 
+    !onboardingState.wasSkipped;
+
+  if (shouldShowWizard) {
+    return <OnboardingWizard />;
+  }
+
+  return <>{children}</>;
+};
+```
+
+**Adicionar opcao em Settings.tsx:**
+
+Nova secao no tab "account" ou novo tab "Onboarding":
+
+```typescript
+<Card>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <Rocket className="w-5 h-5" />
+      Tutorial e Onboarding
+    </CardTitle>
+    <CardDescription>
+      Reveja o tutorial inicial ou refaca o onboarding
+    </CardDescription>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="font-medium">Ver Tutorial Depois</p>
+        <p className="text-sm text-muted-foreground">
+          {hasCompleted 
+            ? 'Voce completou o onboarding em ' + formatDate(completedAt)
+            : 'Voce pulou o onboarding inicial'
+          }
+        </p>
+      </div>
+      <Button variant="outline" onClick={resetOnboarding}>
+        <Play className="w-4 h-4 mr-2" />
+        Refazer Onboarding
+      </Button>
+    </div>
+  </CardContent>
+</Card>
+```
+
+---
+
+### Fase 5: Animacoes e UX
+
+**Framer Motion para transicoes:**
+
+```typescript
+// Transicao entre steps
+<AnimatePresence mode="wait">
+  <motion.div
+    key={currentStep}
+    initial={{ opacity: 0, x: 50 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: -50 }}
+    transition={{ duration: 0.3 }}
+  >
+    {renderCurrentStep()}
+  </motion.div>
+</AnimatePresence>
+```
+
+**Barra de progresso animada:**
+
+```typescript
+const OnboardingProgress = ({ currentStep, totalSteps }) => {
+  const progress = ((currentStep + 1) / totalSteps) * 100;
+  
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between">
+        {steps.map((step, index) => (
+          <motion.div
+            key={step.id}
+            className={cn(
+              "flex items-center gap-2",
+              index <= currentStep ? "text-primary" : "text-muted-foreground"
+            )}
+            initial={{ scale: 0.8 }}
+            animate={{ scale: index === currentStep ? 1.1 : 1 }}
+          >
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center",
+              index < currentStep ? "bg-primary text-white" : 
+              index === currentStep ? "bg-primary/20 border-2 border-primary" :
+              "bg-muted"
+            )}>
+              {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
+            </div>
+            <span className="hidden md:block text-sm">{step.title}</span>
+          </motion.div>
+        ))}
+      </div>
+      <Progress value={progress} className="h-2" />
+    </div>
+  );
 };
 ```
 
@@ -396,76 +512,85 @@ export const queryKeys = {
 
 ### Estrutura de Arquivos
 
-| Arquivo | Ação | Descrição |
+| Arquivo | Acao | Descricao |
 |---------|------|-----------|
-| `supabase/migrations/xxx_cache_store.sql` | Criar | Tabela e funções de cache |
-| `src/hooks/useCacheStore.tsx` | Criar | Hook base para interação com cache |
-| `src/hooks/useCachedComplianceScore.tsx` | Criar | Cache de score (TTL 5min) |
-| `src/hooks/useCachedIssuesBySeverity.tsx` | Criar | Cache de issues (TTL 2min) |
-| `src/hooks/useCachedCollectedResources.tsx` | Criar | Cache de recursos (TTL 10min) |
-| `src/lib/query-keys.ts` | Modificar | Adicionar cache keys |
-| `src/components/dashboard/ActionCenter.tsx` | Modificar | Usar cached hooks |
-| `src/components/dashboard/MetricsGrid.tsx` | Modificar | Usar cached hooks |
+| `supabase/migrations/xxx_onboarding.sql` | Criar | Colunas de onboarding na profiles |
+| `src/hooks/useOnboardingWizard.tsx` | Criar | Hook centralizado do wizard |
+| `src/components/onboarding/OnboardingWizard.tsx` | Criar | Container principal fullscreen |
+| `src/components/onboarding/OnboardingProgress.tsx` | Criar | Barra de progresso visual |
+| `src/components/onboarding/steps/WelcomeStep.tsx` | Criar | Step 1: Bem-vindo |
+| `src/components/onboarding/steps/FrameworksStep.tsx` | Criar | Step 2: Frameworks |
+| `src/components/onboarding/steps/IntegrationStep.tsx` | Criar | Step 3: Integracao |
+| `src/components/onboarding/steps/FirstScanStep.tsx` | Criar | Step 4: Primeiro Scan |
+| `src/components/onboarding/steps/NextStepsStep.tsx` | Criar | Step 5: Proximos Passos |
+| `src/components/onboarding/shared/StepContainer.tsx` | Criar | Layout padrao |
+| `src/components/onboarding/shared/StepNavigation.tsx` | Criar | Navegacao |
+| `src/components/auth/ProtectedRoute.tsx` | Modificar | Integrar wizard |
+| `src/pages/Settings.tsx` | Modificar | Adicionar opcao de refazer |
+| `src/integrations/supabase/types.ts` | Auto-update | Novos campos profiles |
 
 ---
 
-### RLS e Segurança
+### Fluxo de Usuario
 
-```sql
--- RLS para cache_store
-ALTER TABLE cache_store ENABLE ROW LEVEL SECURITY;
-
--- Usuários podem ver/gerenciar apenas seu próprio cache
-CREATE POLICY "Users can read their own cache"
-  ON cache_store FOR SELECT
-  USING (user_id = auth.uid() OR user_id IS NULL);
-
-CREATE POLICY "Users can insert their own cache"
-  ON cache_store FOR INSERT
-  WITH CHECK (user_id = auth.uid() OR user_id IS NULL);
-
-CREATE POLICY "Users can update their own cache"
-  ON cache_store FOR UPDATE
-  USING (user_id = auth.uid() OR user_id IS NULL);
-
-CREATE POLICY "Users can delete their own cache"
-  ON cache_store FOR DELETE
-  USING (user_id = auth.uid() OR user_id IS NULL);
-
--- Service role para invalidação via triggers
-CREATE POLICY "Service role full access"
-  ON cache_store FOR ALL
-  USING (auth.role() = 'service_role');
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 1. PRIMEIRO LOGIN                                                           │
+│    ├── Usuario faz signup/login                                             │
+│    ├── ProtectedRoute verifica onboarding_completed = false                 │
+│    └── Exibe OnboardingWizard fullscreen                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 2. NAVEGACAO NO WIZARD                                                      │
+│    ├── Step 1: Apresentacao (30s) → clica "Comecar"                         │
+│    ├── Step 2: Seleciona frameworks → clica "Continuar"                     │
+│    ├── Step 3: Conecta integracao (ou pula) → clica "Continuar"             │
+│    ├── Step 4: Executa scan e ve resultados → clica "Continuar"             │
+│    └── Step 5: Ve checklist → clica "Ir para Dashboard"                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 3. SKIP OU COMPLETAR                                                        │
+│    ├── A qualquer momento pode clicar "Pular"                               │
+│    │   └── onboarding_skipped = true                                        │
+│    ├── Ao completar step 5                                                  │
+│    │   └── onboarding_completed = true, onboarding_completed_at = now()     │
+│    └── Redireciona para /dashboard                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ 4. REFAZER (em /settings)                                                   │
+│    ├── Clica "Refazer Onboarding"                                           │
+│    ├── onboarding_completed = false, onboarding_step = 0                    │
+│    └── Volta para OnboardingWizard                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Configuração de TTLs
+### Consideracoes Tecnicas
 
-| Dado | TTL | Justificativa |
-|------|-----|---------------|
-| Compliance Score | 5 min | Dados agregados, muda com menos frequência |
-| Issues por Severidade | 2 min | Precisa atualizar mais rápido para alertas críticos |
-| Recursos Coletados | 10 min | Muda apenas em sync manual/automático |
-
----
-
-### Benefícios Esperados
-
-1. **Performance**: Redução de ~70% em queries ao dashboard
-2. **Consistência**: Dados pré-agregados evitam recálculos
-3. **Escalabilidade**: Menos carga no banco conforme usuários crescem
-4. **Invalidação Inteligente**: Triggers garantem dados frescos quando necessário
+| Aspecto | Implementacao |
+|---------|---------------|
+| **Persistencia** | Cada step salva progresso no banco via Supabase |
+| **Estado Local** | React Query + estado local para UI responsiva |
+| **Validacao** | Step 2 requer min 1 framework; Step 3 permite skip |
+| **Animacoes** | Framer Motion para transicoes suaves |
+| **Responsivo** | Layout adapta para mobile (stack vertical) |
+| **Acessibilidade** | Focus management, keyboard navigation |
+| **Error Handling** | Toast para erros, retry automatico |
+| **Cache** | Invalida queries relevantes ao completar |
 
 ---
 
-### Ordem de Implementação
+### Ordem de Implementacao
 
-1. Criar migração com tabela e funções SQL
-2. Criar hook `useCacheStore`
-3. Criar hooks de cache específicos
-4. Atualizar `query-keys.ts`
-5. Atualizar `ActionCenter.tsx` para usar cache
-6. Atualizar `MetricsGrid.tsx` para usar cache
-7. Testar invalidação automática
-8. Monitorar performance em produção
+1. Criar migracao de banco (colunas onboarding)
+2. Criar hook `useOnboardingWizard`
+3. Criar componentes shared (StepContainer, StepNavigation)
+4. Criar OnboardingProgress
+5. Criar WelcomeStep (Step 1)
+6. Criar FrameworksStep (Step 2)
+7. Criar IntegrationStep (Step 3)
+8. Criar FirstScanStep (Step 4)
+9. Criar NextStepsStep (Step 5)
+10. Criar OnboardingWizard container
+11. Integrar no ProtectedRoute
+12. Adicionar opcao em Settings
+13. Testar fluxo completo
+
