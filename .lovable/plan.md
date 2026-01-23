@@ -1,8 +1,9 @@
 
-## Plano: Wizard de Onboarding para Novos Usuarios
+
+## Plano: Sistema de Tracking de Eventos para Product Analytics
 
 ### Objetivo
-Criar um wizard de onboarding fullscreen em 5 passos que guia novos usuarios na configuracao inicial do APOC: apresentacao, selecao de frameworks, primeira integracao, primeiro scan de compliance e proximos passos.
+Implementar um sistema completo de rastreamento de eventos para analytics de produto, incluindo tabela de eventos, hook `useAnalytics`, instrumentacao automatica de eventos-chave e dashboard de analytics exclusivo para admins.
 
 ---
 
@@ -10,25 +11,61 @@ Criar um wizard de onboarding fullscreen em 5 passos que guia novos usuarios na 
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│ FRONTEND - Onboarding Wizard                                                │
+│ FRONTEND - Instrumentacao de Eventos                                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │ Barra de Progresso (5 steps)                                        │    │
-│  │ [●──●──●──●──●] Step 3 de 5                                         │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
+│  useAnalytics() hook                                                        │
+│  ├── track('page_viewed', { path: '/dashboard' })                           │
+│  ├── track('integration_connected', { type: 'aws' })                        │
+│  ├── track('compliance_scan_completed', { score: 87 })                      │
+│  └── ... outros eventos                                                     │
 │                                                                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                                                                     │    │
-│  │  Step 1: Bem-vindo (30s apresentacao)                               │    │
-│  │  Step 2: Escolha Frameworks (LGPD, ISO 27001, SOC 2...)             │    │
-│  │  Step 3: Conecte Integracao (GitHub, AWS, Google)                   │    │
-│  │  Step 4: Primeiro Scan (executar check + resultados)                │    │
-│  │  Step 5: Proximos Passos (checklist)                                │    │
-│  │                                                                     │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
+│  Componentes instrumentados:                                                │
+│  ├── ProtectedRoute → page_viewed                                           │
+│  ├── useIntegrations → integration_connected                                │
+│  ├── useComplianceStatus → compliance_scan_started/completed                │
+│  ├── IssueDetailsSheet → issue_viewed, issue_remediated                     │
+│  ├── ReportsExports → report_exported                                       │
+│  └── UserRolesManagement → user_invited                                     │
 │                                                                             │
-│  [Pular]                                     [Voltar] [Continuar/Concluir]  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DATABASE                                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌────────────────────────────────────────────────────────────────────┐     │
+│  │ analytics_events                                                   │     │
+│  │ ─────────────────────────────────────────────────────────────────  │     │
+│  │ id (PK)    │ org_id    │ user_id    │ event_name                   │     │
+│  │ properties (JSONB)     │ session_id │ created_at                   │     │
+│  │ ─────────────────────────────────────────────────────────────────  │     │
+│  │ uuid       │ uuid      │ uuid       │ 'page_viewed'                │     │
+│  │ {path: '/dashboard'}   │ 'sess_123' │ 2026-01-23T10:00:00          │     │
+│  └────────────────────────────────────────────────────────────────────┘     │
+│                                                                             │
+│  Views SQL para metricas agregadas:                                         │
+│  ├── daily_active_users (DAU)                                               │
+│  ├── weekly_active_users (WAU)                                              │
+│  ├── monthly_active_users (MAU)                                             │
+│  └── integration_connection_stats                                           │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ SETTINGS/ANALYTICS - Dashboard (admin only)                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────────────────────────────────────────────────────────────┐   │
+│  │ Usuarios Ativos            Integracoes Populares                     │   │
+│  │ ┌──────────────────┐       ┌──────────────────────┐                  │   │
+│  │ │ DAU: 45          │       │ GitHub     ████  32  │                  │   │
+│  │ │ WAU: 187         │       │ AWS        ███   24  │                  │   │
+│  │ │ MAU: 412         │       │ Slack      ██    18  │                  │   │
+│  │ └──────────────────┘       └──────────────────────┘                  │   │
+│  │                                                                      │   │
+│  │ Taxa de Remediacao         Tempo ate 1o Scan                         │   │
+│  │ ┌──────────────────┐       ┌──────────────────────┐                  │   │
+│  │ │ 78% resolvidos   │       │ Media: 2.3 horas     │                  │   │
+│  │ │ MTTR: 18h        │       │ Mediana: 45 min      │                  │   │
+│  │ └──────────────────┘       └──────────────────────┘                  │   │
+│  └──────────────────────────────────────────────────────────────────────┘   │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -37,475 +74,577 @@ Criar um wizard de onboarding fullscreen em 5 passos que guia novos usuarios na 
 
 ### Fase 1: Migracao de Banco de Dados
 
-Adicionar colunas na tabela `profiles` para controlar o onboarding:
+Criar tabela `analytics_events` e funcoes auxiliares:
 
+**Estrutura da tabela:**
 ```sql
--- Novas colunas para onboarding
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_completed BOOLEAN DEFAULT false;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_step INTEGER DEFAULT 0;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_data JSONB DEFAULT '{}';
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_skipped BOOLEAN DEFAULT false;
-ALTER TABLE profiles ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMPTZ;
+CREATE TABLE public.analytics_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES organizations(id),
+  user_id UUID NOT NULL,
+  event_name TEXT NOT NULL,
+  properties JSONB DEFAULT '{}',
+  session_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT now() NOT NULL,
+  
+  -- Indices para performance
+  CONSTRAINT valid_event_name CHECK (event_name <> '')
+);
 
--- Indice para queries
-CREATE INDEX IF NOT EXISTS idx_profiles_onboarding ON profiles(onboarding_completed);
+-- Indices para queries frequentes
+CREATE INDEX idx_analytics_events_user_id ON analytics_events(user_id);
+CREATE INDEX idx_analytics_events_org_id ON analytics_events(org_id);
+CREATE INDEX idx_analytics_events_event_name ON analytics_events(event_name);
+CREATE INDEX idx_analytics_events_created_at ON analytics_events(created_at DESC);
+CREATE INDEX idx_analytics_events_session ON analytics_events(session_id);
+
+-- Indice composto para queries de dashboard
+CREATE INDEX idx_analytics_events_org_date 
+  ON analytics_events(org_id, created_at DESC);
 ```
 
-**Dados salvos em `onboarding_data`:**
-```json
-{
-  "selected_frameworks": ["soc2", "iso27001", "lgpd"],
-  "connected_integration": "github",
-  "first_scan_completed": true,
-  "first_scan_results": {
-    "score": 78,
-    "passing": 12,
-    "failing": 3
-  }
-}
+**RLS Policies:**
+```sql
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
+
+-- Usuarios podem inserir seus proprios eventos
+CREATE POLICY "Users can insert own events"
+  ON analytics_events FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Admins podem ver todos os eventos da org
+CREATE POLICY "Admins can view org events"
+  ON analytics_events FOR SELECT
+  USING (
+    has_role(auth.uid(), 'admin') OR 
+    has_role(auth.uid(), 'master_admin')
+  );
+
+-- Service role para batch inserts
+CREATE POLICY "Service role full access"
+  ON analytics_events FOR ALL
+  USING (auth.role() = 'service_role');
+```
+
+**Funcoes SQL para metricas:**
+```sql
+-- Funcao para calcular DAU/WAU/MAU
+CREATE OR REPLACE FUNCTION get_active_users_metrics(p_org_id UUID)
+RETURNS TABLE(dau BIGINT, wau BIGINT, mau BIGINT) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COUNT(DISTINCT CASE 
+      WHEN created_at >= CURRENT_DATE THEN user_id 
+    END) as dau,
+    COUNT(DISTINCT CASE 
+      WHEN created_at >= CURRENT_DATE - INTERVAL '7 days' THEN user_id 
+    END) as wau,
+    COUNT(DISTINCT CASE 
+      WHEN created_at >= CURRENT_DATE - INTERVAL '30 days' THEN user_id 
+    END) as mau
+  FROM analytics_events
+  WHERE org_id = p_org_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Funcao para integracoes mais conectadas
+CREATE OR REPLACE FUNCTION get_top_integrations(p_org_id UUID, p_limit INT DEFAULT 10)
+RETURNS TABLE(integration_type TEXT, connection_count BIGINT) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    properties->>'type' as integration_type,
+    COUNT(*) as connection_count
+  FROM analytics_events
+  WHERE org_id = p_org_id 
+    AND event_name = 'integration_connected'
+    AND created_at >= CURRENT_DATE - INTERVAL '30 days'
+  GROUP BY properties->>'type'
+  ORDER BY connection_count DESC
+  LIMIT p_limit;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Funcao para taxa de remediacao
+CREATE OR REPLACE FUNCTION get_remediation_rate(p_org_id UUID)
+RETURNS TABLE(
+  total_issues BIGINT, 
+  remediated_issues BIGINT, 
+  remediation_rate NUMERIC,
+  avg_time_to_remediate_hours NUMERIC
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH issue_stats AS (
+    SELECT
+      COUNT(*) FILTER (WHERE event_name = 'issue_viewed') as viewed,
+      COUNT(*) FILTER (WHERE event_name = 'issue_remediated') as remediated
+    FROM analytics_events
+    WHERE org_id = p_org_id
+      AND created_at >= CURRENT_DATE - INTERVAL '30 days'
+  ),
+  mttr AS (
+    SELECT AVG(time_to_resolve_hours) as avg_mttr
+    FROM compliance_alerts
+    WHERE org_id = p_org_id
+      AND resolved = true
+      AND resolved_at >= CURRENT_DATE - INTERVAL '30 days'
+  )
+  SELECT 
+    issue_stats.viewed as total_issues,
+    issue_stats.remediated as remediated_issues,
+    CASE WHEN issue_stats.viewed > 0 
+      THEN ROUND((issue_stats.remediated::numeric / issue_stats.viewed) * 100, 1)
+      ELSE 0 
+    END as remediation_rate,
+    COALESCE(mttr.avg_mttr, 0) as avg_time_to_remediate_hours
+  FROM issue_stats, mttr;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Funcao para tempo ate primeiro scan
+CREATE OR REPLACE FUNCTION get_time_to_first_scan(p_org_id UUID)
+RETURNS TABLE(
+  avg_hours NUMERIC,
+  median_hours NUMERIC,
+  users_scanned BIGINT,
+  users_total BIGINT
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH first_scans AS (
+    SELECT 
+      ae.user_id,
+      MIN(ae.created_at) as first_scan_at,
+      p.created_at as user_created_at
+    FROM analytics_events ae
+    JOIN profiles p ON ae.user_id = p.user_id
+    WHERE ae.org_id = p_org_id
+      AND ae.event_name = 'compliance_scan_completed'
+    GROUP BY ae.user_id, p.created_at
+  ),
+  time_diffs AS (
+    SELECT 
+      EXTRACT(EPOCH FROM (first_scan_at - user_created_at)) / 3600 as hours_to_scan
+    FROM first_scans
+  ),
+  user_counts AS (
+    SELECT COUNT(DISTINCT user_id) as total
+    FROM profiles
+    WHERE org_id = p_org_id
+  )
+  SELECT
+    COALESCE(ROUND(AVG(hours_to_scan)::numeric, 1), 0) as avg_hours,
+    COALESCE(ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY hours_to_scan)::numeric, 1), 0) as median_hours,
+    COUNT(*) as users_scanned,
+    (SELECT total FROM user_counts) as users_total
+  FROM time_diffs;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ---
 
-### Fase 2: Hook useOnboardingWizard
+### Fase 2: Hook useAnalytics
 
-Criar hook centralizado para gerenciar todo o estado do wizard:
+Criar hook React para tracking de eventos:
 
-**Arquivo:** `src/hooks/useOnboardingWizard.tsx`
+**Arquivo:** `src/hooks/useAnalytics.tsx`
 
 ```typescript
-interface OnboardingWizardState {
-  currentStep: number;          // 0-4 (5 steps)
-  isActive: boolean;            // Wizard esta ativo
-  isLoading: boolean;           // Carregando dados do DB
-  hasCompleted: boolean;        // Usuario ja completou
-  wasSkipped: boolean;          // Usuario pulou
-  data: OnboardingData;         // Dados coletados
+interface AnalyticsEvent {
+  eventName: string;
+  properties?: Record<string, unknown>;
 }
 
-interface OnboardingData {
-  selectedFrameworks: string[];
-  connectedIntegration: string | null;
-  firstScanCompleted: boolean;
-  firstScanResults: ScanResults | null;
+interface UseAnalyticsReturn {
+  track: (eventName: string, properties?: Record<string, unknown>) => void;
+  trackAsync: (eventName: string, properties?: Record<string, unknown>) => Promise<void>;
+  identify: (traits?: Record<string, unknown>) => void;
+  sessionId: string;
 }
 
-interface UseOnboardingWizardReturn {
-  // Estado
-  state: OnboardingWizardState;
-  
-  // Navegacao
-  nextStep: () => Promise<void>;
-  prevStep: () => void;
-  goToStep: (step: number) => void;
-  
-  // Acoes
-  skipOnboarding: () => Promise<void>;
-  completeOnboarding: () => Promise<void>;
-  resetOnboarding: () => Promise<void>;
-  
-  // Data
-  updateData: (data: Partial<OnboardingData>) => Promise<void>;
-  
-  // Helpers
-  canProceed: boolean;  // Step atual permite avancar
-  stepProgress: number; // 0-100%
+// Eventos validos para type safety
+type EventName = 
+  | 'page_viewed'
+  | 'integration_connected'
+  | 'compliance_scan_started'
+  | 'compliance_scan_completed'
+  | 'issue_viewed'
+  | 'issue_remediated'
+  | 'report_exported'
+  | 'user_invited';
+
+interface PageViewedProperties {
+  path: string;
+  title?: string;
+  referrer?: string;
+}
+
+interface IntegrationConnectedProperties {
+  type: string;
+  name?: string;
+}
+
+interface ComplianceScanProperties {
+  score?: number;
+  passing?: number;
+  failing?: number;
+  duration_ms?: number;
+}
+
+interface IssueProperties {
+  issue_id: string;
+  severity: string;
+  rule_id?: string;
+  integration?: string;
+}
+
+interface ReportExportedProperties {
+  report_type: string;
+  format?: string;
+  filters?: Record<string, unknown>;
+}
+
+interface UserInvitedProperties {
+  role: string;
+  email_domain?: string;
 }
 ```
 
 **Funcionalidades:**
-- Carrega estado do onboarding do banco na inicializacao
-- Persiste progresso e dados a cada step
-- Suporta navegacao bidirecional
-- Valida se usuario pode avancar (ex: selecionou framework?)
-- Sincroniza com React Query para invalidacao de cache
+- Gera `session_id` unico por sessao do browser
+- Batching de eventos para reduzir chamadas de API
+- Fallback para localStorage se offline
+- Type-safe event properties
+- Auto-flush ao fechar pagina
 
----
-
-### Fase 3: Componentes do Wizard
-
-**Estrutura de arquivos:**
-```
-src/components/onboarding/
-├── OnboardingWizard.tsx           # Container principal
-├── OnboardingProgress.tsx         # Barra de progresso
-├── steps/
-│   ├── WelcomeStep.tsx            # Step 1: Bem-vindo
-│   ├── FrameworksStep.tsx         # Step 2: Selecao frameworks
-│   ├── IntegrationStep.tsx        # Step 3: Primeira integracao
-│   ├── FirstScanStep.tsx          # Step 4: Primeiro scan
-│   └── NextStepsStep.tsx          # Step 5: Proximos passos
-└── shared/
-    ├── StepContainer.tsx          # Layout padrao de step
-    ├── StepNavigation.tsx         # Botoes Voltar/Continuar
-    └── SkipButton.tsx             # Botao Pular
-```
-
----
-
-### Step 1: Bem-vindo (WelcomeStep.tsx)
-
-Apresentacao rapida do APOC (30 segundos):
-
+**Implementacao:**
 ```typescript
-// Features apresentadas com icones animados
-const features = [
-  { icon: Shield, title: 'Compliance Automatizado', 
-    desc: 'Monitore ISO 27001, SOC 2 e LGPD automaticamente' },
-  { icon: Zap, title: 'Integracoes Nativas', 
-    desc: 'Conecte AWS, GitHub, Google e mais' },
-  { icon: Eye, title: 'Visibilidade Total', 
-    desc: 'Dashboard unificado de riscos e conformidade' },
-  { icon: Bell, title: 'Alertas Proativos', 
-    desc: 'Notificacoes em tempo real de desvios' },
-];
+export function useAnalytics(): UseAnalyticsReturn {
+  const { user } = useAuth();
+  const sessionIdRef = useRef<string>(getOrCreateSessionId());
+  const queueRef = useRef<AnalyticsEvent[]>([]);
+  const flushTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
-// Animacao de entrada com Framer Motion
-// Auto-avancar apos 30s (opcional) ou botao "Comecar"
-```
+  // Flush events to database
+  const flushEvents = useCallback(async () => {
+    if (queueRef.current.length === 0 || !user?.id) return;
 
----
+    const events = queueRef.current.splice(0, 50); // Max 50 per batch
+    
+    try {
+      // Get org_id from profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('org_id')
+        .eq('user_id', user.id)
+        .single();
 
-### Step 2: Escolha Frameworks (FrameworksStep.tsx)
+      // Insert batch
+      await supabase.from('analytics_events').insert(
+        events.map(e => ({
+          user_id: user.id,
+          org_id: profile?.org_id,
+          event_name: e.eventName,
+          properties: e.properties || {},
+          session_id: sessionIdRef.current,
+        }))
+      );
+    } catch (error) {
+      // Re-queue failed events
+      queueRef.current.unshift(...events);
+      console.error('[Analytics] Flush failed:', error);
+    }
+  }, [user?.id]);
 
-Cards clicaveis para selecao de frameworks:
+  // Track event (non-blocking)
+  const track = useCallback((eventName: string, properties?: Record<string, unknown>) => {
+    queueRef.current.push({ eventName, properties });
+    
+    // Debounced flush
+    if (flushTimeoutRef.current) {
+      clearTimeout(flushTimeoutRef.current);
+    }
+    flushTimeoutRef.current = setTimeout(flushEvents, 1000);
+    
+    // Immediate flush if queue is large
+    if (queueRef.current.length >= 10) {
+      flushEvents();
+    }
+  }, [flushEvents]);
 
-```typescript
-const availableFrameworks = [
-  { 
-    id: 'soc2', 
-    name: 'SOC 2 Type II', 
-    description: 'System and Organization Controls para servicos',
-    icon: '🛡️',
-    popular: true,
-    controlsCount: 64,
-  },
-  { 
-    id: 'iso27001', 
-    name: 'ISO 27001:2022', 
-    description: 'Sistema de Gestao de Seguranca da Informacao',
-    icon: '📋',
-    popular: true,
-    controlsCount: 114,
-  },
-  { 
-    id: 'lgpd', 
-    name: 'LGPD', 
-    description: 'Lei Geral de Protecao de Dados',
-    icon: '🇧🇷',
-    popular: true,
-    controlsCount: 42,
-  },
-  { 
-    id: 'gdpr', 
-    name: 'GDPR', 
-    description: 'General Data Protection Regulation (UE)',
-    icon: '🇪🇺',
-    popular: false,
-    controlsCount: 38,
-  },
-  { 
-    id: 'pci-dss', 
-    name: 'PCI DSS', 
-    description: 'Payment Card Industry Data Security Standard',
-    icon: '💳',
-    popular: false,
-    controlsCount: 251,
-  },
-  { 
-    id: 'hipaa', 
-    name: 'HIPAA', 
-    description: 'Health Insurance Portability and Accountability',
-    icon: '🏥',
-    popular: false,
-    controlsCount: 75,
-  },
-];
+  // Track event (blocking, returns Promise)
+  const trackAsync = useCallback(async (
+    eventName: string, 
+    properties?: Record<string, unknown>
+  ) => {
+    track(eventName, properties);
+    await flushEvents();
+  }, [track, flushEvents]);
 
-// Multi-select com visual de checked state
-// Minimo 1 framework para avancar
-// Badge "Popular" nos mais usados
+  // Flush on unmount/page close
+  useEffect(() => {
+    const handleBeforeUnload = () => flushEvents();
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      flushEvents();
+    };
+  }, [flushEvents]);
+
+  return {
+    track,
+    trackAsync,
+    identify: () => {}, // Future: update user traits
+    sessionId: sessionIdRef.current,
+  };
+}
 ```
 
 ---
 
-### Step 3: Conecte Integracao (IntegrationStep.tsx)
+### Fase 3: Instrumentacao de Eventos
 
-Cards das integracoes mais populares:
+**Eventos a rastrear:**
 
+| Evento | Componente/Hook | Properties |
+|--------|-----------------|------------|
+| `page_viewed` | `ProtectedRoute.tsx` | `{ path, title, referrer }` |
+| `integration_connected` | `useIntegrations.tsx` | `{ type, name }` |
+| `compliance_scan_started` | `useComplianceStatus.tsx` | `{}` |
+| `compliance_scan_completed` | `useComplianceStatus.tsx` | `{ score, passing, failing }` |
+| `issue_viewed` | `IssueDetailsSheet.tsx` | `{ issue_id, severity, rule_id }` |
+| `issue_remediated` | `ActionCenter.tsx` | `{ issue_id, severity, action }` |
+| `report_exported` | `ReportsExports.tsx` | `{ report_type, format }` |
+| `user_invited` | `UserRolesManagement.tsx` | `{ role }` |
+
+**Exemplo de instrumentacao em ProtectedRoute:**
 ```typescript
-const popularIntegrations = [
-  { 
-    id: 'github', 
-    name: 'GitHub', 
-    logo: '...', 
-    category: 'SDLC',
-    description: 'Repositorios, branch protection, vulnerabilidades',
-    benefit: 'Detecta repos publicos e branches desprotegidas',
-  },
-  { 
-    id: 'aws', 
-    name: 'AWS', 
-    logo: '...', 
-    category: 'Cloud',
-    description: 'IAM, S3, EC2, CloudTrail',
-    benefit: 'Monitora buckets publicos e permissoes',
-  },
-  { 
-    id: 'google-workspace', 
-    name: 'Google Workspace', 
-    logo: '...', 
-    category: 'IAM',
-    description: 'Usuarios, grupos, Drive, MFA',
-    benefit: 'Verifica MFA e acessos compartilhados',
-  },
-  { 
-    id: 'azure-ad', 
-    name: 'Azure AD', 
-    logo: '...', 
-    category: 'IAM',
-    description: 'Identidades, grupos, conditional access',
-    benefit: 'Analisa usuarios sem MFA e privilegios',
-  },
-];
+// Em ProtectedRoute.tsx
+const { track } = useAnalytics();
+const location = useLocation();
 
-// Ao clicar, abre modal de conexao (reutiliza ConnectionModal)
-// Mostra status de conexao em real-time
-// "Pular por agora" disponivel
-// Apos conectar com sucesso, habilita avancar
+useEffect(() => {
+  if (user && !onboardingLoading) {
+    track('page_viewed', { 
+      path: location.pathname,
+      referrer: document.referrer 
+    });
+  }
+}, [location.pathname, user, track]);
 ```
 
----
-
-### Step 4: Primeiro Scan (FirstScanStep.tsx)
-
-Executar compliance check e mostrar resultados:
-
+**Exemplo em useIntegrations:**
 ```typescript
-// Estados do step
-type ScanState = 'idle' | 'running' | 'completed' | 'error';
+// Em useIntegrations.tsx
+const { track } = useAnalytics();
 
-// UI Flow:
-// 1. "idle": Mostra botao "Executar Primeiro Scan"
-// 2. "running": Progress bar + mensagens animadas
-//    - "Analisando repositorios GitHub..."
-//    - "Verificando configuracoes AWS..."
-//    - "Aplicando regras de compliance..."
-// 3. "completed": Mostra resultados em cards
-//    - Score geral (ex: 78%)
-//    - Passing tests (12)
-//    - Failing tests (3)
-//    - Preview de 2-3 issues encontradas
-// 4. "error": Mensagem + retry
-
-// Usa useComplianceStatus() internamente
-// Salva resultados em onboarding_data
-```
-
-**Cards de resultado:**
-```typescript
-<div className="grid grid-cols-3 gap-6">
-  <Card className="bg-success/10 border-success/20">
-    <CardContent>
-      <div className="text-4xl font-bold text-success">78%</div>
-      <p>Score de Compliance</p>
-    </CardContent>
-  </Card>
+const connectIntegration = (integration, credentials, userName) => {
+  // ... logica existente ...
   
-  <Card className="bg-info/10 border-info/20">
-    <CardContent>
-      <div className="text-4xl font-bold text-info">12</div>
-      <p>Controles Passando</p>
-    </CardContent>
-  </Card>
+  track('integration_connected', {
+    type: integration.id,
+    name: integration.name,
+  });
   
-  <Card className="bg-warning/10 border-warning/20">
-    <CardContent>
-      <div className="text-4xl font-bold text-warning">3</div>
-      <p>Issues Detectadas</p>
-    </CardContent>
-  </Card>
-</div>
+  return newIntegration;
+};
 ```
 
 ---
 
-### Step 5: Proximos Passos (NextStepsStep.tsx)
+### Fase 4: Dashboard de Analytics (Admin Only)
 
-Checklist interativo do que fazer depois:
+**Criar nova tab em Settings:**
+
+Adicionar tab "Analytics" ao TabsList em Settings.tsx:
 
 ```typescript
-const nextSteps = [
-  {
-    id: 'invite-team',
-    title: 'Convide sua Equipe',
-    description: 'Adicione membros para colaborar na conformidade',
-    icon: Users,
-    link: '/settings?tab=permissions',
-    action: 'Convidar Membros',
-    priority: 'high',
-  },
-  {
-    id: 'configure-slas',
-    title: 'Configure SLAs',
-    description: 'Defina prazos de remediacao por severidade',
-    icon: Clock,
-    link: '/settings?tab=system',
-    action: 'Configurar',
-    priority: 'medium',
-  },
-  {
-    id: 'more-integrations',
-    title: 'Conecte Mais Integracoes',
-    description: 'Quanto mais integracoes, maior a visibilidade',
-    icon: Plug,
-    link: '/integrations',
-    action: 'Ver Catalogo',
-    priority: 'medium',
-  },
-  {
-    id: 'review-policies',
-    title: 'Revise Politicas',
-    description: 'Personalize politicas de seguranca da empresa',
-    icon: FileText,
-    link: '/policies',
-    action: 'Ver Politicas',
-    priority: 'low',
-  },
-  {
-    id: 'schedule-audit',
-    title: 'Agende uma Auditoria',
-    description: 'Prepare-se para certificacoes com auditorias internas',
-    icon: Calendar,
-    link: '/audit',
-    action: 'Agendar',
-    priority: 'low',
-  },
-];
-
-// Checkboxes de "Ja fiz isso" (salva em onboarding_data)
-// Botao "Ir para Dashboard" ao final
-// Animacao de confetti ao concluir
+<TabsTrigger value="analytics" className="gap-1">
+  <BarChart3 className="w-4 h-4" />
+  Analytics
+</TabsTrigger>
 ```
 
----
+**Criar componente ProductAnalyticsDashboard:**
 
-### Fase 4: Integracao no App
-
-**Atualizar ProtectedRoute.tsx:**
+**Arquivo:** `src/components/settings/ProductAnalyticsDashboard.tsx`
 
 ```typescript
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading: authLoading } = useAuth();
-  const { state: onboardingState, isLoading: onboardingLoading } = useOnboardingWizard();
-  
-  // Mostrar wizard se:
-  // 1. Usuario autenticado
-  // 2. Onboarding nao completado
-  // 3. Onboarding nao foi pulado
-  const shouldShowWizard = user && 
-    !onboardingState.hasCompleted && 
-    !onboardingState.wasSkipped;
+interface MetricCardProps {
+  title: string;
+  value: number | string;
+  trend?: { value: number; isPositive: boolean };
+  icon: React.ReactNode;
+}
 
-  if (shouldShowWizard) {
-    return <OnboardingWizard />;
+export default function ProductAnalyticsDashboard() {
+  const { isAdmin, isMasterAdmin } = useUserRoles();
+  
+  // Verificar permissao
+  if (!isAdmin() && !isMasterAdmin()) {
+    return <AccessDenied />;
   }
 
-  return <>{children}</>;
-};
-```
+  // Hooks para dados
+  const { data: activeUsers } = useActiveUsersMetrics();
+  const { data: topIntegrations } = useTopIntegrations();
+  const { data: remediationRate } = useRemediationRate();
+  const { data: timeToFirstScan } = useTimeToFirstScan();
 
-**Adicionar opcao em Settings.tsx:**
-
-Nova secao no tab "account" ou novo tab "Onboarding":
-
-```typescript
-<Card>
-  <CardHeader>
-    <CardTitle className="flex items-center gap-2">
-      <Rocket className="w-5 h-5" />
-      Tutorial e Onboarding
-    </CardTitle>
-    <CardDescription>
-      Reveja o tutorial inicial ou refaca o onboarding
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="flex items-center justify-between">
+  return (
+    <div className="space-y-6">
+      {/* Header */}
       <div>
-        <p className="font-medium">Ver Tutorial Depois</p>
-        <p className="text-sm text-muted-foreground">
-          {hasCompleted 
-            ? 'Voce completou o onboarding em ' + formatDate(completedAt)
-            : 'Voce pulou o onboarding inicial'
-          }
+        <h2 className="text-xl font-semibold">Product Analytics</h2>
+        <p className="text-muted-foreground">
+          Metricas de uso e engajamento da plataforma
         </p>
       </div>
-      <Button variant="outline" onClick={resetOnboarding}>
-        <Play className="w-4 h-4 mr-2" />
-        Refazer Onboarding
-      </Button>
+
+      {/* Active Users */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Usuarios Ativos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <MetricCard title="DAU" value={activeUsers?.dau || 0} icon={<Activity />} />
+            <MetricCard title="WAU" value={activeUsers?.wau || 0} icon={<Activity />} />
+            <MetricCard title="MAU" value={activeUsers?.mau || 0} icon={<Activity />} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Top Integrations */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Plug className="w-5 h-5" />
+            Integracoes Mais Conectadas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {topIntegrations?.map((int, i) => (
+              <div key={int.integration_type} className="flex items-center gap-3">
+                <span className="text-muted-foreground w-6">{i + 1}.</span>
+                <span className="flex-1 font-medium">{int.integration_type}</span>
+                <Progress value={(int.connection_count / topIntegrations[0].connection_count) * 100} className="w-32" />
+                <span className="text-sm text-muted-foreground w-8">{int.connection_count}</span>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Remediation Rate */}
+      <div className="grid grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              Taxa de Remediacao
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-primary">
+              {remediationRate?.remediation_rate || 0}%
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              {remediationRate?.remediated_issues} de {remediationRate?.total_issues} issues remediadas
+            </p>
+            <Separator className="my-4" />
+            <div className="text-sm">
+              <span className="text-muted-foreground">MTTR: </span>
+              <span className="font-medium">{remediationRate?.avg_time_to_remediate_hours || 0}h</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5" />
+              Tempo ate Primeiro Scan
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-4xl font-bold text-primary">
+              {timeToFirstScan?.avg_hours || 0}h
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              Media de tempo apos registro
+            </p>
+            <Separator className="my-4" />
+            <div className="text-sm">
+              <span className="text-muted-foreground">Mediana: </span>
+              <span className="font-medium">{timeToFirstScan?.median_hours || 0}h</span>
+            </div>
+            <div className="text-sm mt-1">
+              <span className="text-muted-foreground">Usuarios com scan: </span>
+              <span className="font-medium">
+                {timeToFirstScan?.users_scanned}/{timeToFirstScan?.users_total}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  </CardContent>
-</Card>
+  );
+}
 ```
 
 ---
 
-### Fase 5: Animacoes e UX
+### Fase 5: Hooks para Metricas do Dashboard
 
-**Framer Motion para transicoes:**
-
-```typescript
-// Transicao entre steps
-<AnimatePresence mode="wait">
-  <motion.div
-    key={currentStep}
-    initial={{ opacity: 0, x: 50 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: -50 }}
-    transition={{ duration: 0.3 }}
-  >
-    {renderCurrentStep()}
-  </motion.div>
-</AnimatePresence>
-```
-
-**Barra de progresso animada:**
+**Arquivo:** `src/hooks/useProductAnalytics.tsx`
 
 ```typescript
-const OnboardingProgress = ({ currentStep, totalSteps }) => {
-  const progress = ((currentStep + 1) / totalSteps) * 100;
+// Hook para usuarios ativos
+export function useActiveUsersMetrics() {
+  const { user } = useAuth();
   
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-between">
-        {steps.map((step, index) => (
-          <motion.div
-            key={step.id}
-            className={cn(
-              "flex items-center gap-2",
-              index <= currentStep ? "text-primary" : "text-muted-foreground"
-            )}
-            initial={{ scale: 0.8 }}
-            animate={{ scale: index === currentStep ? 1.1 : 1 }}
-          >
-            <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center",
-              index < currentStep ? "bg-primary text-white" : 
-              index === currentStep ? "bg-primary/20 border-2 border-primary" :
-              "bg-muted"
-            )}>
-              {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
-            </div>
-            <span className="hidden md:block text-sm">{step.title}</span>
-          </motion.div>
-        ))}
-      </div>
-      <Progress value={progress} className="h-2" />
-    </div>
-  );
-};
+  return useQuery({
+    queryKey: ['product-analytics', 'active-users', user?.id],
+    queryFn: async () => {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('org_id')
+        .eq('user_id', user!.id)
+        .single();
+        
+      const { data, error } = await supabase
+        .rpc('get_active_users_metrics', { p_org_id: profile?.org_id });
+      
+      if (error) throw error;
+      return data[0];
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 min
+  });
+}
+
+// Hook para integracoes populares
+export function useTopIntegrations() {
+  // Similar pattern...
+}
+
+// Hook para taxa de remediacao
+export function useRemediationRate() {
+  // Similar pattern...
+}
+
+// Hook para tempo ate primeiro scan
+export function useTimeToFirstScan() {
+  // Similar pattern...
+}
 ```
 
 ---
@@ -514,52 +653,18 @@ const OnboardingProgress = ({ currentStep, totalSteps }) => {
 
 | Arquivo | Acao | Descricao |
 |---------|------|-----------|
-| `supabase/migrations/xxx_onboarding.sql` | Criar | Colunas de onboarding na profiles |
-| `src/hooks/useOnboardingWizard.tsx` | Criar | Hook centralizado do wizard |
-| `src/components/onboarding/OnboardingWizard.tsx` | Criar | Container principal fullscreen |
-| `src/components/onboarding/OnboardingProgress.tsx` | Criar | Barra de progresso visual |
-| `src/components/onboarding/steps/WelcomeStep.tsx` | Criar | Step 1: Bem-vindo |
-| `src/components/onboarding/steps/FrameworksStep.tsx` | Criar | Step 2: Frameworks |
-| `src/components/onboarding/steps/IntegrationStep.tsx` | Criar | Step 3: Integracao |
-| `src/components/onboarding/steps/FirstScanStep.tsx` | Criar | Step 4: Primeiro Scan |
-| `src/components/onboarding/steps/NextStepsStep.tsx` | Criar | Step 5: Proximos Passos |
-| `src/components/onboarding/shared/StepContainer.tsx` | Criar | Layout padrao |
-| `src/components/onboarding/shared/StepNavigation.tsx` | Criar | Navegacao |
-| `src/components/auth/ProtectedRoute.tsx` | Modificar | Integrar wizard |
-| `src/pages/Settings.tsx` | Modificar | Adicionar opcao de refazer |
-| `src/integrations/supabase/types.ts` | Auto-update | Novos campos profiles |
-
----
-
-### Fluxo de Usuario
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 1. PRIMEIRO LOGIN                                                           │
-│    ├── Usuario faz signup/login                                             │
-│    ├── ProtectedRoute verifica onboarding_completed = false                 │
-│    └── Exibe OnboardingWizard fullscreen                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 2. NAVEGACAO NO WIZARD                                                      │
-│    ├── Step 1: Apresentacao (30s) → clica "Comecar"                         │
-│    ├── Step 2: Seleciona frameworks → clica "Continuar"                     │
-│    ├── Step 3: Conecta integracao (ou pula) → clica "Continuar"             │
-│    ├── Step 4: Executa scan e ve resultados → clica "Continuar"             │
-│    └── Step 5: Ve checklist → clica "Ir para Dashboard"                     │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 3. SKIP OU COMPLETAR                                                        │
-│    ├── A qualquer momento pode clicar "Pular"                               │
-│    │   └── onboarding_skipped = true                                        │
-│    ├── Ao completar step 5                                                  │
-│    │   └── onboarding_completed = true, onboarding_completed_at = now()     │
-│    └── Redireciona para /dashboard                                          │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ 4. REFAZER (em /settings)                                                   │
-│    ├── Clica "Refazer Onboarding"                                           │
-│    ├── onboarding_completed = false, onboarding_step = 0                    │
-│    └── Volta para OnboardingWizard                                          │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+| `supabase/migrations/xxx_analytics_events.sql` | Criar | Tabela e funcoes SQL |
+| `src/hooks/useAnalytics.tsx` | Criar | Hook de tracking |
+| `src/hooks/useProductAnalytics.tsx` | Criar | Hooks para metricas |
+| `src/components/settings/ProductAnalyticsDashboard.tsx` | Criar | Dashboard admin |
+| `src/components/auth/ProtectedRoute.tsx` | Modificar | Adicionar page_viewed |
+| `src/hooks/useIntegrations.tsx` | Modificar | Adicionar integration_connected |
+| `src/hooks/useComplianceStatus.tsx` | Modificar | Adicionar scan events |
+| `src/components/dashboard/IssueDetailsSheet.tsx` | Modificar | Adicionar issue_viewed |
+| `src/components/dashboard/ActionCenter.tsx` | Modificar | Adicionar issue_remediated |
+| `src/pages/ReportsExports.tsx` | Modificar | Adicionar report_exported |
+| `src/components/settings/UserRolesManagement.tsx` | Modificar | Adicionar user_invited |
+| `src/pages/Settings.tsx` | Modificar | Adicionar tab Analytics |
 
 ---
 
@@ -567,30 +672,42 @@ const OnboardingProgress = ({ currentStep, totalSteps }) => {
 
 | Aspecto | Implementacao |
 |---------|---------------|
-| **Persistencia** | Cada step salva progresso no banco via Supabase |
-| **Estado Local** | React Query + estado local para UI responsiva |
-| **Validacao** | Step 2 requer min 1 framework; Step 3 permite skip |
-| **Animacoes** | Framer Motion para transicoes suaves |
-| **Responsivo** | Layout adapta para mobile (stack vertical) |
-| **Acessibilidade** | Focus management, keyboard navigation |
-| **Error Handling** | Toast para erros, retry automatico |
-| **Cache** | Invalida queries relevantes ao completar |
+| **Performance** | Batching de eventos, debounce de 1s, max 50 por batch |
+| **Offline** | Fallback para localStorage, sync quando online |
+| **Privacidade** | Sem PII em properties, apenas IDs e metricas |
+| **RLS** | Usuarios inserem proprios eventos, admins veem org |
+| **Retencao** | Manter 90 dias por padrao (pode adicionar cron de limpeza) |
+| **Type Safety** | Event types definidos para autocompletion |
+| **Session** | UUID gerado por tab, persiste em sessionStorage |
+
+---
+
+### Eventos Detalhados
+
+| Evento | Quando | Properties |
+|--------|--------|------------|
+| `page_viewed` | Cada navegacao | `{ path, title, referrer }` |
+| `integration_connected` | Apos conexao bem-sucedida | `{ type: 'aws', name: 'AWS' }` |
+| `compliance_scan_started` | Inicio de check manual | `{}` |
+| `compliance_scan_completed` | Fim de check | `{ score: 87, passing: 45, failing: 8 }` |
+| `issue_viewed` | Abrir detalhes de issue | `{ issue_id, severity, rule_id, integration }` |
+| `issue_remediated` | Marcar como resolvido/aceito | `{ issue_id, severity, action: 'resolved' }` |
+| `report_exported` | Download de relatorio | `{ report_type: 'compliance', format: 'pdf' }` |
+| `user_invited` | Convite enviado | `{ role: 'viewer' }` |
 
 ---
 
 ### Ordem de Implementacao
 
-1. Criar migracao de banco (colunas onboarding)
-2. Criar hook `useOnboardingWizard`
-3. Criar componentes shared (StepContainer, StepNavigation)
-4. Criar OnboardingProgress
-5. Criar WelcomeStep (Step 1)
-6. Criar FrameworksStep (Step 2)
-7. Criar IntegrationStep (Step 3)
-8. Criar FirstScanStep (Step 4)
-9. Criar NextStepsStep (Step 5)
-10. Criar OnboardingWizard container
-11. Integrar no ProtectedRoute
-12. Adicionar opcao em Settings
-13. Testar fluxo completo
+1. Criar migracao com tabela e funcoes SQL
+2. Criar hook `useAnalytics`
+3. Criar hooks de metricas `useProductAnalytics`
+4. Criar componente `ProductAnalyticsDashboard`
+5. Adicionar tab Analytics em Settings
+6. Instrumentar `page_viewed` em ProtectedRoute
+7. Instrumentar `integration_connected` em useIntegrations
+8. Instrumentar eventos de compliance scan
+9. Instrumentar eventos de issues
+10. Instrumentar `report_exported` e `user_invited`
+11. Testar dashboard com dados reais
 
