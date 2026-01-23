@@ -824,6 +824,59 @@ export type Database = {
           },
         ]
       }
+      data_export_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          expires_at: string | null
+          file_url: string | null
+          id: string
+          metadata: Json | null
+          org_id: string | null
+          request_type: string
+          requested_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          expires_at?: string | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          org_id?: string | null
+          request_type: string
+          requested_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          expires_at?: string | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json | null
+          org_id?: string | null
+          request_type?: string
+          requested_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "data_export_requests_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_logs: {
         Row: {
           cpu_usage: number
@@ -1703,6 +1756,9 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          deleted_at: string | null
+          deletion_reason: string | null
+          deletion_scheduled_for: string | null
           display_name: string | null
           id: string
           org_id: string | null
@@ -1715,6 +1771,9 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deletion_reason?: string | null
+          deletion_scheduled_for?: string | null
           display_name?: string | null
           id?: string
           org_id?: string | null
@@ -1727,6 +1786,9 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deletion_reason?: string | null
+          deletion_scheduled_for?: string | null
           display_name?: string | null
           id?: string
           org_id?: string | null

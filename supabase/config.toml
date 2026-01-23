@@ -92,3 +92,9 @@ verify_jwt = false
 
 [functions.process-job-queue]
 verify_jwt = false
+
+[functions.export-user-data]
+verify_jwt = true
+
+[functions.delete-user-account]
+verify_jwt = true
