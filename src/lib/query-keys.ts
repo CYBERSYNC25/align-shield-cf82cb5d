@@ -56,4 +56,17 @@ export const queryKeys = {
   customTests: ['custom-tests'] as const,
   customTestById: (id: string) => ['custom-test', id] as const,
   customTestResults: (testId: string) => ['custom-test-results', testId] as const,
+
+  // System Logs
+  systemLogs: ['system-logs'] as const,
+  systemLogsWithFilters: (filters: Record<string, unknown>) => 
+    ['system-logs', filters] as const,
+  systemLogsStatistics: ['system-logs', 'statistics'] as const,
+  systemLogsCount: (filters: Record<string, unknown>) => 
+    ['system-logs', 'count', filters] as const,
+};
+
+// Legacy export for compatibility
+export const QUERY_KEYS = {
+  SYSTEM_LOGS: 'system-logs',
 };

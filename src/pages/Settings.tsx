@@ -20,6 +20,7 @@ import UserRolesManagement from '@/components/settings/UserRolesManagement';
 import { SeedDatabaseCard } from '@/components/settings/SeedDatabaseCard';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import TrustCenterSettings from '@/components/settings/TrustCenterSettings';
+import SystemLogsViewer from '@/components/settings/SystemLogsViewer';
 import {
   User,
   Shield,
@@ -30,6 +31,7 @@ import {
   Trash2,
   Key,
   Globe,
+  Terminal,
 } from 'lucide-react';
 
 const Settings = () => {
@@ -75,6 +77,10 @@ const Settings = () => {
                     <TabsTrigger value="permissions">Permissões</TabsTrigger>
                     <TabsTrigger value="audit">Auditoria</TabsTrigger>
                     <TabsTrigger value="system">Sistema</TabsTrigger>
+                    <TabsTrigger value="system-logs" className="gap-1">
+                      <Terminal className="w-4 h-4" />
+                      Logs
+                    </TabsTrigger>
                     <TabsTrigger value="trustcenter" className="gap-1">
                       <Globe className="w-4 h-4" />
                       Trust Center
@@ -312,6 +318,11 @@ const Settings = () => {
                   {/* System Tab */}
                   <TabsContent value="system" className="space-y-6">
                     <SeedDatabaseCard />
+                  </TabsContent>
+
+                  {/* System Logs Tab */}
+                  <TabsContent value="system-logs">
+                    <SystemLogsViewer />
                   </TabsContent>
 
                   {/* Trust Center Tab */}

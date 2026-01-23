@@ -2321,6 +2321,59 @@ export type Database = {
           },
         ]
       }
+      system_logs: {
+        Row: {
+          component_name: string | null
+          created_at: string
+          function_name: string | null
+          id: string
+          level: string
+          message: string
+          metadata: Json | null
+          org_id: string | null
+          request_id: string | null
+          source: string
+          stack_trace: string | null
+          user_id: string | null
+        }
+        Insert: {
+          component_name?: string | null
+          created_at?: string
+          function_name?: string | null
+          id?: string
+          level: string
+          message: string
+          metadata?: Json | null
+          org_id?: string | null
+          request_id?: string | null
+          source: string
+          stack_trace?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          component_name?: string | null
+          created_at?: string
+          function_name?: string | null
+          id?: string
+          level?: string
+          message?: string
+          metadata?: Json | null
+          org_id?: string | null
+          request_id?: string | null
+          source?: string
+          stack_trace?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assigned_to: string | null
@@ -2817,6 +2870,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      cleanup_old_system_logs: {
+        Args: { p_days_to_keep?: number }
+        Returns: number
+      }
       complete_job: {
         Args: { p_job_id: string; p_result?: Json }
         Returns: boolean
@@ -2850,6 +2907,14 @@ export type Database = {
       fail_job: {
         Args: { p_error_message: string; p_job_id: string }
         Returns: boolean
+      }
+      get_log_statistics: {
+        Args: { p_hours?: number; p_org_id?: string }
+        Returns: {
+          count: number
+          latest_at: string
+          level: string
+        }[]
       }
       get_trust_center_by_slug: {
         Args: { p_slug: string }

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 import { createLogger } from '@/lib/logger';
+import { supabase } from '@/integrations/supabase/client';
 
 const logger = createLogger('ErrorBoundary');
 
@@ -40,10 +41,30 @@ class ErrorBoundary extends Component<Props, State> {
     // Call optional error handler
     this.props.onError?.(error, errorInfo);
 
-    // TODO: Send to Sentry in production
-    // if (import.meta.env.PROD) {
-    //   Sentry.captureException(error, { extra: errorInfo });
-    // }
+    // Persist error to centralized logging system
+    this.persistErrorToBackend(error, errorInfo);
+  }
+
+  private async persistErrorToBackend(error: Error, errorInfo: ErrorInfo) {
+    try {
+      await supabase.functions.invoke('log-event', {
+        body: {
+          level: 'critical',
+          source: 'frontend',
+          message: `React Error Boundary: ${error.message}`,
+          stack_trace: error.stack,
+          component_name: 'ErrorBoundary',
+          metadata: {
+            componentStack: errorInfo.componentStack,
+            url: typeof window !== 'undefined' ? window.location.href : undefined,
+            userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+            timestamp: new Date().toISOString(),
+          }
+        }
+      });
+    } catch (e) {
+      console.error('Failed to persist error to backend:', e);
+    }
   }
 
   handleReload = () => {
