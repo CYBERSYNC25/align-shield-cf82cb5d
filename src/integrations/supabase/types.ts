@@ -1788,6 +1788,11 @@ export type Database = {
           deletion_scheduled_for: string | null
           display_name: string | null
           id: string
+          onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
+          onboarding_data: Json | null
+          onboarding_skipped: boolean | null
+          onboarding_step: number | null
           org_id: string | null
           organization: string | null
           role: string | null
@@ -1803,6 +1808,11 @@ export type Database = {
           deletion_scheduled_for?: string | null
           display_name?: string | null
           id?: string
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_data?: Json | null
+          onboarding_skipped?: boolean | null
+          onboarding_step?: number | null
           org_id?: string | null
           organization?: string | null
           role?: string | null
@@ -1818,6 +1828,11 @@ export type Database = {
           deletion_scheduled_for?: string | null
           display_name?: string | null
           id?: string
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
+          onboarding_data?: Json | null
+          onboarding_skipped?: boolean | null
+          onboarding_step?: number | null
           org_id?: string | null
           organization?: string | null
           role?: string | null
