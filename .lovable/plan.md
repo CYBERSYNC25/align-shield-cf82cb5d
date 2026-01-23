@@ -1,8 +1,8 @@
 
-## Plano: Sistema de Filas Assíncronas para Jobs
+## Plano: Sistema de Logging Centralizado
 
 ### Objetivo
-Implementar um sistema robusto de processamento assíncrono para operações pesadas como sincronização de integrações, verificações de compliance e geração de relatórios. Isso melhora a experiência do usuário (resposta imediata), a resiliência (retry automático) e a escalabilidade (processamento em background).
+Implementar um sistema de logging centralizado que persiste logs de erros e eventos importantes no banco de dados, permitindo rastreamento, depuração e análise por administradores. O sistema captura logs do frontend (erros React, eventos manuais) e backend (Edge Functions) em uma tabela unificada.
 
 ---
 
@@ -10,355 +10,517 @@ Implementar um sistema robusto de processamento assíncrono para operações pes
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         JOB QUEUE SYSTEM                                │
+│                    CENTRALIZED LOGGING SYSTEM                           │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  Frontend (SyncIntegrationButton)                                       │
-│  └─> INSERT INTO job_queue (job_type, payload, priority)                │
-│      └─> Retorna job_id imediatamente                                   │
-│          └─> UI mostra "Job agendado" / polling status                  │
+│  FRONTEND                                                               │
+│  ├── ErrorBoundary (global)                                             │
+│  │   └─> Captura erros React não tratados                               │
+│  │       └─> Envia via Edge Function                                    │
+│  ├── useErrorLogger hook                                                │
+│  │   └─> logError(), logWarning(), logInfo(), logDebug()                │
+│  │       └─> Batching + debounce para eficiência                        │
+│  └── window.onerror + unhandledrejection                                │
+│      └─> Captura erros globais JS                                       │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  job_queue (tabela)                                                     │
+│  BACKEND (Edge Functions)                                               │
+│  ├── EdgeLogger (existente)                                             │
+│  │   └─> Modificado para persistir em system_logs                       │
+│  └─> Logs estruturados com contexto                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Edge Function: log-event                                               │
+│  ├── POST /log-event                                                    │
+│  │   └─> Recebe: { level, source, message, metadata, stack_trace }      │
+│  │       └─> INSERT INTO system_logs                                    │
+│  └── Validação + Rate limiting                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│  system_logs (tabela)                                                   │
 │  ├── id (UUID)                                                          │
 │  ├── org_id → organizations.id                                          │
-│  ├── job_type (sync_integration, run_compliance_check, generate_report) │
-│  ├── payload (JSONB)                                                    │
-│  ├── status (pending → processing → completed/failed)                   │
-│  ├── priority (1-5, maior = mais urgente)                               │
-│  ├── attempts / max_attempts (default 3)                                │
-│  ├── error_message                                                      │
-│  ├── result (JSONB)                                                     │
-│  ├── created_at / started_at / completed_at                             │
-│  └── scheduled_for (para jobs agendados)                                │
+│  ├── level (debug, info, warn, error, critical)                         │
+│  ├── source (frontend, edge_function, webhook, scheduled_job)           │
+│  ├── message (TEXT)                                                     │
+│  ├── metadata (JSONB) - contexto, browser, versão, etc.                 │
+│  ├── stack_trace (TEXT)                                                 │
+│  ├── user_id → auth.users                                               │
+│  └── created_at                                                         │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  Edge Function: process-job-queue                                       │
-│  ├── SELECT jobs WHERE status='pending' ORDER BY priority, created_at   │
-│  ├── UPDATE status='processing'                                         │
-│  ├── Execute job (sync, compliance, report)                             │
-│  ├── On Success: status='completed', result=data                        │
-│  └── On Failure: attempts++, exponential backoff, retry ou failed       │
-├─────────────────────────────────────────────────────────────────────────┤
-│  Retry Logic (Exponential Backoff)                                      │
-│  ├── Attempt 1: Retry após 1 minuto                                     │
-│  ├── Attempt 2: Retry após 5 minutos                                    │
-│  └── Attempt 3: Falha definitiva (status='failed')                      │
+│  Admin UI: /settings (tab "Logs do Sistema")                            │
+│  ├── Filtros: level, source, data range                                 │
+│  ├── Busca por mensagem/metadata                                        │
+│  ├── Visualização de stack trace                                        │
+│  └── Exportação CSV/JSON                                                │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-### Fase 1: Criar Tabela job_queue
+### Fase 1: Criar Tabela system_logs
 
 **Migration SQL:**
 ```sql
-CREATE TABLE public.job_queue (
+CREATE TABLE public.system_logs (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   org_id UUID REFERENCES public.organizations(id),
-  user_id UUID REFERENCES auth.users(id),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   
-  -- Job definition
-  job_type TEXT NOT NULL CHECK (job_type IN (
-    'sync_integration', 
-    'run_compliance_check', 
-    'generate_report',
-    'send_notification',
-    'cleanup_data'
-  )),
-  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  -- Log classification
+  level TEXT NOT NULL CHECK (level IN ('debug', 'info', 'warn', 'error', 'critical')),
+  source TEXT NOT NULL CHECK (source IN ('frontend', 'edge_function', 'webhook', 'scheduled_job', 'database')),
   
-  -- Status tracking
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN (
-    'pending', 
-    'processing', 
-    'completed', 
-    'failed',
-    'cancelled'
-  )),
-  priority INTEGER NOT NULL DEFAULT 3 CHECK (priority BETWEEN 1 AND 5),
+  -- Content
+  message TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}'::jsonb,
+  stack_trace TEXT,
   
-  -- Retry logic
-  attempts INTEGER NOT NULL DEFAULT 0,
-  max_attempts INTEGER NOT NULL DEFAULT 3,
-  error_message TEXT,
-  last_error_at TIMESTAMP WITH TIME ZONE,
+  -- Context
+  function_name TEXT,
+  component_name TEXT,
+  request_id TEXT,
   
-  -- Results
-  result JSONB,
-  
-  -- Timing
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  scheduled_for TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  started_at TIMESTAMP WITH TIME ZONE,
-  completed_at TIMESTAMP WITH TIME ZONE,
-  
-  -- Metadata
-  metadata JSONB DEFAULT '{}'::jsonb
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Indexes for queue processing
-CREATE INDEX job_queue_pending_idx ON public.job_queue(status, priority DESC, scheduled_for ASC) 
-  WHERE status = 'pending';
-CREATE INDEX job_queue_org_id_idx ON public.job_queue(org_id);
-CREATE INDEX job_queue_user_id_idx ON public.job_queue(user_id);
-CREATE INDEX job_queue_job_type_idx ON public.job_queue(job_type);
-CREATE INDEX job_queue_created_at_idx ON public.job_queue(created_at DESC);
+-- Indexes for efficient queries
+CREATE INDEX system_logs_org_id_idx ON public.system_logs(org_id);
+CREATE INDEX system_logs_level_idx ON public.system_logs(level);
+CREATE INDEX system_logs_source_idx ON public.system_logs(source);
+CREATE INDEX system_logs_created_at_idx ON public.system_logs(created_at DESC);
+CREATE INDEX system_logs_user_id_idx ON public.system_logs(user_id);
+
+-- Composite index for common admin queries
+CREATE INDEX system_logs_org_level_created_idx 
+  ON public.system_logs(org_id, level, created_at DESC);
 
 -- RLS
-ALTER TABLE public.job_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_logs ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can view their org jobs"
-  ON public.job_queue FOR SELECT
-  USING (org_id = get_user_org_id(auth.uid()) OR user_id = auth.uid());
+-- Only admins can view logs
+CREATE POLICY "Admins can view org logs"
+  ON public.system_logs FOR SELECT
+  USING (
+    org_id = get_user_org_id(auth.uid()) 
+    AND EXISTS (
+      SELECT 1 FROM user_roles 
+      WHERE user_id = auth.uid() 
+      AND role IN ('admin', 'master_admin')
+    )
+  );
 
-CREATE POLICY "Users can create jobs for their org"
-  ON public.job_queue FOR INSERT
-  WITH CHECK (org_id = get_user_org_id(auth.uid()));
+-- Service role can insert (for Edge Functions)
+CREATE POLICY "Service role can insert logs"
+  ON public.system_logs FOR INSERT
+  WITH CHECK (auth.role() = 'service_role');
 
-CREATE POLICY "Service role can manage all jobs"
-  ON public.job_queue FOR ALL
-  USING (auth.role() = 'service_role');
+-- Authenticated users can insert their own logs
+CREATE POLICY "Users can insert their own logs"
+  ON public.system_logs FOR INSERT
+  WITH CHECK (
+    user_id = auth.uid() 
+    AND org_id = get_user_org_id(auth.uid())
+  );
+
+-- No UPDATE or DELETE (logs are immutable)
 ```
 
 ---
 
-### Fase 2: Edge Function process-job-queue
+### Fase 2: Edge Function log-event
 
-Esta Edge Function será chamada periodicamente (via cron externo ou manualmente) para processar jobs pendentes.
-
-**Arquivo:** `supabase/functions/process-job-queue/index.ts`
+**Arquivo:** `supabase/functions/log-event/index.ts`
 
 ```typescript
-// Estrutura principal
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createLogger } from "../_shared/logger.ts";
 
-const logger = createLogger('ProcessJobQueue');
-
-// Job handlers por tipo
-const JOB_HANDLERS = {
-  'sync_integration': handleSyncIntegration,
-  'run_compliance_check': handleComplianceCheck,
-  'generate_report': handleGenerateReport,
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Exponential backoff: 1min, 5min, 15min
-const RETRY_DELAYS = [60, 300, 900]; // segundos
+interface LogEventPayload {
+  level: 'debug' | 'info' | 'warn' | 'error' | 'critical';
+  source: 'frontend' | 'edge_function' | 'webhook' | 'scheduled_job';
+  message: string;
+  metadata?: Record<string, unknown>;
+  stack_trace?: string;
+  function_name?: string;
+  component_name?: string;
+  request_id?: string;
+}
 
 serve(async (req) => {
-  // 1. Buscar jobs pendentes (batch de 5)
-  // 2. Para cada job: marcar processing → executar → completed/retry
-  // 3. Retornar resumo
-});
-```
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
----
+  try {
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    );
 
-### Fase 3: Helper Functions
+    const payload: LogEventPayload = await req.json();
 
-**Função para calcular próximo retry:**
-```sql
-CREATE OR REPLACE FUNCTION public.calculate_next_retry(
-  p_attempts INTEGER,
-  p_max_attempts INTEGER DEFAULT 3
-)
-RETURNS TIMESTAMP WITH TIME ZONE
-LANGUAGE plpgsql
-IMMUTABLE
-AS $$
-DECLARE
-  delay_seconds INTEGER;
-BEGIN
-  IF p_attempts >= p_max_attempts THEN
-    RETURN NULL; -- Não há mais retries
-  END IF;
-  
-  -- Exponential backoff: 60s, 300s, 900s
-  delay_seconds := POWER(5, p_attempts) * 60;
-  RETURN now() + (delay_seconds || ' seconds')::interval;
-END;
-$$;
-```
+    // Extract user from JWT if present
+    const authHeader = req.headers.get('Authorization');
+    let userId: string | null = null;
+    let orgId: string | null = null;
 
-**Função para criar job:**
-```sql
-CREATE OR REPLACE FUNCTION public.enqueue_job(
-  p_job_type TEXT,
-  p_payload JSONB DEFAULT '{}'::jsonb,
-  p_priority INTEGER DEFAULT 3,
-  p_scheduled_for TIMESTAMP WITH TIME ZONE DEFAULT now()
-)
-RETURNS UUID
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_job_id UUID;
-  v_org_id UUID;
-BEGIN
-  -- Obter org_id do usuário
-  SELECT org_id INTO v_org_id FROM profiles WHERE user_id = auth.uid();
-  
-  INSERT INTO job_queue (org_id, user_id, job_type, payload, priority, scheduled_for)
-  VALUES (v_org_id, auth.uid(), p_job_type, p_payload, p_priority, p_scheduled_for)
-  RETURNING id INTO v_job_id;
-  
-  RETURN v_job_id;
-END;
-$$;
-```
-
----
-
-### Fase 4: Atualizar SyncIntegrationButton
-
-**Antes (síncrono):**
-```typescript
-const { data, error } = await supabase.functions.invoke('sync-integration-data', {
-  body: { provider }
-});
-```
-
-**Depois (via fila):**
-```typescript
-const { data: job, error } = await supabase.rpc('enqueue_job', {
-  p_job_type: 'sync_integration',
-  p_payload: { provider, integration_id: integrationId },
-  p_priority: 4 // Alta prioridade para ações manuais
-});
-
-if (job) {
-  toast.info('Sincronização agendada', {
-    description: 'O processamento iniciará em breve'
-  });
-}
-```
-
----
-
-### Fase 5: Hook useJobQueue
-
-**Arquivo:** `src/hooks/useJobQueue.tsx`
-
-```typescript
-export interface Job {
-  id: string;
-  job_type: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  payload: Record<string, any>;
-  result?: Record<string, any>;
-  error_message?: string;
-  attempts: number;
-  created_at: string;
-  completed_at?: string;
-}
-
-export function useJobQueue() {
-  // Listar jobs do usuário/org
-  const { data: jobs } = useQuery({ ... });
-  
-  // Criar novo job
-  const createJob = useMutation({
-    mutationFn: async (params: CreateJobParams) => {
-      return await supabase.rpc('enqueue_job', params);
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        userId = user.id;
+        // Get org_id from profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('org_id')
+          .eq('user_id', user.id)
+          .single();
+        orgId = profile?.org_id || null;
+      }
     }
-  });
+
+    // Insert log
+    const { error } = await supabase
+      .from('system_logs')
+      .insert({
+        org_id: orgId,
+        user_id: userId,
+        level: payload.level,
+        source: payload.source,
+        message: payload.message,
+        metadata: payload.metadata || {},
+        stack_trace: payload.stack_trace,
+        function_name: payload.function_name,
+        component_name: payload.component_name,
+        request_id: payload.request_id,
+      });
+
+    if (error) throw error;
+
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  } catch (error) {
+    console.error('Error logging event:', error);
+    return new Response(JSON.stringify({ error: 'Failed to log event' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
+```
+
+---
+
+### Fase 3: Atualizar Logger Frontend
+
+**Arquivo modificado:** `src/lib/logger.ts`
+
+Adicionar capacidade de enviar logs para o backend:
+
+```typescript
+// Adicionar método para persistir logs críticos
+async persistError(message: string, error?: Error, metadata?: LogContext): Promise<void> {
+  try {
+    await supabase.functions.invoke('log-event', {
+      body: {
+        level: 'error',
+        source: 'frontend',
+        message,
+        metadata: { ...metadata, module: this.context },
+        stack_trace: error?.stack,
+        component_name: this.context,
+      }
+    });
+  } catch (e) {
+    console.error('Failed to persist log:', e);
+  }
+}
+```
+
+---
+
+### Fase 4: Hook useErrorLogger
+
+**Arquivo:** `src/hooks/useErrorLogger.tsx`
+
+```typescript
+export interface ErrorLogContext {
+  component?: string;
+  action?: string;
+  userId?: string;
+  [key: string]: unknown;
+}
+
+export function useErrorLogger(componentName?: string) {
+  const { user } = useAuth();
   
-  // Cancelar job pendente
-  const cancelJob = useMutation({ ... });
+  const logError = useCallback(async (
+    message: string,
+    error?: Error,
+    context?: ErrorLogContext
+  ) => {
+    // Log to console
+    console.error(`[${componentName}]`, message, error);
+    
+    // Persist to backend
+    try {
+      await supabase.functions.invoke('log-event', {
+        body: {
+          level: 'error',
+          source: 'frontend',
+          message,
+          stack_trace: error?.stack,
+          component_name: componentName,
+          metadata: {
+            ...context,
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+          }
+        }
+      });
+    } catch (e) {
+      console.error('Failed to persist error log:', e);
+    }
+  }, [componentName, user]);
+
+  const logWarning = useCallback(async (
+    message: string,
+    context?: ErrorLogContext
+  ) => { /* similar */ }, [componentName]);
+
+  const logInfo = useCallback(async (
+    message: string,
+    context?: ErrorLogContext
+  ) => { /* similar */ }, [componentName]);
+
+  return { logError, logWarning, logInfo };
+}
+```
+
+---
+
+### Fase 5: Atualizar ErrorBoundary
+
+**Arquivo modificado:** `src/components/common/ErrorBoundary.tsx`
+
+Adicionar envio de erros para o backend:
+
+```typescript
+componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  // Existing console logging...
   
-  // Polling para status de um job específico
-  const useJobStatus = (jobId: string) => {
-    return useQuery({
-      queryKey: ['job-status', jobId],
-      refetchInterval: (query) => 
-        query.state.data?.status === 'pending' || 
-        query.state.data?.status === 'processing' ? 2000 : false,
+  // NEW: Persist to backend
+  this.persistErrorToBackend(error, errorInfo);
+}
+
+private async persistErrorToBackend(error: Error, errorInfo: ErrorInfo) {
+  try {
+    await supabase.functions.invoke('log-event', {
+      body: {
+        level: 'critical',
+        source: 'frontend',
+        message: `React Error Boundary: ${error.message}`,
+        stack_trace: error.stack,
+        component_name: 'ErrorBoundary',
+        metadata: {
+          componentStack: errorInfo.componentStack,
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+        }
+      }
+    });
+  } catch (e) {
+    console.error('Failed to persist error to backend:', e);
+  }
+}
+```
+
+---
+
+### Fase 6: Global Error Handlers
+
+**Arquivo:** `src/lib/global-error-handler.ts`
+
+```typescript
+export function setupGlobalErrorHandlers() {
+  // Captura erros JS não tratados
+  window.onerror = (message, source, lineno, colno, error) => {
+    supabase.functions.invoke('log-event', {
+      body: {
+        level: 'error',
+        source: 'frontend',
+        message: String(message),
+        stack_trace: error?.stack,
+        metadata: {
+          source,
+          lineno,
+          colno,
+          url: window.location.href,
+        }
+      }
     });
   };
-  
-  return { jobs, createJob, cancelJob, useJobStatus };
+
+  // Captura Promise rejections não tratadas
+  window.addEventListener('unhandledrejection', (event) => {
+    supabase.functions.invoke('log-event', {
+      body: {
+        level: 'error',
+        source: 'frontend',
+        message: `Unhandled Promise Rejection: ${event.reason}`,
+        stack_trace: event.reason?.stack,
+        metadata: {
+          url: window.location.href,
+        }
+      }
+    });
+  });
+}
+```
+
+Chamar em `src/main.tsx`:
+```typescript
+import { setupGlobalErrorHandlers } from '@/lib/global-error-handler';
+setupGlobalErrorHandlers();
+```
+
+---
+
+### Fase 7: Hook useSystemLogs (Admin)
+
+**Arquivo:** `src/hooks/useSystemLogs.tsx`
+
+```typescript
+export interface SystemLog {
+  id: string;
+  level: 'debug' | 'info' | 'warn' | 'error' | 'critical';
+  source: 'frontend' | 'edge_function' | 'webhook' | 'scheduled_job';
+  message: string;
+  metadata: Record<string, unknown>;
+  stack_trace: string | null;
+  component_name: string | null;
+  function_name: string | null;
+  user_id: string | null;
+  created_at: string;
+}
+
+export interface LogFilters {
+  level?: string;
+  source?: string;
+  startDate?: Date;
+  endDate?: Date;
+  search?: string;
+}
+
+export function useSystemLogs(filters: LogFilters = {}) {
+  // Query with filters
+  // Pagination support
+  // Real-time updates option
+  // Export functionality
 }
 ```
 
 ---
 
-### Fase 6: Componente JobStatusBadge
+### Fase 8: UI - Tab "Logs do Sistema" em Settings
 
-**Arquivo:** `src/components/jobs/JobStatusBadge.tsx`
+**Arquivo:** `src/components/settings/SystemLogsViewer.tsx`
 
-```typescript
-// Mostra status visual do job com ícone animado
-// - pending: Clock icon (amarelo)
-// - processing: Spinner (azul)
-// - completed: Check (verde)
-// - failed: X (vermelho)
-```
-
----
-
-### Fase 7: Painel de Jobs (opcional)
-
-Adicionar uma seção em Settings ou Dashboard para visualizar jobs recentes:
-
-```typescript
-// src/components/jobs/JobQueuePanel.tsx
-// - Lista de jobs com filtros (status, tipo)
-// - Ação de cancelar jobs pendentes
-// - Retry manual para jobs falhos
-```
-
----
-
-### Resumo de Arquivos a Criar/Modificar
-
-| Arquivo | Ação | Descrição |
-|---------|------|-----------|
-| `supabase/migrations/xxx_job_queue.sql` | Criar | Tabela + índices + RLS + funções |
-| `supabase/functions/process-job-queue/index.ts` | Criar | Edge Function processadora |
-| `src/hooks/useJobQueue.tsx` | Criar | Hook React para gerenciar jobs |
-| `src/components/jobs/JobStatusBadge.tsx` | Criar | Componente visual de status |
-| `src/components/jobs/JobQueuePanel.tsx` | Criar | Painel de visualização |
-| `src/components/integrations/SyncIntegrationButton.tsx` | Modificar | Usar fila ao invés de chamada direta |
-| `src/hooks/integrations/useAwsSync.tsx` | Modificar | Usar fila |
-| `src/hooks/integrations/useAzureSync.tsx` | Modificar | Usar fila |
-| `src/hooks/integrations/useGoogleSync.tsx` | Modificar | Usar fila |
-| `src/hooks/integrations/useDatadogSync.tsx` | Modificar | Usar fila |
-| `src/hooks/useOktaSync.tsx` | Modificar | Usar fila |
-| `src/hooks/useAuth0Sync.tsx` | Modificar | Usar fila |
-| `src/lib/query-keys.ts` | Modificar | Adicionar chaves para jobs |
-
----
-
-### Fluxo de Processamento Detalhado
+Layout proposto:
+- Filtros no topo (level, source, date range)
+- Search bar para busca em message/metadata
+- Tabela com logs paginados
+- Modal para ver detalhes (stack trace completo)
+- Botão de export (CSV/JSON)
+- Badge colorido por level (debug=gray, info=blue, warn=yellow, error=red, critical=purple)
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ 1. ENQUEUE                                                              │
-│    User clica "Sincronizar"                                             │
-│    └─> supabase.rpc('enqueue_job', {...})                               │
-│        └─> INSERT job_queue (status='pending')                          │
-│            └─> Return job_id                                            │
-│                └─> Toast "Agendado!"                                    │
+│ LOGS DO SISTEMA                                              [Exportar]│
 ├─────────────────────────────────────────────────────────────────────────┤
-│ 2. PROCESS (Edge Function - chamada via cron ou manual)                 │
-│    SELECT * FROM job_queue                                              │
-│    WHERE status = 'pending' AND scheduled_for <= now()                  │
-│    ORDER BY priority DESC, created_at ASC                               │
-│    LIMIT 5 FOR UPDATE SKIP LOCKED                                       │
-│    └─> Para cada job:                                                   │
-│        ├─> UPDATE status = 'processing', started_at = now()             │
-│        ├─> Execute handler (sync/compliance/report)                     │
-│        ├─> Success: status='completed', result={...}                    │
-│        └─> Failure:                                                     │
-│            ├─> attempts++                                               │
-│            ├─> Se attempts < max: scheduled_for = backoff, status=pending│
-│            └─> Se attempts >= max: status='failed', error_message       │
+│ [Level ▼]  [Source ▼]  [Data Início]  [Data Fim]  [🔍 Buscar...]       │
 ├─────────────────────────────────────────────────────────────────────────┤
-│ 3. NOTIFY (opcional)                                                    │
-│    Quando job completa/falha:                                           │
-│    └─> supabase.rpc('create_notification', {...})                       │
-│        └─> User recebe alerta no NotificationCenter                     │
+│ LEVEL    SOURCE        MESSAGE                  COMPONENT   CREATED_AT │
+│ ──────   ──────        ───────                  ─────────   ────────── │
+│ [ERROR]  frontend      React Error Boundary...  ErrorBound  5 min ago  │
+│ [WARN]   edge_func     Rate limit approaching   sync-aws    10 min ago │
+│ [INFO]   frontend      User completed action    Dashboard   15 min ago │
+│ [CRIT]   webhook       Payment failed           stripe-wh   1 hour ago │
+├─────────────────────────────────────────────────────────────────────────┤
+│ < 1 2 3 ... 10 >                                                        │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Fase 9: Adicionar Tab em Settings
+
+**Arquivo modificado:** `src/pages/Settings.tsx`
+
+```typescript
+// Adicionar nova tab
+<TabsTrigger value="system-logs" className="gap-1">
+  <Terminal className="w-4 h-4" />
+  Logs do Sistema
+</TabsTrigger>
+
+// Conteúdo da tab
+<TabsContent value="system-logs">
+  <SystemLogsViewer />
+</TabsContent>
+```
+
+---
+
+### Resumo de Arquivos
+
+| Arquivo | Ação | Descrição |
+|---------|------|-----------|
+| `supabase/migrations/xxx_system_logs.sql` | Criar | Tabela + índices + RLS |
+| `supabase/functions/log-event/index.ts` | Criar | Edge Function para receber logs |
+| `src/lib/logger.ts` | Modificar | Adicionar persistência para erros |
+| `src/lib/global-error-handler.ts` | Criar | Handlers globais window.onerror |
+| `src/hooks/useErrorLogger.tsx` | Criar | Hook para logging em componentes |
+| `src/hooks/useSystemLogs.tsx` | Criar | Hook para consultar logs (admin) |
+| `src/components/common/ErrorBoundary.tsx` | Modificar | Enviar erros para backend |
+| `src/components/settings/SystemLogsViewer.tsx` | Criar | UI de visualização de logs |
+| `src/pages/Settings.tsx` | Modificar | Adicionar tab "Logs do Sistema" |
+| `src/main.tsx` | Modificar | Inicializar global error handlers |
+| `src/lib/query-keys.ts` | Modificar | Adicionar chaves para system-logs |
+
+---
+
+### Fluxo de Erro Completo
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│ 1. ERRO OCORRE                                                          │
+│    ├── React Component Error → ErrorBoundary.componentDidCatch()        │
+│    ├── JS Runtime Error → window.onerror                                │
+│    └── Promise Rejection → unhandledrejection                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│ 2. CAPTURA                                                              │
+│    ├── Log no console (desenvolvimento)                                 │
+│    └── Prepara payload: { level, source, message, stack_trace, ... }    │
+├─────────────────────────────────────────────────────────────────────────┤
+│ 3. ENVIO                                                                │
+│    └── supabase.functions.invoke('log-event', { body: payload })        │
+│        ├── Inclui auth token automaticamente                            │
+│        └── Edge Function extrai user_id e org_id                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│ 4. PERSISTÊNCIA                                                         │
+│    └── INSERT INTO system_logs                                          │
+│        └── Disponível para admins via RLS                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│ 5. VISUALIZAÇÃO                                                         │
+│    └── Admin acessa Settings → Logs do Sistema                          │
+│        ├── Filtra por level, source, data                               │
+│        ├── Busca por texto                                              │
+│        └── Exporta para análise                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -368,24 +530,35 @@ Adicionar uma seção em Settings ou Dashboard para visualizar jobs recentes:
 
 | Aspecto | Solução |
 |---------|---------|
-| **Concorrência** | `FOR UPDATE SKIP LOCKED` evita processamento duplicado |
-| **Idempotência** | Jobs devem ser idempotentes (re-executar não causa problemas) |
-| **Timeout** | Jobs com `started_at` > 15min sem `completed_at` = timeout → retry |
-| **Ordem** | Priority DESC, then created_at ASC (FIFO dentro da mesma prioridade) |
-| **Backoff** | 1min → 5min → 15min (exponencial) |
-| **Cleanup** | Jobs completed/failed > 30 dias podem ser arquivados/deletados |
-| **Rate Limit** | Processo max 5 jobs por execução para evitar timeout da Edge Function |
+| **Performance** | Logs são enviados assincronamente, não bloqueiam UI |
+| **Rate Limiting** | Edge Function pode implementar limite por IP/user |
+| **Retenção** | Considerar job periódico para limpar logs > 90 dias |
+| **Privacidade** | Não logar dados sensíveis (senhas, tokens) |
+| **RLS** | Apenas admins podem ver logs; logs são imutáveis |
+| **Batching** | useErrorLogger pode agrupar logs em batch para reduzir requests |
+| **Fallback** | Se Edge Function falhar, log apenas no console |
+
+---
+
+### Diferença entre Tabelas Existentes
+
+| Tabela | Propósito |
+|--------|-----------|
+| `audit_logs` | Ações de usuário (CRUD em recursos) |
+| `system_audit_logs` | Eventos de compliance/segurança |
+| `system_logs` (NOVA) | Erros técnicos e debugging |
 
 ---
 
 ### Ordem de Implementação
 
-1. Migration: Criar tabela `job_queue` com índices e RLS
-2. Migration: Criar funções `enqueue_job` e `calculate_next_retry`
-3. Edge Function: Criar `process-job-queue` com handlers
-4. Hook: Criar `useJobQueue` com criação e polling
-5. UI: Criar `JobStatusBadge` component
-6. Refatorar: Atualizar `SyncIntegrationButton` para usar fila
-7. Refatorar: Atualizar hooks de sync específicos
-8. UI: Criar `JobQueuePanel` para Settings
-
+1. Migration: Criar tabela `system_logs`
+2. Edge Function: Criar `log-event`
+3. Global Handlers: Criar `global-error-handler.ts`
+4. Atualizar `main.tsx` para inicializar handlers
+5. Atualizar `ErrorBoundary` para persistir erros
+6. Criar hook `useErrorLogger`
+7. Criar hook `useSystemLogs`
+8. Criar componente `SystemLogsViewer`
+9. Adicionar tab em Settings
+10. Atualizar `query-keys.ts`
