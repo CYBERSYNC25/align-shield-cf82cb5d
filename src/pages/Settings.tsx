@@ -23,6 +23,7 @@ import { SeedDatabaseCard } from '@/components/settings/SeedDatabaseCard';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import TrustCenterSettings from '@/components/settings/TrustCenterSettings';
 import SystemLogsViewer from '@/components/settings/SystemLogsViewer';
+import ApiKeysManagement from '@/components/settings/ApiKeysManagement';
 import {
   User,
   Shield,
@@ -98,6 +99,10 @@ const Settings = () => {
                     <TabsTrigger value="trustcenter" className="gap-1">
                       <Globe className="w-4 h-4" />
                       Trust Center
+                    </TabsTrigger>
+                    <TabsTrigger value="api-keys" className="gap-1">
+                      <Key className="w-4 h-4" />
+                      API Keys
                     </TabsTrigger>
                   </TabsList>
 
@@ -457,6 +462,11 @@ const Settings = () => {
                   {/* Trust Center Tab */}
                   <TabsContent value="trustcenter">
                     <TrustCenterSettings />
+                  </TabsContent>
+
+                  {/* API Keys Tab */}
+                  <TabsContent value="api-keys">
+                    <ApiKeysManagement />
                   </TabsContent>
                 </Tabs>
               </div>
