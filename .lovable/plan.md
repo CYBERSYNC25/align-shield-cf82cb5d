@@ -1,536 +1,311 @@
 
+# Plano: Fortalecimento da Segurança de Credenciais de Integrações
 
-# Plano de Implementação: Validação Rigorosa de Inputs
+## Análise do Estado Atual
 
-## Resumo Executivo
-
-Este plano implementa validação em 3 camadas (Frontend, Backend, Sanitização) para todos os pontos de entrada de dados do sistema APOC.
-
-## Diagnóstico Atual
-
-### ✅ O que já existe:
-- Schemas Zod centralizados em `src/lib/form-schemas.ts` e `src/lib/auth-schemas.ts`
-- Utilitários de sanitização em `src/lib/security/` (escapeHTML, escapeCSV, escapeSlackMarkdown)
-- Validação de upload de arquivos com tipos e tamanhos permitidos
-- Validação de assinaturas de webhooks inbound
+### ✅ O que já está implementado:
+| Item | Status | Detalhes |
+|------|--------|----------|
+| AES-256-GCM | ✅ | Implementado em `crypto-utils.ts` |
+| IV único por credencial | ✅ | 12 bytes aleatórios gerados a cada criptografia |
+| IV armazenado com dados | ✅ | Formato `iv:ciphertext` (hex-encoded) |
+| TOKEN_ENCRYPTION_KEY | ✅ | Armazenado em Supabase Secrets |
+| RLS por organização | ✅ | `org_id = get_user_org_id(auth.uid())` |
+| OAuth Token Refresh | ✅ | Implementado para Google Workspace |
 
 ### ⚠️ Gaps identificados:
-1. **Formulários com validação manual** (CreateRiskModal, CreateAuditModal, CreateControlModal) não usam Zod
-2. **Edge Functions** têm validação básica de campos obrigatórios, mas faltam schemas tipados
-3. **Nomes de arquivos** não são sanitizados contra path traversal (`../../../`)
-4. **URLs de webhooks** outbound não validam contra localhost/IPs internos
-5. **Falta hook `useSecureForm`** unificado
+| Item | Severidade | Descrição |
+|------|------------|-----------|
+| Credenciais retornadas ao frontend | **High** | `save-integration-credentials` pode retornar dados descriptografados |
+| Sem Key Rotation | **Medium** | Mesma chave usada indefinidamente |
+| Sem Supabase Vault | **Medium** | Chave em variável de ambiente, não no Vault |
+| Sem logging de acessos | **Medium** | Não há audit trail de quando credenciais são usadas |
+| Sem revogação automática | **Low** | Credenciais inativas não são limpas |
+| Sem detecção de expiração | **Low** | Usuários não são alertados sobre tokens expirados |
+| Salt inconsistente | **Low** | `sync-integration-data` usa salt diferente do `crypto-utils.ts` |
 
 ---
 
-## Fase 1: Hook `useSecureForm` (Novo)
+## Plano de Implementação
 
-Criar um hook que encapsula react-hook-form + Zod + sanitização automática.
+### Fase 1: Correções Críticas
 
-### Arquivo: `src/hooks/useSecureForm.ts`
+#### 1.1 Garantir que credenciais NUNCA retornem ao frontend
+
+Atualizar `save-integration-credentials/index.ts` para redatar credenciais na resposta:
 
 ```typescript
-import { useForm, UseFormReturn, FieldValues, DefaultValues, Path, PathValue } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import DOMPurify from 'dompurify';
-import { useCallback } from 'react';
+// Resposta segura - nunca retorna credenciais
+return new Response(JSON.stringify({
+  success: true,
+  message: 'Integration connected successfully',
+  integration: {
+    id: integration.id,
+    provider: integration.provider,
+    name: integration.name,
+    status: integration.status,
+    // NUNCA incluir: configuration, credentials, tokens
+    connected_at: integration.created_at,
+  }
+}), { headers: corsHeaders });
+```
 
-interface UseSecureFormOptions<T extends FieldValues> {
-  schema: z.ZodSchema<T>;
-  defaultValues?: DefaultValues<T>;
-  sanitize?: boolean; // Auto-sanitize string fields
-  onSubmit: (data: T) => Promise<void> | void;
-}
+#### 1.2 Unificar salt de derivação de chave
 
-interface UseSecureFormReturn<T extends FieldValues> extends UseFormReturn<T> {
-  handleSecureSubmit: (e?: React.FormEvent) => Promise<void>;
-  setSecureValue: <K extends Path<T>>(name: K, value: PathValue<T, K>) => void;
-}
+O `sync-integration-data` usa `lovable-integration-salt` mas `crypto-utils.ts` usa `apoc-token-encryption-salt-v1`. Isso pode causar falhas de descriptografia.
 
-export function useSecureForm<T extends FieldValues>({
-  schema,
-  defaultValues,
-  sanitize = true,
-  onSubmit,
-}: UseSecureFormOptions<T>): UseSecureFormReturn<T> {
-  const form = useForm<T>({
-    resolver: zodResolver(schema),
-    defaultValues,
-    mode: 'onBlur', // Validate on blur for better UX
-  });
-
-  // Sanitize string values
-  const sanitizeValue = useCallback((value: unknown): unknown => {
-    if (!sanitize) return value;
-    
-    if (typeof value === 'string') {
-      // Trim whitespace
-      let sanitized = value.trim();
-      // Remove null bytes
-      sanitized = sanitized.replace(/\0/g, '');
-      // Sanitize HTML (prevents XSS)
-      sanitized = DOMPurify.sanitize(sanitized, { ALLOWED_TAGS: [] });
-      return sanitized;
-    }
-    
-    if (Array.isArray(value)) {
-      return value.map(sanitizeValue);
-    }
-    
-    if (value && typeof value === 'object') {
-      return Object.fromEntries(
-        Object.entries(value).map(([k, v]) => [k, sanitizeValue(v)])
-      );
-    }
-    
-    return value;
-  }, [sanitize]);
-
-  // Secure setValue that sanitizes on input
-  const setSecureValue = useCallback(<K extends Path<T>>(name: K, value: PathValue<T, K>) => {
-    const sanitized = sanitizeValue(value) as PathValue<T, K>;
-    form.setValue(name, sanitized, { shouldValidate: true });
-  }, [form, sanitizeValue]);
-
-  // Secure submit handler
-  const handleSecureSubmit = useCallback(async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    
-    await form.handleSubmit(async (data) => {
-      // Double-sanitize on submit
-      const sanitizedData = sanitizeValue(data) as T;
-      
-      // Re-validate sanitized data
-      const result = schema.safeParse(sanitizedData);
-      if (!result.success) {
-        console.error('Post-sanitization validation failed:', result.error);
-        return;
-      }
-      
-      await onSubmit(result.data);
-    })(e);
-  }, [form, sanitizeValue, schema, onSubmit]);
-
-  return {
-    ...form,
-    handleSecureSubmit,
-    setSecureValue,
-  };
-}
+```typescript
+// supabase/functions/_shared/crypto-utils.ts
+// Salt ÚNICO para todo o sistema
+const ENCRYPTION_SALT = 'apoc-token-encryption-salt-v1';
 ```
 
 ---
 
-## Fase 2: Schemas de Validação Compartilhados
+### Fase 2: Logging de Acesso a Credenciais
 
-### Arquivo: `src/lib/validation/index.ts` (Novo)
+#### 2.1 Criar função de logging centralizada
 
-Centralizar schemas reutilizáveis para frontend e backend.
+Novo arquivo: `supabase/functions/_shared/credential-access-logger.ts`
 
 ```typescript
-import { z } from 'zod';
+interface CredentialAccessLog {
+  user_id: string;
+  org_id?: string;
+  integration_name: string;
+  action: 'decrypt' | 'encrypt' | 'refresh' | 'revoke';
+  ip_address?: string;
+  user_agent?: string;
+  success: boolean;
+  error_message?: string;
+}
 
-// ============= Primitivos Seguros =============
+export async function logCredentialAccess(
+  supabase: any,
+  log: CredentialAccessLog
+): Promise<void> {
+  await supabase.from('system_audit_logs').insert({
+    user_id: log.user_id,
+    action_type: 'credential_access',
+    action_category: 'security',
+    resource_type: 'integration_credential',
+    resource_id: log.integration_name,
+    description: `${log.action} credential for ${log.integration_name}`,
+    metadata: {
+      action: log.action,
+      success: log.success,
+      error: log.error_message,
+    },
+    ip_address: log.ip_address,
+    created_at: new Date().toISOString(),
+  });
+}
+```
 
-export const safeStringSchema = (opts?: { min?: number; max?: number }) =>
-  z.string()
-    .trim()
-    .min(opts?.min ?? 1, 'Campo obrigatório')
-    .max(opts?.max ?? 1000, `Máximo ${opts?.max ?? 1000} caracteres`)
-    .refine((v) => !v.includes('\0'), 'Caracteres inválidos');
+#### 2.2 Integrar logging em todas as funções que acessam credenciais
 
-export const emailSchema = z
-  .string()
-  .trim()
-  .email('Email inválido')
-  .max(255)
-  .toLowerCase();
+Funções a atualizar:
+- `sync-integration-data/index.ts`
+- `google-workspace-sync/index.ts`
+- `azure-sync-resources/index.ts`
+- `aws-sync-resources/index.ts`
+- `okta-integration/index.ts`
 
-export const urlSchema = z
-  .string()
-  .trim()
-  .url('URL inválida')
-  .max(2048)
-  .refine(
-    (url) => url.startsWith('https://'),
-    'URL deve usar HTTPS'
-  );
+---
 
-// URL de webhook (não permite localhost/IPs internos)
-export const webhookUrlSchema = urlSchema.refine(
-  (url) => {
-    const parsed = new URL(url);
-    const hostname = parsed.hostname.toLowerCase();
-    
-    // Bloquear localhost e variantes
-    if (hostname === 'localhost' || hostname === '127.0.0.1') return false;
-    
-    // Bloquear IPs privados
-    const ipv4Private = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/;
-    if (ipv4Private.test(hostname)) return false;
-    
-    // Bloquear ::1, 0.0.0.0
-    if (['::1', '0.0.0.0', ''].includes(hostname)) return false;
-    
-    return true;
-  },
-  'URL não pode apontar para localhost ou IPs internos'
+### Fase 3: Key Rotation
+
+#### 3.1 Criar tabela de histórico de chaves
+
+```sql
+CREATE TABLE public.encryption_key_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  key_version INT NOT NULL UNIQUE,
+  key_hash TEXT NOT NULL, -- SHA-256 do hash da chave (para verificação, não a chave)
+  algorithm TEXT NOT NULL DEFAULT 'AES-256-GCM',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  rotated_at TIMESTAMPTZ,
+  deprecated_at TIMESTAMPTZ,
+  is_active BOOLEAN NOT NULL DEFAULT false
 );
 
-// Nome de arquivo seguro
-export const safeFilenameSchema = z
-  .string()
-  .trim()
-  .max(255)
-  .refine(
-    (name) => !/[\/\\:\*\?"<>\|]/.test(name),
-    'Nome contém caracteres inválidos'
-  )
-  .refine(
-    (name) => !name.includes('..'),
-    'Nome não pode conter ..'
-  )
-  .refine(
-    (name) => !/^\./.test(name),
-    'Nome não pode começar com ponto'
+-- RLS: apenas service_role pode acessar
+ALTER TABLE public.encryption_key_history ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Only service role"
+  ON public.encryption_key_history
+  FOR ALL
+  USING (auth.role() = 'service_role');
+```
+
+#### 3.2 Modificar formato de criptografia para incluir versão
+
+```typescript
+// Novo formato: version:iv:ciphertext
+// Ex: v1:a1b2c3...:d4e5f6...
+
+export async function encryptTokenWithVersion(
+  plainText: string, 
+  encryptionKey: string,
+  keyVersion: number = 1
+): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(encryptionKey);
+  
+  const encrypted = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    new TextEncoder().encode(plainText)
   );
-
-// CPF (11 dígitos)
-export const cpfSchema = z
-  .string()
-  .transform((v) => v.replace(/\D/g, ''))
-  .refine((v) => v.length === 11, 'CPF deve ter 11 dígitos')
-  .refine(validateCPF, 'CPF inválido');
-
-// CNPJ (14 dígitos)  
-export const cnpjSchema = z
-  .string()
-  .transform((v) => v.replace(/\D/g, ''))
-  .refine((v) => v.length === 14, 'CNPJ deve ter 14 dígitos')
-  .refine(validateCNPJ, 'CNPJ inválido');
-
-function validateCPF(cpf: string): boolean {
-  if (/^(\d)\1{10}$/.test(cpf)) return false;
-  let sum = 0, remainder;
-  for (let i = 1; i <= 9; i++) sum += parseInt(cpf[i - 1]) * (11 - i);
-  remainder = (sum * 10) % 11;
-  if (remainder === 10 || remainder === 11) remainder = 0;
-  if (remainder !== parseInt(cpf[9])) return false;
-  sum = 0;
-  for (let i = 1; i <= 10; i++) sum += parseInt(cpf[i - 1]) * (12 - i);
-  remainder = (sum * 10) % 11;
-  if (remainder === 10 || remainder === 11) remainder = 0;
-  return remainder === parseInt(cpf[10]);
+  
+  return `v${keyVersion}:${bytesToHex(iv)}:${bytesToHex(new Uint8Array(encrypted))}`;
 }
 
-function validateCNPJ(cnpj: string): boolean {
-  if (/^(\d)\1{13}$/.test(cnpj)) return false;
-  let size = cnpj.length - 2, numbers = cnpj.substring(0, size);
-  const digits = cnpj.substring(size);
-  let sum = 0, pos = size - 7;
-  for (let i = size; i >= 1; i--) {
-    sum += parseInt(numbers.charAt(size - i)) * pos--;
-    if (pos < 2) pos = 9;
+export async function decryptTokenWithVersion(
+  encryptedText: string,
+  getKeyByVersion: (version: number) => Promise<string>
+): Promise<string> {
+  const parts = encryptedText.split(':');
+  
+  let version = 1;
+  let ivHex: string, ciphertextHex: string;
+  
+  if (parts[0].startsWith('v')) {
+    version = parseInt(parts[0].substring(1));
+    ivHex = parts[1];
+    ciphertextHex = parts[2];
+  } else {
+    // Legacy format (sem versão)
+    ivHex = parts[0];
+    ciphertextHex = parts[1];
   }
-  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  if (result !== parseInt(digits.charAt(0))) return false;
-  size++; numbers = cnpj.substring(0, size);
-  sum = 0; pos = size - 7;
-  for (let i = size; i >= 1; i--) {
-    sum += parseInt(numbers.charAt(size - i)) * pos--;
-    if (pos < 2) pos = 9;
-  }
-  result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
-  return result === parseInt(digits.charAt(1));
+  
+  const encryptionKey = await getKeyByVersion(version);
+  // ... resto da descriptografia
 }
-
-// ============= Schemas de Formulários =============
-
-export const createRiskSchema = z.object({
-  title: safeStringSchema({ min: 3, max: 200 }),
-  description: safeStringSchema({ max: 2000 }).optional().or(z.literal('')),
-  category: z.enum(['operacional', 'financeiro', 'estrategico', 'tecnologico', 'regulatorio', 'reputacional']),
-  probability: z.enum(['low', 'medium', 'high']),
-  impact: z.enum(['low', 'medium', 'high']),
-  owner: safeStringSchema({ min: 3, max: 100 }),
-  owner_role: safeStringSchema({ max: 100 }).optional().or(z.literal('')),
-  status: z.enum(['active', 'mitigated', 'accepted']),
-  next_review: z.string().optional(),
-});
-
-export const createAuditSchema = z.object({
-  name: safeStringSchema({ min: 3, max: 200 }),
-  framework: z.string().min(1, 'Framework é obrigatório'),
-  auditor: safeStringSchema({ max: 100 }).optional().or(z.literal('')),
-  start_date: z.string().optional(),
-  end_date: z.string().optional(),
-  status: z.enum(['planning', 'in_progress', 'review', 'completed']),
-}).refine(
-  (data) => {
-    if (data.start_date && data.end_date) {
-      return new Date(data.end_date) >= new Date(data.start_date);
-    }
-    return true;
-  },
-  { message: 'Data de término deve ser após data de início', path: ['end_date'] }
-);
-
-// Adicionar mais schemas conforme necessário...
 ```
+
+#### 3.3 Edge Function para rotação de chaves
+
+Nova função: `supabase/functions/rotate-encryption-key/index.ts`
+
+- Gera nova chave
+- Re-criptografa todas as credenciais com a nova versão
+- Marca chave antiga como deprecated (mas mantém para legacy)
+- Agenda limpeza de chaves antigas após 180 dias
 
 ---
 
-## Fase 3: Validação Backend (Edge Functions)
+### Fase 4: Detecção e Alertas de Tokens Expirados
 
-### Arquivo: `supabase/functions/_shared/validation.ts` (Novo)
+#### 4.1 Função schedulada para verificar tokens
+
+Nova função: `supabase/functions/check-token-expiration/index.ts`
 
 ```typescript
-/**
- * Backend Validation Utilities
- * 
- * CRITICAL: Never trust frontend data. Validate EVERYTHING.
- */
-
-import { z } from 'npm:zod@3.23.8';
-
-// Re-export common schemas for Deno
-export { z };
-
-// ============= Safe Primitives =============
-
-export const safeString = (opts?: { min?: number; max?: number }) =>
-  z.string()
-    .trim()
-    .min(opts?.min ?? 1)
-    .max(opts?.max ?? 10000)
-    .transform((v) => v.replace(/\0/g, '')); // Remove null bytes
-
-export const safeEmail = z.string().trim().email().max(255).toLowerCase();
-
-export const safeUrl = z.string().trim().url().max(2048);
-
-// Webhook URL (blocks localhost/internal IPs)
-export const webhookUrl = safeUrl.refine((url) => {
-  try {
-    const parsed = new URL(url);
-    const hostname = parsed.hostname.toLowerCase();
-    
-    if (hostname === 'localhost') return false;
-    if (hostname === '127.0.0.1') return false;
-    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(hostname)) return false;
-    if (['::1', '0.0.0.0'].includes(hostname)) return false;
-    if (hostname.endsWith('.local')) return false;
-    
-    return true;
-  } catch {
-    return false;
-  }
-}, 'URL cannot point to localhost or internal IPs');
-
-// Safe filename (no path traversal)
-export const safeFilename = z.string()
-  .trim()
-  .max(255)
-  .refine((name) => !name.includes('..'), 'Path traversal not allowed')
-  .refine((name) => !/[\/\\:\*\?"<>\|]/.test(name), 'Invalid characters')
-  .transform((name) => name.replace(/^\.+/, '')); // Remove leading dots
-
-// ============= Response Helpers =============
-
-export function validationError(
-  error: z.ZodError,
-  corsHeaders: Record<string, string>
-): Response {
-  const formatted = error.errors.map((e) => ({
-    field: e.path.join('.'),
-    message: e.message,
-    code: e.code,
-  }));
-
-  return new Response(
-    JSON.stringify({
-      error: 'Validation failed',
-      code: 'VALIDATION_ERROR',
-      details: formatted,
-    }),
-    {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    }
-  );
-}
-
-export function parseAndValidate<T>(
-  schema: z.ZodSchema<T>,
-  data: unknown,
-  corsHeaders: Record<string, string>
-): { success: true; data: T } | { success: false; response: Response } {
-  const result = schema.safeParse(data);
+// Executar diariamente via cron
+Deno.serve(async (req) => {
+  const supabase = createClient(/* service role */);
   
-  if (!result.success) {
-    return { success: false, response: validationError(result.error, corsHeaders) };
+  // Buscar tokens expirando em 7 dias
+  const { data: expiringTokens } = await supabase
+    .from('integration_oauth_tokens')
+    .select('user_id, integration_name, expires_at')
+    .lt('expires_at', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
+    .gt('expires_at', new Date().toISOString());
+  
+  // Enviar notificação para cada usuário
+  for (const token of expiringTokens) {
+    await supabase.rpc('create_notification', {
+      p_user_id: token.user_id,
+      p_title: 'Token expirando',
+      p_message: `Seu token ${token.integration_name} expira em breve.`,
+      p_type: 'warning',
+      p_category: 'integration',
+    });
   }
   
-  return { success: true, data: result.data };
-}
-```
-
----
-
-## Fase 4: Atualizar Edge Functions
-
-### Exemplo: `supabase/functions/ingest-metrics/index.ts`
-
-```typescript
-import { z } from '../_shared/validation.ts';
-import { parseAndValidate, safeString } from '../_shared/validation.ts';
-
-const metricsSchema = z.object({
-  agent_token: safeString({ min: 1, max: 255 }),
-  router_name: safeString({ min: 1, max: 255 }),
-  cpu: z.number().min(0).max(100),
-  version: safeString({ min: 1, max: 50 }),
-});
-
-// Na função:
-const parsed = parseAndValidate(metricsSchema, await req.json(), corsHeaders);
-if (!parsed.success) return parsed.response;
-
-const { agent_token, router_name, cpu, version } = parsed.data;
-// Continuar com dados validados e tipados...
-```
-
-### Atualizar: `supabase/functions/public-api/index.ts`
-
-Adicionar validação de query params:
-
-```typescript
-const querySchema = z.object({
-  severity: z.enum(['critical', 'high', 'medium', 'low']).optional(),
-  resolved: z.enum(['true', 'false']).optional(),
-  integration: safeString({ max: 100 }).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-  offset: z.coerce.number().int().min(0).default(0),
+  // Marcar tokens já expirados
+  const { data: expiredTokens } = await supabase
+    .from('integration_oauth_tokens')
+    .select('id, user_id, integration_name')
+    .lt('expires_at', new Date().toISOString());
+  
+  // Atualizar status da integração para 'expired'
+  for (const token of expiredTokens) {
+    await supabase
+      .from('integration_status')
+      .upsert({
+        user_id: token.user_id,
+        integration_name: token.integration_name,
+        status: 'expired',
+        health_score: 0,
+      });
+  }
 });
 ```
 
 ---
 
-## Fase 5: Sanitização de Nomes de Arquivos
+### Fase 5: Revogação Automática de Credenciais Inativas
 
-### Atualizar: `src/hooks/useFileUpload.tsx`
+#### 5.1 Adicionar campo last_used_at
 
-```typescript
-// Adicionar função de sanitização
-function sanitizeFilename(filename: string): string {
-  // Remove path separators
-  let safe = filename.replace(/[\/\\]/g, '_');
-  // Remove path traversal attempts
-  safe = safe.replace(/\.\./g, '_');
-  // Remove null bytes
-  safe = safe.replace(/\0/g, '');
-  // Remove special chars that could cause issues
-  safe = safe.replace(/[:\*\?"<>\|]/g, '_');
-  // Remove leading dots/spaces
-  safe = safe.replace(/^[\.\s]+/, '');
-  // Limit length
-  safe = safe.slice(0, 200);
-  // Ensure non-empty
-  if (!safe) safe = 'unnamed_file';
-  return safe;
-}
+```sql
+ALTER TABLE public.integrations 
+ADD COLUMN last_used_at TIMESTAMPTZ;
 
-// Na função uploadFile:
-const sanitizedName = sanitizeFilename(file.name);
-const fileId = `${Date.now()}-${sanitizedName}`;
+ALTER TABLE public.integration_oauth_tokens 
+ADD COLUMN last_used_at TIMESTAMPTZ;
 ```
 
----
-
-## Fase 6: Refatorar Formulários Existentes
-
-### Atualizar: `src/components/risk/CreateRiskModal.tsx`
-
-Migrar de estado manual para `useSecureForm`:
+#### 5.2 Atualizar last_used_at em cada uso
 
 ```typescript
-import { useSecureForm } from '@/hooks/useSecureForm';
-import { createRiskSchema } from '@/lib/validation';
+// Em sync-integration-data, google-workspace-sync, etc.
+await supabaseAdmin
+  .from('integrations')
+  .update({ last_used_at: new Date().toISOString() })
+  .eq('id', integrationId);
+```
 
-const CreateRiskModal = ({ onSuccess }: CreateRiskModalProps) => {
-  const { createRisk } = useRisks();
-  
-  const form = useSecureForm({
-    schema: createRiskSchema,
-    defaultValues: {
-      title: '',
-      description: '',
-      category: 'operacional',
-      probability: 'medium',
-      impact: 'medium',
-      owner: '',
-      status: 'active',
-    },
-    onSubmit: async (data) => {
-      const riskData = {
-        ...data,
-        riskScore: calculateRiskScore(data.probability, data.impact),
-        lastReview: new Date().toISOString().split('T')[0],
-      };
-      await createRisk(riskData);
-      onSuccess?.();
-    },
+#### 5.3 Job de revogação automática
+
+```typescript
+// check-token-expiration/index.ts - adicionar
+const { data: staleIntegrations } = await supabase
+  .from('integrations')
+  .select('id, user_id, provider, name')
+  .lt('last_used_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+  .eq('status', 'connected');
+
+for (const integration of staleIntegrations) {
+  // Notificar usuário
+  await supabase.rpc('create_notification', {
+    p_user_id: integration.user_id,
+    p_title: 'Integração inativa',
+    p_message: `${integration.name} não é usada há 90 dias e será revogada em 14 dias.`,
+    p_type: 'warning',
+    p_category: 'integration',
   });
-
-  return (
-    <Form {...form}>
-      {/* Usar FormField com form.control */}
-    </Form>
-  );
-};
+  
+  // Marcar para revogação
+  await supabase
+    .from('integrations')
+    .update({ 
+      status: 'pending_revocation',
+      metadata: { revocation_scheduled_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() }
+    })
+    .eq('id', integration.id);
+}
 ```
-
-### Padrão similar para:
-- `CreateAuditModal.tsx`
-- `CreateControlModal.tsx`
-- `CreatePlaybookModal.tsx`
-- `CreateIncidentModal.tsx`
-- E outros modais de criação...
 
 ---
 
-## Fase 7: Validação de URLs de Webhooks Outbound
+### Fase 6: Supabase Vault (Nota)
 
-### Atualizar: `src/components/notifications/OutboundWebhookForm.tsx`
+O Supabase Vault é uma feature enterprise que armazena secrets diretamente no banco de dados com criptografia. A implementação atual com `Deno.env.get('TOKEN_ENCRYPTION_KEY')` é segura para o tier atual, mas pode ser migrada para Vault quando disponível.
 
-```typescript
-import { webhookUrlSchema } from '@/lib/validation';
-
-// No schema do formulário:
-const webhookFormSchema = z.object({
-  name: safeStringSchema({ min: 3, max: 100 }),
-  url: webhookUrlSchema, // Bloqueia localhost/IPs internos
-  secret: safeStringSchema({ min: 16, max: 256 }).optional(),
-  events: z.array(z.string()).min(1, 'Selecione pelo menos um evento'),
-});
-```
-
-### Atualizar: `supabase/functions/send-outbound-webhook/index.ts`
-
-```typescript
-import { webhookUrl } from '../_shared/validation.ts';
-
-// Validar URL antes de enviar
-const urlResult = webhookUrl.safeParse(webhookConfig.url);
-if (!urlResult.success) {
-  logger.error('Invalid webhook URL blocked', { url: webhookConfig.url });
-  return new Response(
-    JSON.stringify({ error: 'Invalid webhook URL' }),
-    { status: 400, headers: corsHeaders }
-  );
-}
-```
+**Alternativa atual**: A chave já está em Supabase Secrets, que é criptografada em repouso e só acessível por Edge Functions. Isso atende o requisito.
 
 ---
 
@@ -538,87 +313,70 @@ if (!urlResult.success) {
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/hooks/useSecureForm.ts` | **NOVO** | Hook unificado com validação + sanitização |
-| `src/lib/validation/index.ts` | **NOVO** | Schemas centralizados para frontend |
-| `supabase/functions/_shared/validation.ts` | **NOVO** | Schemas e helpers para backend |
-| `src/hooks/useFileUpload.tsx` | Modificar | Adicionar sanitização de filenames |
-| `src/components/risk/CreateRiskModal.tsx` | Modificar | Migrar para useSecureForm |
-| `src/components/audit/CreateAuditModal.tsx` | Modificar | Migrar para useSecureForm |
-| `src/components/controls/CreateControlModal.tsx` | Modificar | Migrar para useSecureForm |
-| `src/components/incidents/CreatePlaybookModal.tsx` | Modificar | Migrar para useSecureForm |
-| `supabase/functions/ingest-metrics/index.ts` | Modificar | Adicionar schema Zod |
-| `supabase/functions/public-api/index.ts` | Modificar | Validar query params |
-| `supabase/functions/send-outbound-webhook/index.ts` | Modificar | Bloquear URLs internas |
-| `supabase/functions/log-event/index.ts` | Modificar | Adicionar schema Zod |
-| `supabase/functions/save-integration-credentials/index.ts` | Modificar | Adicionar validação tipada |
+| `supabase/functions/_shared/credential-access-logger.ts` | **NOVO** | Logging centralizado de acessos |
+| `supabase/functions/_shared/crypto-utils.ts` | Modificar | Adicionar versionamento de chaves |
+| `supabase/functions/save-integration-credentials/index.ts` | Modificar | Remover credenciais da resposta |
+| `supabase/functions/sync-integration-data/index.ts` | Modificar | Unificar salt, adicionar logging |
+| `supabase/functions/check-token-expiration/index.ts` | **NOVO** | Verificar tokens expirados |
+| `supabase/functions/google-workspace-sync/index.ts` | Modificar | Adicionar logging |
+| **Database Migration** | Criar | Tabela `encryption_key_history`, colunas `last_used_at` |
 
 ---
 
 ## Benefícios da Implementação
 
-1. **Type-Safety End-to-End**: Mesmo schema valida frontend e backend
-2. **Prevenção de XSS**: DOMPurify integrado no hook
-3. **Prevenção de Path Traversal**: Sanitização de nomes de arquivo
-4. **Prevenção de SSRF**: URLs de webhook não podem apontar para localhost
-5. **Melhor UX**: Validação no onBlur mostra erros em tempo real
-6. **Código DRY**: Schemas centralizados, reutilizáveis
-7. **Mensagens de Erro Claras**: Retorno 400 com detalhes específicos
+1. **Credenciais nunca expostas**: Frontend nunca recebe tokens descriptografados
+2. **Audit trail completo**: Cada acesso a credenciais é logado com metadados
+3. **Key rotation**: Capacidade de trocar chaves sem downtime
+4. **Alertas proativos**: Usuários notificados antes de tokens expirarem
+5. **Higiene automática**: Credenciais inativas revogadas automaticamente
+6. **Conformidade**: Requisitos de SOC2, ISO27001, LGPD
 
 ---
 
 ## Seção Técnica: Detalhes de Implementação
 
-### Padrão de Validação Backend
+### Formato de Criptografia Versionado
 
-```typescript
-// Padrão recomendado para Edge Functions
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+```text
+Formato Legacy: iv:ciphertext (24 chars hex : N chars hex)
+Formato Novo:   vN:iv:ciphertext (version : 24 chars hex : N chars hex)
 
-  try {
-    const body = await req.json();
-    
-    // 1. Validar e tipar
-    const parsed = parseAndValidate(mySchema, body, corsHeaders);
-    if (!parsed.success) return parsed.response;
-    
-    // 2. Usar dados tipados
-    const { field1, field2 } = parsed.data;
-    
-    // 3. Lógica de negócio...
-    
-  } catch (error) {
-    // 4. JSON parse errors, etc
-    return new Response(
-      JSON.stringify({ error: 'Invalid request body' }),
-      { status: 400, headers: corsHeaders }
-    );
-  }
-});
+Exemplo:
+- Legacy: a1b2c3d4e5f6g7h8i9j0k1l2:m3n4o5p6q7r8...
+- v1:    v1:a1b2c3d4e5f6g7h8i9j0k1l2:m3n4o5p6q7r8...
+- v2:    v2:b2c3d4e5f6g7h8i9j0k1l2m3:n4o5p6q7r8s9...
 ```
 
-### Integração com Form Components
+### Fluxo de Rotação de Chaves
 
-```tsx
-// Componente com useSecureForm
-export function MyForm() {
-  const { register, handleSecureSubmit, formState: { errors } } = useSecureForm({
-    schema: mySchema,
-    onSubmit: async (data) => {
-      // data já está validado e sanitizado
-      await api.create(data);
-    },
-  });
+```text
+1. Admin inicia rotação
+2. Nova chave gerada e armazenada como v(N+1)
+3. Job em background re-criptografa cada credencial:
+   - Descriptografa com chave v(N)
+   - Criptografa com chave v(N+1)
+   - Atualiza registro no banco
+4. Após 100% migradas, marca v(N) como deprecated
+5. Após 180 dias, remove v(N) do sistema
+```
 
-  return (
-    <form onSubmit={handleSecureSubmit}>
-      <Input {...register('name')} />
-      {errors.name && <Error>{errors.name.message}</Error>}
-      <Button type="submit">Salvar</Button>
-    </form>
-  );
+### Estrutura de Logging
+
+```json
+{
+  "action_type": "credential_access",
+  "action_category": "security",
+  "resource_type": "integration_credential",
+  "resource_id": "github",
+  "description": "decrypt credential for github",
+  "metadata": {
+    "action": "decrypt",
+    "success": true,
+    "key_version": 1,
+    "function": "sync-integration-data"
+  },
+  "ip_address": "203.0.113.45",
+  "user_agent": "Supabase Edge Runtime"
 }
 ```
-
