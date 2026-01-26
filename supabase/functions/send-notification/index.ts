@@ -13,6 +13,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Escapes Slack mrkdwn special characters to prevent formatting issues.
+ * Prevents XSS-like attacks through Slack markdown injection.
+ */
+function escapeSlackMarkdown(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  
+  return text
+    .replace(/&/g, '&amp;')  // Must be first
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\*/g, '\\*')   // Bold
+    .replace(/_/g, '\\_')    // Italic
+    .replace(/~/g, '\\~')    // Strikethrough
+    .replace(/`/g, '\\`');   // Code
+}
+
+/**
+ * Truncates text to a maximum length to prevent excessively long payloads.
+ */
+function truncateText(text: string, maxLength = 500): string {
+  if (!text || typeof text !== 'string') return '';
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength - 3) + '...';
+}
+
 interface NotificationPayload {
   org_id: string;
   user_ids?: string[];
@@ -130,14 +156,18 @@ const handler = async (req: Request): Promise<Response> => {
     // Send Slack notification
     if (settings?.slack_enabled && settings?.slack_webhook_url && channelConfig.slack) {
       try {
+        // Security: Sanitize all user-provided text before sending to Slack
+        const sanitizedTitle = escapeSlackMarkdown(truncateText(payload.title, 200));
+        const sanitizedMessage = escapeSlackMarkdown(truncateText(payload.message, 1000));
+        
         const slackPayload = {
-          text: `*${payload.title}*\n${payload.message}`,
+          text: `*${sanitizedTitle}*\n${sanitizedMessage}`,
           attachments: [{
             color: payload.priority === 'high' ? '#dc2626' : 
                    payload.priority === 'normal' ? '#f59e0b' : '#3b82f6',
-            fields: Object.entries(payload.data || {}).map(([key, value]) => ({
-              title: key,
-              value: String(value),
+            fields: Object.entries(payload.data || {}).slice(0, 10).map(([key, value]) => ({
+              title: escapeSlackMarkdown(truncateText(key, 50)),
+              value: escapeSlackMarkdown(truncateText(String(value), 200)),
               short: true,
             })),
           }],
