@@ -3235,6 +3235,100 @@ export type Database = {
       }
     }
     Views: {
+      integration_oauth_tokens_safe: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string | null
+          integration_name: string | null
+          last_used_at: string | null
+          org_id: string | null
+          scope: string | null
+          token_type: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          integration_name?: string | null
+          last_used_at?: string | null
+          org_id?: string | null
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string | null
+          integration_name?: string | null
+          last_used_at?: string | null
+          org_id?: string | null
+          scope?: string | null
+          token_type?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integration_oauth_tokens_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrations_safe: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          last_sync_at: string | null
+          last_used_at: string | null
+          name: string | null
+          org_id: string | null
+          provider: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          last_sync_at?: string | null
+          last_used_at?: string | null
+          name?: string | null
+          org_id?: string | null
+          provider?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          last_sync_at?: string | null
+          last_used_at?: string | null
+          name?: string | null
+          org_id?: string | null
+          provider?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trust_center_public_data: {
         Row: {
           company_slug: string | null
@@ -3508,6 +3602,14 @@ export type Database = {
           p_value: Json
         }
         Returns: undefined
+      }
+      test_rls_bypass: {
+        Args: { test_org_id: string }
+        Returns: {
+          rows_visible: number
+          status: string
+          table_name: string
+        }[]
       }
       validate_api_key: {
         Args: { p_key_hash: string }

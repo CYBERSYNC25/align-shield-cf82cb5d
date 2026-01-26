@@ -23,6 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useIntegrations } from '@/hooks/useIntegrations';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ConnectIntegrationModalProps {
   isOpen: boolean;
@@ -35,6 +36,7 @@ interface ConnectIntegrationModalProps {
     evidences: number;
     setupTime: string;
     category?: string;
+    provider?: string;
   } | null;
 }
 
@@ -46,7 +48,7 @@ const ConnectIntegrationModal = ({ isOpen, onClose, integration }: ConnectIntegr
     endpoint: ''
   });
   const { toast } = useToast();
-  const { connectIntegration } = useIntegrations();
+  const { refreshIntegrations } = useIntegrations();
   const { user } = useAuth();
 
   // Early return if integration is null
@@ -64,31 +66,50 @@ const ConnectIntegrationModal = ({ isOpen, onClose, integration }: ConnectIntegr
       return;
     }
 
+    if (!user) {
+      toast({
+        title: 'Não autenticado',
+        description: 'Você precisa estar logado para conectar integrações.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     setStep('connecting');
     
-    // Simular validação de credenciais
-    setTimeout(() => {
-      try {
-        // Conectar a integração
-        const userName = user?.email || 'Usuário';
-        connectIntegration(integration!, credentials, userName);
-        
-        setStep('success');
-        
-        setTimeout(() => {
-          onClose();
-          setStep('config');
-          setCredentials({ apiKey: '', apiSecret: '', endpoint: '' });
-        }, 2000);
-      } catch (error) {
-        toast({
-          title: 'Erro ao conectar',
-          description: 'Não foi possível conectar a integração. Verifique as credenciais.',
-          variant: 'destructive'
-        });
+    try {
+      // Chamar edge function para salvar credenciais de forma segura
+      const { data, error } = await supabase.functions.invoke('save-integration-credentials', {
+        body: {
+          provider: integration.provider || integration.name.toLowerCase().replace(/\s+/g, '-'),
+          name: integration.name,
+          credentials: {
+            apiKey: credentials.apiKey,
+            apiSecret: credentials.apiSecret,
+            endpoint: credentials.endpoint || undefined,
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      setStep('success');
+      refreshIntegrations();
+      
+      setTimeout(() => {
+        onClose();
         setStep('config');
-      }
-    }, 2000);
+        setCredentials({ apiKey: '', apiSecret: '', endpoint: '' });
+      }, 2000);
+    } catch (error: any) {
+      console.error('Erro ao conectar integração:', error);
+      toast({
+        title: 'Erro ao conectar',
+        description: error.message || 'Não foi possível conectar a integração. Verifique as credenciais.',
+        variant: 'destructive'
+      });
+      setStep('config');
+    }
   };
 
   const handleClose = () => {
@@ -202,7 +223,7 @@ const ConnectIntegrationModal = ({ isOpen, onClose, integration }: ConnectIntegr
               <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-lg">
                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">
-                  Suas credenciais são criptografadas e armazenadas com segurança. 
+                  Suas credenciais são criptografadas com AES-256-GCM e armazenadas com segurança. 
                   <Button variant="link" className="h-auto p-0 text-xs" asChild>
                     <a href="#" className="inline-flex items-center gap-1">
                       Saiba mais <ExternalLink className="h-3 w-3" />
