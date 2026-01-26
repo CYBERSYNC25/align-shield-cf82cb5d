@@ -1,382 +1,338 @@
 
-# Plano: Fortalecimento da Segurança de Credenciais de Integrações
+# Plano de Auditoria e Fortalecimento de RLS
 
-## Análise do Estado Atual
+## Resumo Executivo
 
-### ✅ O que já está implementado:
-| Item | Status | Detalhes |
-|------|--------|----------|
-| AES-256-GCM | ✅ | Implementado em `crypto-utils.ts` |
-| IV único por credencial | ✅ | 12 bytes aleatórios gerados a cada criptografia |
-| IV armazenado com dados | ✅ | Formato `iv:ciphertext` (hex-encoded) |
-| TOKEN_ENCRYPTION_KEY | ✅ | Armazenado em Supabase Secrets |
-| RLS por organização | ✅ | `org_id = get_user_org_id(auth.uid())` |
-| OAuth Token Refresh | ✅ | Implementado para Google Workspace |
-
-### ⚠️ Gaps identificados:
-| Item | Severidade | Descrição |
-|------|------------|-----------|
-| Credenciais retornadas ao frontend | **High** | `save-integration-credentials` pode retornar dados descriptografados |
-| Sem Key Rotation | **Medium** | Mesma chave usada indefinidamente |
-| Sem Supabase Vault | **Medium** | Chave em variável de ambiente, não no Vault |
-| Sem logging de acessos | **Medium** | Não há audit trail de quando credenciais são usadas |
-| Sem revogação automática | **Low** | Credenciais inativas não são limpas |
-| Sem detecção de expiração | **Low** | Usuários não são alertados sobre tokens expirados |
-| Salt inconsistente | **Low** | `sync-integration-data` usa salt diferente do `crypto-utils.ts` |
+Auditoria completa de 57 tabelas públicas revelou que **TODAS as tabelas têm RLS habilitado** ✅, porém existem **vulnerabilidades críticas** que permitem vazamento de dados entre organizações.
 
 ---
 
-## Plano de Implementação
+## Status Atual do RLS
 
-### Fase 1: Correções Críticas
+### ✅ Tabelas com RLS Habilitado: 57/57 (100%)
 
-#### 1.1 Garantir que credenciais NUNCA retornem ao frontend
+Nenhuma tabela está sem RLS habilitado. Todas as 57 tabelas públicas possuem `ROW LEVEL SECURITY` ativo.
 
-Atualizar `save-integration-credentials/index.ts` para redatar credenciais na resposta:
+### 🔴 Vulnerabilidades CRÍTICAS Identificadas
 
-```typescript
-// Resposta segura - nunca retorna credenciais
-return new Response(JSON.stringify({
-  success: true,
-  message: 'Integration connected successfully',
-  integration: {
-    id: integration.id,
-    provider: integration.provider,
-    name: integration.name,
-    status: integration.status,
-    // NUNCA incluir: configuration, credentials, tokens
-    connected_at: integration.created_at,
-  }
-}), { headers: corsHeaders });
-```
-
-#### 1.2 Unificar salt de derivação de chave
-
-O `sync-integration-data` usa `lovable-integration-salt` mas `crypto-utils.ts` usa `apoc-token-encryption-salt-v1`. Isso pode causar falhas de descriptografia.
-
-```typescript
-// supabase/functions/_shared/crypto-utils.ts
-// Salt ÚNICO para todo o sistema
-const ENCRYPTION_SALT = 'apoc-token-encryption-salt-v1';
-```
+| # | Vulnerabilidade | Tabelas Afetadas | Severidade |
+|---|-----------------|------------------|------------|
+| 1 | **`OR (org_id IS NULL)`** - Permite acesso a dados sem org_id | 25 tabelas | **CRÍTICO** |
+| 2 | **`USING(true)`** - Acesso irrestrito | control_tests (SELECT) | **HIGH** |
+| 3 | **`WITH CHECK(true)`** - Insert irrestrito | auth_login_attempts | MEDIUM |
+| 4 | **api_keys sem org_id check** | api_keys | **HIGH** |
+| 5 | **Credenciais expostas via RLS** | integration_oauth_tokens, integrations | **CRÍTICO** |
+| 6 | **profiles sem org_id isolation** | profiles | MEDIUM |
 
 ---
 
-### Fase 2: Logging de Acesso a Credenciais
+## Análise Detalhada
 
-#### 2.1 Criar função de logging centralizada
+### 1. CRÍTICO: Padrão `OR (org_id IS NULL)` em 25 Tabelas
 
-Novo arquivo: `supabase/functions/_shared/credential-access-logger.ts`
+Este padrão permite que usuários de qualquer organização vejam registros onde `org_id` é `NULL`, quebrando o isolamento multi-tenant.
 
-```typescript
-interface CredentialAccessLog {
-  user_id: string;
-  org_id?: string;
-  integration_name: string;
-  action: 'decrypt' | 'encrypt' | 'refresh' | 'revoke';
-  ip_address?: string;
-  user_agent?: string;
-  success: boolean;
-  error_message?: string;
-}
+**Tabelas afetadas:**
+- answer_library, auditor_access_tokens, audits
+- bcp_plans, compliance_alerts, controls
+- custom_compliance_tests, evidence, frameworks
+- incident_playbooks, incidents, integration_collected_data
+- integration_oauth_tokens, integration_status, integrations
+- notifications, policies, risk_acceptances
+- risks, security_questionnaires, system_logs
+- tasks, trust_center_settings, user_roles, vendors
 
-export async function logCredentialAccess(
-  supabase: any,
-  log: CredentialAccessLog
-): Promise<void> {
-  await supabase.from('system_audit_logs').insert({
-    user_id: log.user_id,
-    action_type: 'credential_access',
-    action_category: 'security',
-    resource_type: 'integration_credential',
-    resource_id: log.integration_name,
-    description: `${log.action} credential for ${log.integration_name}`,
-    metadata: {
-      action: log.action,
-      success: log.success,
-      error: log.error_message,
-    },
-    ip_address: log.ip_address,
-    created_at: new Date().toISOString(),
-  });
-}
+**Políticas problemáticas (exemplo):**
+```sql
+-- VULNERÁVEL:
+USING ((org_id = get_user_org_id(auth.uid())) OR (org_id IS NULL))
+
+-- CORRIGIDO:
+USING (org_id = get_user_org_id(auth.uid()))
 ```
 
-#### 2.2 Integrar logging em todas as funções que acessam credenciais
-
-Funções a atualizar:
-- `sync-integration-data/index.ts`
-- `google-workspace-sync/index.ts`
-- `azure-sync-resources/index.ts`
-- `aws-sync-resources/index.ts`
-- `okta-integration/index.ts`
-
----
-
-### Fase 3: Key Rotation
-
-#### 3.1 Criar tabela de histórico de chaves
+### 2. HIGH: control_tests com USING(true)
 
 ```sql
-CREATE TABLE public.encryption_key_history (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  key_version INT NOT NULL UNIQUE,
-  key_hash TEXT NOT NULL, -- SHA-256 do hash da chave (para verificação, não a chave)
-  algorithm TEXT NOT NULL DEFAULT 'AES-256-GCM',
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  rotated_at TIMESTAMPTZ,
-  deprecated_at TIMESTAMPTZ,
-  is_active BOOLEAN NOT NULL DEFAULT false
-);
+-- VULNERÁVEL: Qualquer usuário autenticado pode ver TODOS os testes
+SELECT policyname:Users can view control tests 
+USING(true)
+```
 
--- RLS: apenas service_role pode acessar
-ALTER TABLE public.encryption_key_history ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Only service role"
-  ON public.encryption_key_history
-  FOR ALL
+### 3. HIGH: api_keys sem org_id check
+
+A tabela `api_keys` tem `org_id` column, mas as políticas usam apenas `user_id`:
+```sql
+-- Atual (user_id only):
+USING (auth.uid() = user_id)
+
+-- Deveria incluir org_id:
+USING (auth.uid() = user_id AND org_id = get_user_org_id(auth.uid()))
+```
+
+### 4. CRÍTICO: Credenciais OAuth expostas
+
+A tabela `integration_oauth_tokens` contém `access_token` e `refresh_token` que podem ser selecionados via RLS. Usuários NÃO devem ver tokens descriptografados.
+
+**Colunas expostas:**
+- access_token (encrypted but visible)
+- refresh_token (encrypted but visible)
+
+### 5. MEDIUM: profiles sem org_id isolation
+
+Admins podem ver perfis de outras orgs via `has_role()` check sem validar org_id.
+
+---
+
+## Plano de Correção
+
+### Fase 1: Corrigir Padrão OR (org_id IS NULL)
+
+Atualizar políticas em 25 tabelas para remover `OR (org_id IS NULL)`:
+
+```sql
+-- PADRÃO CORRETO:
+CREATE POLICY "Org members can view {table}"
+  ON public.{table} FOR SELECT
+  USING (org_id = get_user_org_id(auth.uid()));
+
+CREATE POLICY "Org members can insert {table}"
+  ON public.{table} FOR INSERT
+  WITH CHECK (org_id = get_user_org_id(auth.uid()));
+
+CREATE POLICY "Org members can update {table}"
+  ON public.{table} FOR UPDATE
+  USING (org_id = get_user_org_id(auth.uid()));
+
+CREATE POLICY "Org members can delete {table}"
+  ON public.{table} FOR DELETE
+  USING (org_id = get_user_org_id(auth.uid()));
+```
+
+### Fase 2: Restringir control_tests
+
+```sql
+DROP POLICY "Users can view control tests" ON public.control_tests;
+CREATE POLICY "Org members can view control tests"
+  ON public.control_tests FOR SELECT
+  USING (org_id = get_user_org_id(auth.uid()));
+```
+
+### Fase 3: Adicionar org_id check em api_keys
+
+```sql
+DROP POLICY "Users can view own API keys" ON public.api_keys;
+DROP POLICY "Users can insert own API keys" ON public.api_keys;
+DROP POLICY "Users can update own API keys" ON public.api_keys;
+DROP POLICY "Users can delete own API keys" ON public.api_keys;
+
+CREATE POLICY "Users can view own API keys"
+  ON public.api_keys FOR SELECT
+  USING (auth.uid() = user_id AND org_id = get_user_org_id(auth.uid()));
+
+CREATE POLICY "Users can insert own API keys"
+  ON public.api_keys FOR INSERT
+  WITH CHECK (auth.uid() = user_id AND org_id = get_user_org_id(auth.uid()));
+
+CREATE POLICY "Users can update own API keys"
+  ON public.api_keys FOR UPDATE
+  USING (auth.uid() = user_id AND org_id = get_user_org_id(auth.uid()));
+
+CREATE POLICY "Users can delete own API keys"
+  ON public.api_keys FOR DELETE
+  USING (auth.uid() = user_id AND org_id = get_user_org_id(auth.uid()));
+```
+
+### Fase 4: Proteger Credenciais Sensíveis
+
+#### 4.1 Criar VIEW sem credenciais para integrations
+
+```sql
+CREATE VIEW public.integrations_safe AS
+SELECT 
+  id, user_id, provider, name, status, 
+  last_sync_at, created_at, updated_at, org_id, last_used_at
+  -- OMITIR: configuration (contém credenciais criptografadas)
+FROM public.integrations;
+
+-- Revogar SELECT direto na tabela
+DROP POLICY "Org members can view integrations" ON public.integrations;
+CREATE POLICY "No direct SELECT on integrations"
+  ON public.integrations FOR SELECT
+  USING (false); -- Bloqueia acesso direto
+
+-- Permitir via VIEW
+GRANT SELECT ON public.integrations_safe TO authenticated;
+```
+
+#### 4.2 Criar VIEW sem tokens para integration_oauth_tokens
+
+```sql
+CREATE VIEW public.integration_oauth_tokens_safe AS
+SELECT 
+  id, user_id, integration_name, token_type, 
+  expires_at, scope, created_at, updated_at, org_id, last_used_at
+  -- OMITIR: access_token, refresh_token, metadata
+FROM public.integration_oauth_tokens;
+
+-- Bloquear SELECT direto
+DROP POLICY "Org members can view integration_oauth_tokens" ON public.integration_oauth_tokens;
+CREATE POLICY "Only service role can SELECT oauth tokens"
+  ON public.integration_oauth_tokens FOR SELECT
   USING (auth.role() = 'service_role');
 ```
 
-#### 3.2 Modificar formato de criptografia para incluir versão
-
-```typescript
-// Novo formato: version:iv:ciphertext
-// Ex: v1:a1b2c3...:d4e5f6...
-
-export async function encryptTokenWithVersion(
-  plainText: string, 
-  encryptionKey: string,
-  keyVersion: number = 1
-): Promise<string> {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(encryptionKey);
-  
-  const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
-    key,
-    new TextEncoder().encode(plainText)
-  );
-  
-  return `v${keyVersion}:${bytesToHex(iv)}:${bytesToHex(new Uint8Array(encrypted))}`;
-}
-
-export async function decryptTokenWithVersion(
-  encryptedText: string,
-  getKeyByVersion: (version: number) => Promise<string>
-): Promise<string> {
-  const parts = encryptedText.split(':');
-  
-  let version = 1;
-  let ivHex: string, ciphertextHex: string;
-  
-  if (parts[0].startsWith('v')) {
-    version = parseInt(parts[0].substring(1));
-    ivHex = parts[1];
-    ciphertextHex = parts[2];
-  } else {
-    // Legacy format (sem versão)
-    ivHex = parts[0];
-    ciphertextHex = parts[1];
-  }
-  
-  const encryptionKey = await getKeyByVersion(version);
-  // ... resto da descriptografia
-}
-```
-
-#### 3.3 Edge Function para rotação de chaves
-
-Nova função: `supabase/functions/rotate-encryption-key/index.ts`
-
-- Gera nova chave
-- Re-criptografa todas as credenciais com a nova versão
-- Marca chave antiga como deprecated (mas mantém para legacy)
-- Agenda limpeza de chaves antigas após 180 dias
-
----
-
-### Fase 4: Detecção e Alertas de Tokens Expirados
-
-#### 4.1 Função schedulada para verificar tokens
-
-Nova função: `supabase/functions/check-token-expiration/index.ts`
-
-```typescript
-// Executar diariamente via cron
-Deno.serve(async (req) => {
-  const supabase = createClient(/* service role */);
-  
-  // Buscar tokens expirando em 7 dias
-  const { data: expiringTokens } = await supabase
-    .from('integration_oauth_tokens')
-    .select('user_id, integration_name, expires_at')
-    .lt('expires_at', new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString())
-    .gt('expires_at', new Date().toISOString());
-  
-  // Enviar notificação para cada usuário
-  for (const token of expiringTokens) {
-    await supabase.rpc('create_notification', {
-      p_user_id: token.user_id,
-      p_title: 'Token expirando',
-      p_message: `Seu token ${token.integration_name} expira em breve.`,
-      p_type: 'warning',
-      p_category: 'integration',
-    });
-  }
-  
-  // Marcar tokens já expirados
-  const { data: expiredTokens } = await supabase
-    .from('integration_oauth_tokens')
-    .select('id, user_id, integration_name')
-    .lt('expires_at', new Date().toISOString());
-  
-  // Atualizar status da integração para 'expired'
-  for (const token of expiredTokens) {
-    await supabase
-      .from('integration_status')
-      .upsert({
-        user_id: token.user_id,
-        integration_name: token.integration_name,
-        status: 'expired',
-        health_score: 0,
-      });
-  }
-});
-```
-
----
-
-### Fase 5: Revogação Automática de Credenciais Inativas
-
-#### 5.1 Adicionar campo last_used_at
+### Fase 5: Adicionar org_id isolation em profiles
 
 ```sql
-ALTER TABLE public.integrations 
-ADD COLUMN last_used_at TIMESTAMPTZ;
-
-ALTER TABLE public.integration_oauth_tokens 
-ADD COLUMN last_used_at TIMESTAMPTZ;
+-- Adicionar política para limitar visibilidade a mesma org
+CREATE POLICY "Org members can view org profiles"
+  ON public.profiles FOR SELECT
+  USING (
+    auth.uid() = user_id 
+    OR org_id = get_user_org_id(auth.uid())
+    OR has_role(auth.uid(), 'master_admin')
+  );
 ```
 
-#### 5.2 Atualizar last_used_at em cada uso
+### Fase 6: Criar Função de Teste de Penetração
 
-```typescript
-// Em sync-integration-data, google-workspace-sync, etc.
-await supabaseAdmin
-  .from('integrations')
-  .update({ last_used_at: new Date().toISOString() })
-  .eq('id', integrationId);
-```
-
-#### 5.3 Job de revogação automática
-
-```typescript
-// check-token-expiration/index.ts - adicionar
-const { data: staleIntegrations } = await supabase
-  .from('integrations')
-  .select('id, user_id, provider, name')
-  .lt('last_used_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
-  .eq('status', 'connected');
-
-for (const integration of staleIntegrations) {
-  // Notificar usuário
-  await supabase.rpc('create_notification', {
-    p_user_id: integration.user_id,
-    p_title: 'Integração inativa',
-    p_message: `${integration.name} não é usada há 90 dias e será revogada em 14 dias.`,
-    p_type: 'warning',
-    p_category: 'integration',
-  });
+```sql
+CREATE OR REPLACE FUNCTION public.test_rls_bypass(test_org_id uuid)
+RETURNS TABLE(
+  table_name text,
+  rows_visible bigint,
+  status text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  current_user_org uuid;
+BEGIN
+  current_user_org := get_user_org_id(auth.uid());
   
-  // Marcar para revogação
-  await supabase
-    .from('integrations')
-    .update({ 
-      status: 'pending_revocation',
-      metadata: { revocation_scheduled_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() }
-    })
-    .eq('id', integration.id);
-}
+  -- Verificar que o org de teste é DIFERENTE do usuário atual
+  IF test_org_id = current_user_org THEN
+    RAISE EXCEPTION 'Use um org_id diferente do seu para testar';
+  END IF;
+  
+  -- Testar cada tabela com org_id
+  RETURN QUERY
+  SELECT 'integrations'::text, 
+    (SELECT COUNT(*) FROM integrations WHERE org_id = test_org_id),
+    CASE WHEN (SELECT COUNT(*) FROM integrations WHERE org_id = test_org_id) = 0 
+      THEN 'PASS' ELSE 'FAIL - CROSS-ORG LEAK' END;
+  
+  RETURN QUERY
+  SELECT 'risks'::text,
+    (SELECT COUNT(*) FROM risks WHERE org_id = test_org_id),
+    CASE WHEN (SELECT COUNT(*) FROM risks WHERE org_id = test_org_id) = 0 
+      THEN 'PASS' ELSE 'FAIL - CROSS-ORG LEAK' END;
+  
+  -- Adicionar mais tabelas...
+END;
+$$;
 ```
 
 ---
 
-### Fase 6: Supabase Vault (Nota)
-
-O Supabase Vault é uma feature enterprise que armazena secrets diretamente no banco de dados com criptografia. A implementação atual com `Deno.env.get('TOKEN_ENCRYPTION_KEY')` é segura para o tier atual, mas pode ser migrada para Vault quando disponível.
-
-**Alternativa atual**: A chave já está em Supabase Secrets, que é criptografada em repouso e só acessível por Edge Functions. Isso atende o requisito.
-
----
-
-## Arquivos a Criar/Modificar
+## Arquivos a Modificar
 
 | Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `supabase/functions/_shared/credential-access-logger.ts` | **NOVO** | Logging centralizado de acessos |
-| `supabase/functions/_shared/crypto-utils.ts` | Modificar | Adicionar versionamento de chaves |
-| `supabase/functions/save-integration-credentials/index.ts` | Modificar | Remover credenciais da resposta |
-| `supabase/functions/sync-integration-data/index.ts` | Modificar | Unificar salt, adicionar logging |
-| `supabase/functions/check-token-expiration/index.ts` | **NOVO** | Verificar tokens expirados |
-| `supabase/functions/google-workspace-sync/index.ts` | Modificar | Adicionar logging |
-| **Database Migration** | Criar | Tabela `encryption_key_history`, colunas `last_used_at` |
+| Migration SQL | **NOVO** | Atualizar 25+ políticas RLS |
+| `src/hooks/useIntegrations.ts` | Modificar | Usar view `integrations_safe` |
+| `src/hooks/useApiKeys.tsx` | Verificar | Garantir que key_hash não é exposto |
 
 ---
 
-## Benefícios da Implementação
+## Tabelas por Prioridade de Correção
 
-1. **Credenciais nunca expostas**: Frontend nunca recebe tokens descriptografados
-2. **Audit trail completo**: Cada acesso a credenciais é logado com metadados
-3. **Key rotation**: Capacidade de trocar chaves sem downtime
-4. **Alertas proativos**: Usuários notificados antes de tokens expirarem
-5. **Higiene automática**: Credenciais inativas revogadas automaticamente
-6. **Conformidade**: Requisitos de SOC2, ISO27001, LGPD
+### 🔴 CRÍTICO (Corrigir Primeiro)
+
+| Tabela | Problema | Ação |
+|--------|----------|------|
+| integration_oauth_tokens | Tokens OAuth visíveis | Criar VIEW, bloquear SELECT |
+| integrations | Credenciais criptografadas visíveis | Criar VIEW, bloquear SELECT |
+| api_keys | Sem org_id check | Adicionar org_id à policy |
+| control_tests | USING(true) | Restringir por org_id |
+
+### 🟠 HIGH (Corrigir em Seguida)
+
+| Tabela | Problema |
+|--------|----------|
+| risks | OR (org_id IS NULL) |
+| incidents | OR (org_id IS NULL) |
+| audits | OR (org_id IS NULL) |
+| frameworks | OR (org_id IS NULL) |
+| controls | OR (org_id IS NULL) |
+| policies | OR (org_id IS NULL) |
+| evidence | OR (org_id IS NULL) |
+| vendors | OR (org_id IS NULL) |
+
+### 🟡 MEDIUM (25 tabelas restantes)
+
+Todas as outras tabelas com padrão `OR (org_id IS NULL)`.
 
 ---
 
-## Seção Técnica: Detalhes de Implementação
+## Benefícios Pós-Correção
 
-### Formato de Criptografia Versionado
+1. **Isolamento Multi-Tenant Completo**: Nenhum vazamento entre organizações
+2. **Credenciais Protegidas**: Tokens OAuth e API keys nunca expostos ao frontend
+3. **Auditabilidade**: Função de teste de penetração para validação contínua
+4. **Conformidade**: SOC2, ISO27001, LGPD requirements atendidos
+5. **Defesa em Profundidade**: RLS + Views + Edge Functions
 
-```text
-Formato Legacy: iv:ciphertext (24 chars hex : N chars hex)
-Formato Novo:   vN:iv:ciphertext (version : 24 chars hex : N chars hex)
+---
 
-Exemplo:
-- Legacy: a1b2c3d4e5f6g7h8i9j0k1l2:m3n4o5p6q7r8...
-- v1:    v1:a1b2c3d4e5f6g7h8i9j0k1l2:m3n4o5p6q7r8...
-- v2:    v2:b2c3d4e5f6g7h8i9j0k1l2m3:n4o5p6q7r8s9...
+## Seção Técnica: SQL de Migração Completo
+
+A migração será dividida em 6 partes:
+
+### Parte 1: Drop policies vulneráveis
+```sql
+-- 25 DROP POLICY statements
 ```
 
-### Fluxo de Rotação de Chaves
-
-```text
-1. Admin inicia rotação
-2. Nova chave gerada e armazenada como v(N+1)
-3. Job em background re-criptografa cada credencial:
-   - Descriptografa com chave v(N)
-   - Criptografa com chave v(N+1)
-   - Atualiza registro no banco
-4. Após 100% migradas, marca v(N) como deprecated
-5. Após 180 dias, remove v(N) do sistema
+### Parte 2: Criar policies corrigidas (sem OR NULL)
+```sql
+-- 100+ CREATE POLICY statements
 ```
 
-### Estrutura de Logging
-
-```json
-{
-  "action_type": "credential_access",
-  "action_category": "security",
-  "resource_type": "integration_credential",
-  "resource_id": "github",
-  "description": "decrypt credential for github",
-  "metadata": {
-    "action": "decrypt",
-    "success": true,
-    "key_version": 1,
-    "function": "sync-integration-data"
-  },
-  "ip_address": "203.0.113.45",
-  "user_agent": "Supabase Edge Runtime"
-}
+### Parte 3: Criar VIEWs seguras
+```sql
+CREATE VIEW integrations_safe WITH (security_invoker=on) AS ...
+CREATE VIEW integration_oauth_tokens_safe WITH (security_invoker=on) AS ...
 ```
+
+### Parte 4: Bloquear SELECT direto em tabelas sensíveis
+```sql
+CREATE POLICY "Only service role" ON integrations FOR SELECT USING(false);
+-- Service role e edge functions ainda podem acessar
+```
+
+### Parte 5: Atualizar hooks frontend
+```typescript
+// Mudar de 'integrations' para 'integrations_safe'
+```
+
+### Parte 6: Criar função de teste
+```sql
+CREATE FUNCTION test_rls_bypass(...) ...
+```
+
+---
+
+## Resumo de Achados
+
+| Categoria | Status |
+|-----------|--------|
+| Tabelas com RLS | ✅ 57/57 (100%) |
+| Políticas com org_id IS NULL | ❌ 25 tabelas vulneráveis |
+| Políticas com USING(true) | ❌ 1 tabela (control_tests) |
+| Credenciais expostas | ❌ 2 tabelas (integrations, oauth_tokens) |
+| api_keys sem org_id | ❌ 1 tabela |
+| Leaked Password Protection | ❌ Desabilitado (manual) |
