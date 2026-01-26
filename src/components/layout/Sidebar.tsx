@@ -40,7 +40,7 @@ const sidebarItems: SidebarItem[] = [
     id: 'dashboard',
     label: 'Dashboard',
     icon: Home,
-    href: '/'
+    href: '/dashboard'
   },
   {
     id: 'compliance',
