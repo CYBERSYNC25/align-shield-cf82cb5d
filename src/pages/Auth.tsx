@@ -4,39 +4,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Navigate } from 'react-router-dom';
-import { Shield, Building2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Shield, AlertCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
-import { signUpSchema, loginSchema, type SignUpInput, type LoginInput } from '@/lib/auth-schemas';
-import { checkPasswordPwned, checkPasswordStrength } from '@/lib/password-security';
+import { loginSchema } from '@/lib/auth-schemas';
+import { useLoginRateLimiter } from '@/hooks/useLoginRateLimiter';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
 
 /**
  * Página de Autenticação
  * 
  * @component
  * @description
- * Gerencia login e cadastro com validação Zod, verificação de senha vazada e CAPTCHA.
+ * Gerencia login com validação Zod, rate limiting e CAPTCHA.
  * 
- * Features:
+ * Features de Segurança:
+ * - Rate limiting: 5 tentativas por 15 minutos
+ * - Account lockout temporário
+ * - CAPTCHA (Cloudflare Turnstile)
  * - Validação em tempo real com Zod
- * - Verificação de senhas vazadas (Have I Been Pwned API)
- * - Indicador de força de senha
- * - CAPTCHA (Cloudflare Turnstile) no login
  * - Feedback visual de erros
- * - Redirecionamento automático após autenticação
  * 
  * @example
- * // Em App.tsx:
  * <Route path="/auth" element={<Auth />} />
  */
 const Auth = () => {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, loading } = useAuth();
   const { toast } = useToast();
+  const { status: rateLimitStatus, checkCanAttempt, recordAttempt, getTimeRemaining } = useLoginRateLimiter();
   
   // Estados de loading e validação
   const [isLoading, setIsLoading] = useState(false);
@@ -45,13 +42,9 @@ const Auth = () => {
   
   // Estados de validação
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
-  const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   
-  // Estados de senha
-  const [signupPassword, setSignupPassword] = useState('');
-  const [passwordStrength, setPasswordStrength] = useState<any>(null);
-  const [isPwned, setIsPwned] = useState(false);
-  const [pwnedCount, setPwnedCount] = useState(0);
+  // Estado para mostrar alerta de lockout
+  const [showLockoutAlert, setShowLockoutAlert] = useState(false);
 
   // Redirect if already authenticated
   if (user && !loading) {
@@ -59,41 +52,39 @@ const Auth = () => {
   }
 
   /**
-   * Handler de login com validação Zod e CAPTCHA
+   * Handler de login com validação Zod, Rate Limiting e CAPTCHA
    * 
-   * @param {React.FormEvent} e - Evento do formulário
-   * 
-   * Fluxo:
-   * 1. Valida campos com Zod (loginSchema)
-   * 2. Verifica token CAPTCHA
-   * 3. Chama Supabase signIn
-   * 4. Trata erros e exibe feedback
-   * 
-   * Erros possíveis:
-   * - Email inválido (formato)
-   * - Senha vazia
-   * - CAPTCHA não completado
-   * - Credenciais incorretas (Supabase)
-   * - Email não confirmado
-   * - Rate limit excedido
-   * 
-   * @example
-   * <form onSubmit={handleSignIn}>
-   *   <input name="email" />
-   *   <input name="password" />
-   *   <Turnstile onSuccess={setCaptchaToken} />
-   *   <button type="submit">Entrar</button>
-   * </form>
+   * Fluxo de Segurança:
+   * 1. Verifica rate limiting (5 tentativas/15min)
+   * 2. Se bloqueado, exibe alerta de lockout
+   * 3. Valida campos com Zod (loginSchema)
+   * 4. Verifica token CAPTCHA
+   * 5. Chama Supabase signIn
+   * 6. Registra tentativa (sucesso/falha)
+   * 7. Trata erros e exibe feedback
    */
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErrors({});
+    setShowLockoutAlert(false);
     
     const formData = new FormData(e.target as HTMLFormElement);
     const data = {
       email: formData.get('email') as string,
       password: formData.get('password') as string
     };
+    
+    // SECURITY: Check rate limiting before processing
+    const canAttempt = await checkCanAttempt(data.email);
+    if (!canAttempt) {
+      setShowLockoutAlert(true);
+      toast({
+        title: "Conta temporariamente bloqueada",
+        description: `Muitas tentativas de login. Tente novamente em ${getTimeRemaining()}.`,
+        variant: "destructive"
+      });
+      return;
+    }
     
     // Validação Zod
     const validation = loginSchema.safeParse(data);
@@ -124,12 +115,21 @@ const Auth = () => {
     const { error } = await signIn(data.email, data.password);
     
     if (error) {
+      // SECURITY: Record failed attempt
+      await recordAttempt(data.email, false, error.message);
+      
       // Mapeia erros do Supabase para mensagens amigáveis
       let errorMessage = error.message;
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = "Email ou senha incorretos. Verifique suas credenciais e tente novamente.";
       } else if (error.message.includes('Email not confirmed')) {
         errorMessage = "Por favor, confirme seu email antes de fazer login. Verifique sua caixa de entrada.";
+      }
+      
+      // Show attempts remaining
+      const remaining = rateLimitStatus.attemptsRemaining;
+      if (remaining > 0 && remaining <= 3) {
+        errorMessage += ` (${remaining} tentativa${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})`;
       }
       
       toast({
@@ -141,134 +141,12 @@ const Auth = () => {
       // Reset CAPTCHA
       turnstileRef.current?.reset();
       setCaptchaToken('');
-    }
-    
-    setIsLoading(false);
-  };
-
-  /**
-   * Handler de cadastro com validação Zod e verificação de senha vazada
-   * 
-   * @param {React.FormEvent} e - Evento do formulário
-   * 
-   * Fluxo:
-   * 1. Valida todos os campos com Zod (signUpSchema)
-   * 2. Verifica se senha foi vazada (HIBP API)
-   * 3. Alerta usuário se senha comprometida (mas permite continuar)
-   * 4. Chama Supabase signUp
-   * 5. Trigger handle_new_user() cria perfil automaticamente
-   * 6. Email de confirmação enviado
-   * 
-   * Validações:
-   * - Email válido e único
-   * - Senha forte (8+ chars, maiúscula, minúscula, número, especial)
-   * - Confirmação de senha
-   * - Nome de exibição (3-100 chars)
-   * - Organização (3-200 chars)
-   * 
-   * @example
-   * <form onSubmit={handleSignUp}>
-   *   <input name="email" />
-   *   <input name="password" onChange={(e) => handlePasswordChange(e.target.value)} />
-   *   <input name="confirmPassword" />
-   *   <input name="displayName" />
-   *   <input name="organization" />
-   *   <button type="submit">Cadastrar</button>
-   * </form>
-   */
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSignupErrors({});
-    
-    const formData = new FormData(e.target as HTMLFormElement);
-    const data: SignUpInput = {
-      email: formData.get('email') as string,
-      password: formData.get('password') as string,
-      confirmPassword: formData.get('confirmPassword') as string,
-      displayName: formData.get('displayName') as string,
-      organization: formData.get('organization') as string
-    };
-    
-    // Validação Zod
-    const validation = signUpSchema.safeParse(data);
-    if (!validation.success) {
-      const errors: Record<string, string> = {};
-      validation.error.errors.forEach(err => {
-        if (err.path[0]) {
-          errors[err.path[0].toString()] = err.message;
-        }
-      });
-      setSignupErrors(errors);
-      toast({
-        title: "Erros de validação",
-        description: "Por favor, corrija os campos destacados",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    // Verifica senha vazada (não bloqueia, apenas alerta)
-    const pwnedResult = await checkPasswordPwned(data.password);
-    if (pwnedResult.isPwned) {
-      toast({
-        title: "⚠️ Senha comprometida",
-        description: `Esta senha foi encontrada em ${pwnedResult.count.toLocaleString()} vazamentos de dados. Recomendamos usar uma senha diferente.`,
-        variant: "destructive"
-      });
-      setIsLoading(false);
-      return; // Bloqueia cadastro com senha vazada
-    }
-    
-    // Cadastra usuário
-    const { error } = await signUp(data.email, data.password, { 
-      display_name: data.displayName,
-      organization: data.organization
-    });
-    
-    if (error) {
-      let errorMessage = error.message;
-      if (error.message.includes('User already registered')) {
-        errorMessage = "Este email já está cadastrado. Tente fazer login ou use outro email.";
-      }
-      
-      toast({
-        title: "Erro no cadastro",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    }
-    
-    setIsLoading(false);
-  };
-  
-  /**
-   * Handler de mudança de senha (signup) - calcula força em tempo real
-   * 
-   * @param {string} password - Nova senha digitada
-   * 
-   * Atualiza:
-   * - Estado de força da senha (score, label, feedback)
-   * - Indicador visual (barra de progresso)
-   * 
-   * @example
-   * <input
-   *   type="password"
-   *   onChange={(e) => handlePasswordChange(e.target.value)}
-   * />
-   * {passwordStrength && (
-   *   <Progress value={passwordStrength.score * 25} />
-   * )}
-   */
-  const handlePasswordChange = (password: string) => {
-    setSignupPassword(password);
-    if (password) {
-      const strength = checkPasswordStrength(password);
-      setPasswordStrength(strength);
     } else {
-      setPasswordStrength(null);
+      // SECURITY: Record successful attempt
+      await recordAttempt(data.email, true);
     }
+    
+    setIsLoading(false);
   };
 
   if (loading) {
@@ -301,6 +179,27 @@ const Auth = () => {
         
         <CardContent className="px-8 pb-8">
           <div className="w-full">
+              {/* Lockout Alert */}
+              {showLockoutAlert && rateLimitStatus.lockedUntil && (
+                <Alert variant="destructive" className="mb-4">
+                  <Lock className="h-4 w-4" />
+                  <AlertDescription>
+                    Conta temporariamente bloqueada por segurança. 
+                    Tente novamente em <strong>{getTimeRemaining()}</strong>.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {/* Remaining attempts warning */}
+              {!showLockoutAlert && rateLimitStatus.attemptsRemaining > 0 && rateLimitStatus.attemptsRemaining <= 2 && (
+                <Alert variant="default" className="mb-4 border-warning bg-warning/10">
+                  <AlertCircle className="h-4 w-4 text-warning" />
+                  <AlertDescription className="text-warning">
+                    Atenção: {rateLimitStatus.attemptsRemaining} tentativa{rateLimitStatus.attemptsRemaining !== 1 ? 's' : ''} restante{rateLimitStatus.attemptsRemaining !== 1 ? 's' : ''} antes do bloqueio temporário.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email" className="text-foreground">Email</Label>

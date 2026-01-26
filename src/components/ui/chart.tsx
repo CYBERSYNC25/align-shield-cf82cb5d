@@ -2,6 +2,7 @@ import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 
 import { cn } from "@/lib/utils";
+import { sanitizeCSSColor } from "@/lib/security/cssValidator";
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const;
@@ -65,18 +66,26 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null;
   }
 
+  // Security: Validate and escape the chart ID to prevent CSS injection
+  const safeId = id.replace(/[^a-zA-Z0-9-_]/g, '');
+
   return (
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(
             ([theme, prefix]) => `
-${prefix} [data-chart=${id}] {
+${prefix} [data-chart=${safeId}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
-    const color = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    const rawColor = itemConfig.theme?.[theme as keyof typeof itemConfig.theme] || itemConfig.color;
+    // Security: Validate CSS color to prevent CSS injection attacks
+    const color = rawColor ? sanitizeCSSColor(rawColor) : null;
+    // Security: Validate key name to prevent CSS injection
+    const safeKey = key.replace(/[^a-zA-Z0-9-_]/g, '');
+    return color ? `  --color-${safeKey}: ${color};` : null;
   })
+  .filter(Boolean)
   .join("\n")}
 }
 `,

@@ -4,17 +4,11 @@ import { Asset } from '@/hooks/useAssetInventory';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { escapeCSV } from '@/lib/security/textSanitizer';
 
 interface ExportCSVButtonProps {
   assets: Asset[];
   disabled?: boolean;
-}
-
-function escapeCSV(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
 }
 
 function formatComplianceStatus(status: string): string {

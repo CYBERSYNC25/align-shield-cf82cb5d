@@ -397,6 +397,36 @@ export type Database = {
           },
         ]
       }
+      auth_login_attempts: {
+        Row: {
+          attempted_at: string
+          email: string
+          failure_reason: string | null
+          id: string
+          ip_address: string | null
+          success: boolean
+          user_agent: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          email: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          email?: string
+          failure_reason?: string | null
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       bcp_plans: {
         Row: {
           contact_person: string | null
@@ -3229,6 +3259,14 @@ export type Database = {
         Args: { p_attempts: number; p_max_attempts?: number }
         Returns: string
       }
+      can_attempt_login: {
+        Args: { p_email: string }
+        Returns: {
+          allowed: boolean
+          attempts_remaining: number
+          locked_until: string
+        }[]
+      }
       check_object_permission: {
         Args: {
           _object_id: string
@@ -3267,6 +3305,10 @@ export type Database = {
         }
       }
       cleanup_expired_cache: { Args: never; Returns: number }
+      cleanup_old_login_attempts: {
+        Args: { p_days_to_keep?: number }
+        Returns: number
+      }
       cleanup_old_system_logs: {
         Args: { p_days_to_keep?: number }
         Returns: number
@@ -3396,6 +3438,16 @@ export type Database = {
       is_object_owner: {
         Args: { _object_id: string; _object_type: string; _user_id: string }
         Returns: boolean
+      }
+      record_login_attempt: {
+        Args: {
+          p_email: string
+          p_failure_reason?: string
+          p_ip_address?: string
+          p_success: boolean
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       reset_stuck_jobs: { Args: never; Returns: number }
       search_answer_library: {
