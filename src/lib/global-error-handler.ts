@@ -3,9 +3,12 @@
  * 
  * Captures unhandled JS errors and Promise rejections,
  * sending them to the centralized logging system.
+ * 
+ * IMPORTANT: All data is sanitized for PII before logging (LGPD/GDPR compliant)
  */
 
 import { supabase } from '@/integrations/supabase/client';
+import { sanitizeForLogs, sanitizeStackTrace, maskPiiValue } from '@/lib/security/piiSanitizer';
 
 // Debounce to avoid flooding the backend with duplicate errors
 let lastErrorKey = '';
@@ -31,8 +34,18 @@ async function sendLogToBackend(payload: {
   metadata?: Record<string, unknown>;
 }) {
   try {
+    // Sanitize all data before sending - LGPD/GDPR compliance
+    const sanitizedPayload = {
+      level: payload.level,
+      source: payload.source,
+      message: maskPiiValue(payload.message),
+      stack_trace: sanitizeStackTrace(payload.stack_trace),
+      component_name: payload.component_name,
+      metadata: payload.metadata ? sanitizeForLogs(payload.metadata) as Record<string, unknown> : undefined
+    };
+
     await supabase.functions.invoke('log-event', {
-      body: payload
+      body: sanitizedPayload
     });
   } catch (e) {
     // Silently fail - we don't want error logging to cause more errors
@@ -69,6 +82,7 @@ export function setupGlobalErrorHandlers(): void {
         line: lineno,
         column: colno,
         url: window.location.href,
+        // Note: userAgent is sanitized by the sanitizeForLogs function
         userAgent: navigator.userAgent,
         timestamp: new Date().toISOString(),
       }
@@ -100,7 +114,7 @@ export function setupGlobalErrorHandlers(): void {
 
   // Log successful initialization in development
   if (import.meta.env.MODE === 'development') {
-    console.log('[GlobalErrorHandler] Initialized');
+    console.log('[GlobalErrorHandler] Initialized with PII sanitization');
   }
 }
 
