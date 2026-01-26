@@ -160,11 +160,11 @@ export const useComplianceReadiness = () => {
       ? Math.round(frameworkReadiness.reduce((sum, f) => sum + f.score, 0) / frameworkReadiness.length)
       : 0;
 
-    // Métricas de integrações
+    // Métricas de integrações - usar status 'connected' ao invés de 'active'
     const integrationsMetrics = {
       total: integrations.length,
-      active: integrations.filter(i => i.status === 'active').length,
-      collectingEvidence: integrations.filter(i => i.evidences > 0).length,
+      active: integrations.filter(i => i.status === 'connected').length,
+      collectingEvidence: integrations.filter(i => i.lastSync !== null).length,
     };
 
     // Métricas de políticas

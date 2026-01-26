@@ -1,174 +1,104 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface Integration {
   id: string;
   name: string;
-  category: string;
-  status: 'active' | 'paused' | 'warning';
-  lastSync: string;
-  evidences: number;
-  controls: number;
-  logo: string;
-  health: 'healthy' | 'degraded' | 'paused';
-  issue?: string;
-  pausedBy?: string;
-  config?: any;
-  credentials?: {
-    apiKey?: string;
-    apiSecret?: string;
-    endpoint?: string;
-  };
-  connectedAt: string;
-  connectedBy: string;
+  provider: string;
+  status: 'connected' | 'disconnected' | 'error' | 'expired';
+  lastSync: string | null;
+  lastUsedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  orgId: string | null;
 }
-
-const STORAGE_KEY = 'connected_integrations';
 
 export const useIntegrations = () => {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    loadIntegrations();
-  }, []);
+  const loadIntegrations = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
-  const loadIntegrations = () => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        setIntegrations(JSON.parse(stored));
-      }
+      setLoading(true);
+      // Usar a VIEW segura que não expõe credenciais
+      const { data, error } = await supabase
+        .from('integrations_safe')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const mapped: Integration[] = (data || []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        provider: item.provider,
+        status: item.status as Integration['status'],
+        lastSync: item.last_sync_at,
+        lastUsedAt: item.last_used_at,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+        orgId: item.org_id,
+      }));
+
+      setIntegrations(mapped);
     } catch (error) {
       console.error('Erro ao carregar integrações:', error);
+      toast({
+        title: 'Erro ao carregar',
+        description: 'Não foi possível carregar as integrações.',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toast]);
 
-  const saveIntegrations = (newIntegrations: Integration[]) => {
+  useEffect(() => {
+    loadIntegrations();
+  }, [loadIntegrations]);
+
+  const disconnectIntegration = async (id: string) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newIntegrations));
-      setIntegrations(newIntegrations);
-    } catch (error) {
-      console.error('Erro ao salvar integrações:', error);
+      const { error } = await supabase
+        .from('integrations')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setIntegrations(prev => prev.filter(i => i.id !== id));
+
       toast({
-        title: 'Erro ao salvar',
-        description: 'Não foi possível salvar a integração.',
+        title: 'Integração desconectada',
+        description: 'A integração foi removida com sucesso.',
+      });
+    } catch (error) {
+      console.error('Erro ao desconectar integração:', error);
+      toast({
+        title: 'Erro ao desconectar',
+        description: 'Não foi possível remover a integração.',
         variant: 'destructive',
       });
     }
   };
 
-  const connectIntegration = (
-    integration: any,
-    credentials: { apiKey: string; apiSecret: string; endpoint?: string },
-    userName: string = 'Usuário'
-  ) => {
-    const newIntegration: Integration = {
-      id: `${integration.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-      name: integration.name,
-      category: integration.category || 'Outros',
-      status: 'active',
-      lastSync: 'Agora',
-      evidences: 0,
-      controls: integration.controls?.length || 0,
-      logo: integration.logo,
-      health: 'healthy',
-      credentials: {
-        apiKey: credentials.apiKey,
-        apiSecret: credentials.apiSecret,
-        endpoint: credentials.endpoint,
-      },
-      connectedAt: new Date().toISOString(),
-      connectedBy: userName,
-    };
-
-    const updatedIntegrations = [...integrations, newIntegration];
-    saveIntegrations(updatedIntegrations);
-
-    toast({
-      title: 'Integração conectada!',
-      description: `${integration.name} foi conectado com sucesso.`,
-    });
-
-    return newIntegration;
-  };
-
-  const disconnectIntegration = (id: string) => {
-    const integration = integrations.find(i => i.id === id);
-    const updatedIntegrations = integrations.filter(i => i.id !== id);
-    saveIntegrations(updatedIntegrations);
-
-    if (integration) {
-      toast({
-        title: 'Integração desconectada',
-        description: `${integration.name} foi desconectado.`,
-      });
-    }
-  };
-
-  const pauseIntegration = (id: string, reason?: string) => {
-    const updatedIntegrations = integrations.map(integration =>
-      integration.id === id
-        ? {
-            ...integration,
-            status: 'paused' as const,
-            health: 'paused' as const,
-            pausedBy: reason || 'Pausada pelo usuário',
-          }
-        : integration
-    );
-    saveIntegrations(updatedIntegrations);
-
-    toast({
-      title: 'Integração pausada',
-      description: 'A sincronização foi pausada.',
-    });
-  };
-
-  const resumeIntegration = (id: string) => {
-    const updatedIntegrations = integrations.map(integration =>
-      integration.id === id
-        ? {
-            ...integration,
-            status: 'active' as const,
-            health: 'healthy' as const,
-            pausedBy: undefined,
-            lastSync: 'Agora',
-          }
-        : integration
-    );
-    saveIntegrations(updatedIntegrations);
-
-    toast({
-      title: 'Integração retomada',
-      description: 'A sincronização foi retomada.',
-    });
-  };
-
-  const updateIntegrationConfig = (id: string, config: any) => {
-    const updatedIntegrations = integrations.map(integration =>
-      integration.id === id
-        ? { ...integration, config }
-        : integration
-    );
-    saveIntegrations(updatedIntegrations);
-
-    toast({
-      title: 'Configuração atualizada',
-      description: 'As configurações foram salvas com sucesso.',
-    });
-  };
+  const refreshIntegrations = useCallback(() => {
+    loadIntegrations();
+  }, [loadIntegrations]);
 
   return {
     integrations,
     loading,
-    connectIntegration,
     disconnectIntegration,
-    pauseIntegration,
-    resumeIntegration,
-    updateIntegrationConfig,
+    refreshIntegrations,
   };
 };
