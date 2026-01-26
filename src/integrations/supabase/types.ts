@@ -164,6 +164,74 @@ export type Database = {
           },
         ]
       }
+      api_keys: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_revoked: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_minute_reset: string | null
+          last_request_at: string | null
+          name: string
+          org_id: string | null
+          rate_limit_tier: string | null
+          requests_this_minute: number | null
+          requests_today: number | null
+          revoked_at: string | null
+          scopes: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_revoked?: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_minute_reset?: string | null
+          last_request_at?: string | null
+          name: string
+          org_id?: string | null
+          rate_limit_tier?: string | null
+          requests_this_minute?: number | null
+          requests_today?: number | null
+          revoked_at?: string | null
+          scopes?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_revoked?: boolean | null
+          key_hash?: string
+          key_prefix?: string
+          last_minute_reset?: string | null
+          last_request_at?: string | null
+          name?: string
+          org_id?: string | null
+          rate_limit_tier?: string | null
+          requests_this_minute?: number | null
+          requests_today?: number | null
+          revoked_at?: string | null
+          scopes?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           action: string
@@ -3159,6 +3227,19 @@ export type Database = {
           p_value: Json
         }
         Returns: undefined
+      }
+      validate_api_key: {
+        Args: { p_key_hash: string }
+        Returns: {
+          api_key_id: string
+          is_valid: boolean
+          org_id: string
+          rate_limit_exceeded: boolean
+          rate_limit_tier: string
+          requests_remaining: number
+          scopes: string[]
+          user_id: string
+        }[]
       }
     }
     Enums: {

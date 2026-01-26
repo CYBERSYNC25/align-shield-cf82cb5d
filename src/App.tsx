@@ -32,6 +32,7 @@ import Inventory from "./pages/Inventory";
 import AuditorPortalPage from "./pages/AuditorPortalPage";
 import TrustCenter from "./pages/TrustCenter";
 import Questionnaires from "./pages/Questionnaires";
+import Developers from "./pages/Developers";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 import DPA from "./pages/legal/DPA";
@@ -153,6 +154,12 @@ const App = () => (
           <Route path="/questionnaires" element={
             <ProtectedRoute>
               <Questionnaires />
+            </ProtectedRoute>
+          } />
+          {/* Developer Documentation */}
+          <Route path="/developers" element={
+            <ProtectedRoute>
+              <Developers />
             </ProtectedRoute>
           } />
           {/* Auditor Portal - Public Route (no auth required) */}
