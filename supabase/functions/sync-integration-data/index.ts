@@ -10,57 +10,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Decryption utilities
-function hexToBytes(hex: string): Uint8Array {
-  const bytes = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < hex.length; i += 2) {
-    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-  }
-  return bytes;
-}
-
-async function deriveKey(secret: string): Promise<CryptoKey> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "PBKDF2" },
-    false,
-    ["deriveKey"]
-  );
-
-  return crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: encoder.encode("lovable-integration-salt"),
-      iterations: 100000,
-      hash: "SHA-256",
-    },
-    keyMaterial,
-    { name: "AES-GCM", length: 256 },
-    false,
-    ["encrypt", "decrypt"]
-  );
-}
-
-async function decryptToken(encryptedText: string, encryptionKey: string): Promise<string> {
-  const [ivHex, ciphertextHex] = encryptedText.split(':');
-  if (!ivHex || !ciphertextHex) {
-    throw new Error('Invalid encrypted token format');
-  }
-
-  const iv = hexToBytes(ivHex);
-  const ciphertext = hexToBytes(ciphertextHex);
-  const key = await deriveKey(encryptionKey);
-
-  const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv },
-    key,
-    ciphertext
-  );
-
-  return new TextDecoder().decode(decrypted);
-}
+// Import shared crypto utilities (uses consistent salt)
+import { decryptToken, isEncrypted, getEncryptionSalt } from "../_shared/crypto-utils.ts";
+import { createCredentialLogger } from "../_shared/credential-access-logger.ts";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -116,6 +68,9 @@ serve(async (req) => {
     // Admin client for database operations
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+    // Create credential logger for audit trail
+    const credentialLogger = createCredentialLogger(supabaseAdmin, user.id, 'sync-integration-data');
+
     // Fetch encrypted credentials
     const { data: integration, error: fetchError } = await supabaseAdmin
       .from('integrations')
@@ -134,20 +89,30 @@ serve(async (req) => {
       throw new Error(`Integration ${provider} not found or not connected`);
     }
 
-    // Decrypt credentials
+    // Decrypt credentials with audit logging
     const config = integration.configuration as Record<string, string>;
     const decryptedCredentials: Record<string, string> = {};
+    let decryptionSuccess = true;
+    let decryptionError: string | undefined;
 
-    for (const [key, value] of Object.entries(config)) {
-      if (typeof value === 'string' && value.includes(':')) {
-        try {
+    try {
+      for (const [key, value] of Object.entries(config)) {
+        if (typeof value === 'string' && isEncrypted(value)) {
           decryptedCredentials[key] = await decryptToken(value, encryptionKey);
-        } catch {
+        } else if (typeof value === 'string') {
           decryptedCredentials[key] = value;
         }
-      } else {
-        decryptedCredentials[key] = value;
       }
+    } catch (err) {
+      decryptionSuccess = false;
+      decryptionError = err instanceof Error ? err.message : 'Decryption failed';
+    }
+
+    // Log credential access
+    await credentialLogger.logDecrypt(provider, decryptionSuccess, decryptionError);
+
+    if (!decryptionSuccess) {
+      throw new Error(`Failed to decrypt credentials for ${provider}`);
     }
 
     logger.debug(`Credentials decrypted for ${provider}`);
@@ -181,14 +146,22 @@ serve(async (req) => {
         logger.debug(`No specific collector for ${provider}`);
     }
 
-    // Update integration status
+    // Update integration status and last_used_at
+    const nowIso = new Date().toISOString();
+    
     await supabaseAdmin.from('integration_status').upsert({
       user_id: user.id,
       integration_name: provider,
       status: 'connected',
-      last_sync_at: new Date().toISOString(),
+      last_sync_at: nowIso,
       metadata: { resources_collected: resourcesCollected }
     }, { onConflict: 'user_id,integration_name' });
+
+    // Update last_used_at for inactivity tracking
+    await supabaseAdmin.from('integrations').update({
+      last_used_at: nowIso,
+      updated_at: nowIso,
+    }).eq('id', integration.id);
 
     logger.info(`Completed: ${resourcesCollected} resources collected`);
 

@@ -11,7 +11,19 @@
  * - Uses AES-256-GCM (authenticated encryption)
  * - Random IV for each encryption
  * - Key derived from TOKEN_ENCRYPTION_KEY secret
+ * 
+ * KEY VERSIONING (v1.1):
+ * - Encrypted format: vN:iv:ciphertext (where N is key version)
+ * - Legacy format (iv:ciphertext) treated as v1
+ * - Supports key rotation with backward compatibility
  */
+
+// CRITICAL: This salt MUST be consistent across ALL functions
+// Any change will break decryption of existing data
+const ENCRYPTION_SALT = 'apoc-token-encryption-salt-v1';
+
+// Current key version for new encryptions
+const CURRENT_KEY_VERSION = 1;
 
 /**
  * Convert hex string to Uint8Array
@@ -47,14 +59,10 @@ async function deriveKey(secret: string): Promise<CryptoKey> {
     ['deriveKey']
   );
 
-  // Use a fixed salt derived from the secret itself
-  // This ensures the same secret always produces the same key
-  const salt = encoder.encode('apoc-token-encryption-salt-v1');
-
   return crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt,
+      salt: encoder.encode(ENCRYPTION_SALT),
       iterations: 100000,
       hash: 'SHA-256'
     },
@@ -66,13 +74,49 @@ async function deriveKey(secret: string): Promise<CryptoKey> {
 }
 
 /**
- * Encrypt a token using AES-256-GCM
+ * Parse encrypted token to extract version, IV, and ciphertext
+ */
+export function parseEncryptedToken(encryptedText: string): {
+  version: number;
+  ivHex: string;
+  ciphertextHex: string;
+} {
+  const parts = encryptedText.split(':');
+  
+  // Check for versioned format: vN:iv:ciphertext
+  if (parts[0].startsWith('v') && parts.length === 3) {
+    return {
+      version: parseInt(parts[0].substring(1), 10),
+      ivHex: parts[1],
+      ciphertextHex: parts[2],
+    };
+  }
+  
+  // Legacy format: iv:ciphertext (treat as v1)
+  if (parts.length === 2) {
+    return {
+      version: 1,
+      ivHex: parts[0],
+      ciphertextHex: parts[1],
+    };
+  }
+  
+  throw new Error('Invalid encrypted token format');
+}
+
+/**
+ * Encrypt a token using AES-256-GCM with version prefix
  * 
  * @param plainText - The token to encrypt
  * @param encryptionKey - The encryption key (from TOKEN_ENCRYPTION_KEY secret)
- * @returns Encrypted token in format: iv:ciphertext (both hex-encoded)
+ * @param keyVersion - The key version (defaults to current)
+ * @returns Encrypted token in format: vN:iv:ciphertext (all hex-encoded)
  */
-export async function encryptToken(plainText: string, encryptionKey: string): Promise<string> {
+export async function encryptToken(
+  plainText: string, 
+  encryptionKey: string,
+  keyVersion: number = CURRENT_KEY_VERSION
+): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(plainText);
 
@@ -89,25 +133,24 @@ export async function encryptToken(plainText: string, encryptionKey: string): Pr
     data
   );
 
-  // Return as hex: iv:ciphertext
+  // Return with version prefix: vN:iv:ciphertext
   const encryptedBytes = new Uint8Array(encrypted);
-  return `${bytesToHex(iv)}:${bytesToHex(encryptedBytes)}`;
+  return `v${keyVersion}:${bytesToHex(iv)}:${bytesToHex(encryptedBytes)}`;
 }
 
 /**
  * Decrypt a token using AES-256-GCM
+ * Supports both versioned and legacy formats
  * 
- * @param encryptedText - Encrypted token in format: iv:ciphertext
+ * @param encryptedText - Encrypted token in format: vN:iv:ciphertext or iv:ciphertext
  * @param encryptionKey - The encryption key (from TOKEN_ENCRYPTION_KEY secret)
- * @returns Decrypted token
+ * @returns Object with decrypted token and key version used
  */
-export async function decryptToken(encryptedText: string, encryptionKey: string): Promise<string> {
-  // Parse iv:ciphertext format
-  const [ivHex, ciphertextHex] = encryptedText.split(':');
-  
-  if (!ivHex || !ciphertextHex) {
-    throw new Error('Invalid encrypted token format');
-  }
+export async function decryptToken(
+  encryptedText: string, 
+  encryptionKey: string
+): Promise<string> {
+  const { ivHex, ciphertextHex } = parseEncryptedToken(encryptedText);
 
   const iv = hexToBytes(ivHex);
   const ciphertext = hexToBytes(ciphertextHex);
@@ -127,15 +170,86 @@ export async function decryptToken(encryptedText: string, encryptionKey: string)
 }
 
 /**
- * Check if a token is encrypted (has the iv:ciphertext format)
+ * Decrypt with key version info (for migration/rotation)
+ */
+export async function decryptTokenWithVersion(
+  encryptedText: string,
+  encryptionKey: string
+): Promise<{ plainText: string; keyVersion: number }> {
+  const { version, ivHex, ciphertextHex } = parseEncryptedToken(encryptedText);
+
+  const iv = hexToBytes(ivHex);
+  const ciphertext = hexToBytes(ciphertextHex);
+
+  const key = await deriveKey(encryptionKey);
+
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+
+  const decoder = new TextDecoder();
+  return {
+    plainText: decoder.decode(decrypted),
+    keyVersion: version,
+  };
+}
+
+/**
+ * Check if a token is encrypted (has the versioned or legacy format)
  */
 export function isEncrypted(token: string): boolean {
   if (!token) return false;
-  // Check if it matches the hex:hex pattern
+  
   const parts = token.split(':');
-  if (parts.length !== 2) return false;
-  // IV should be 24 hex chars (12 bytes)
-  if (parts[0].length !== 24) return false;
-  // Both parts should be valid hex
-  return /^[0-9a-f]+$/i.test(parts[0]) && /^[0-9a-f]+$/i.test(parts[1]);
+  
+  // Versioned format: vN:iv:ciphertext
+  if (parts[0].startsWith('v') && parts.length === 3) {
+    const version = parseInt(parts[0].substring(1), 10);
+    if (isNaN(version) || version < 1) return false;
+    if (parts[1].length !== 24) return false; // IV is 12 bytes = 24 hex chars
+    return /^[0-9a-f]+$/i.test(parts[1]) && /^[0-9a-f]+$/i.test(parts[2]);
+  }
+  
+  // Legacy format: iv:ciphertext
+  if (parts.length === 2) {
+    if (parts[0].length !== 24) return false;
+    return /^[0-9a-f]+$/i.test(parts[0]) && /^[0-9a-f]+$/i.test(parts[1]);
+  }
+  
+  return false;
+}
+
+/**
+ * Re-encrypt a token with a new key version (for key rotation)
+ * 
+ * @param encryptedText - Currently encrypted token
+ * @param oldKey - The old encryption key
+ * @param newKey - The new encryption key
+ * @param newVersion - The new key version
+ * @returns Re-encrypted token with new version
+ */
+export async function reEncryptToken(
+  encryptedText: string,
+  oldKey: string,
+  newKey: string,
+  newVersion: number
+): Promise<string> {
+  const plainText = await decryptToken(encryptedText, oldKey);
+  return encryptToken(plainText, newKey, newVersion);
+}
+
+/**
+ * Get the encryption salt (for documentation/debugging only)
+ */
+export function getEncryptionSalt(): string {
+  return ENCRYPTION_SALT;
+}
+
+/**
+ * Get the current key version
+ */
+export function getCurrentKeyVersion(): number {
+  return CURRENT_KEY_VERSION;
 }
