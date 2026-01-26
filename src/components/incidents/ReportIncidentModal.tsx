@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useSecureForm } from '@/hooks/useSecureForm';
+import { reportIncidentSchema, ReportIncidentFormData } from '@/lib/validation';
 
 interface ReportIncidentModalProps {
   open: boolean;
@@ -14,49 +15,37 @@ interface ReportIncidentModalProps {
 
 const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    severity: '',
-    impactLevel: '',
-    affectedSystems: '',
-    assignedTo: ''
-  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    
-    try {
-      // Simulate incident reporting
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+  const {
+    register,
+    handleSecureSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setValue,
+    watch,
+  } = useSecureForm<ReportIncidentFormData>({
+    schema: reportIncidentSchema,
+    defaultValues: {
+      title: '',
+      description: '',
+      severity: 'medium',
+      impactLevel: 'medium',
+      affectedSystems: '',
+      assignedTo: '',
+    },
+    onSubmit: async (data) => {
       toast({
         title: "Incidente Reportado",
-        description: `Incidente "${formData.title}" foi registrado com sucesso.`,
+        description: `Incidente "${data.title}" foi registrado com sucesso.`,
       });
       
-      // Reset form and close modal
-      setFormData({
-        title: '',
-        description: '',
-        severity: '',
-        impactLevel: '',
-        affectedSystems: '',
-        assignedTo: ''
-      });
+      reset();
       onOpenChange(false);
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Falha ao reportar o incidente. Tente novamente.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+  });
+
+  const severity = watch('severity');
+  const impactLevel = watch('impactLevel');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -65,33 +54,38 @@ const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) =
           <DialogTitle>Reportar Novo Incidente</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSecureSubmit} className="space-y-4">
           <div>
             <Label htmlFor="title">Título do Incidente</Label>
             <Input
               id="title"
-              value={formData.title}
-              onChange={(e) => setFormData({...formData, title: e.target.value})}
+              {...register('title')}
               placeholder="Descreva o incidente brevemente..."
-              required
             />
+            {errors.title && (
+              <p className="text-sm text-destructive mt-1">{errors.title.message}</p>
+            )}
           </div>
 
           <div>
             <Label htmlFor="description">Descrição</Label>
             <Textarea
               id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              {...register('description')}
               placeholder="Descreva os detalhes do incidente..."
-              required
             />
+            {errors.description && (
+              <p className="text-sm text-destructive mt-1">{errors.description.message}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Severidade</Label>
-              <Select value={formData.severity} onValueChange={(value) => setFormData({...formData, severity: value})}>
+              <Select 
+                value={severity} 
+                onValueChange={(value) => setValue('severity', value as ReportIncidentFormData['severity'], { shouldValidate: true })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar..." />
                 </SelectTrigger>
@@ -102,11 +96,17 @@ const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) =
                   <SelectItem value="critical">Crítico</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.severity && (
+                <p className="text-sm text-destructive mt-1">{errors.severity.message}</p>
+              )}
             </div>
 
             <div>
               <Label>Impacto</Label>
-              <Select value={formData.impactLevel} onValueChange={(value) => setFormData({...formData, impactLevel: value})}>
+              <Select 
+                value={impactLevel} 
+                onValueChange={(value) => setValue('impactLevel', value as ReportIncidentFormData['impactLevel'], { shouldValidate: true })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar..." />
                 </SelectTrigger>
@@ -116,35 +116,41 @@ const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) =
                   <SelectItem value="high">Alto Impacto</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.impactLevel && (
+                <p className="text-sm text-destructive mt-1">{errors.impactLevel.message}</p>
+              )}
             </div>
           </div>
 
           <div>
-            <Label htmlFor="systems">Sistemas Afetados</Label>
+            <Label htmlFor="affectedSystems">Sistemas Afetados</Label>
             <Input
-              id="systems"
-              value={formData.affectedSystems}
-              onChange={(e) => setFormData({...formData, affectedSystems: e.target.value})}
+              id="affectedSystems"
+              {...register('affectedSystems')}
               placeholder="Ex: API, Database, Frontend..."
             />
+            {errors.affectedSystems && (
+              <p className="text-sm text-destructive mt-1">{errors.affectedSystems.message}</p>
+            )}
           </div>
 
           <div>
-            <Label htmlFor="assigned">Responsável</Label>
+            <Label htmlFor="assignedTo">Responsável</Label>
             <Input
-              id="assigned"
-              value={formData.assignedTo}
-              onChange={(e) => setFormData({...formData, assignedTo: e.target.value})}
+              id="assignedTo"
+              {...register('assignedTo')}
               placeholder="Nome do responsável..."
-              required
             />
+            {errors.assignedTo && (
+              <p className="text-sm text-destructive mt-1">{errors.assignedTo.message}</p>
+            )}
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button type="submit" className="flex-1" disabled={loading}>
-              {loading ? 'Reportando...' : 'Reportar Incidente'}
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? 'Reportando...' : 'Reportar Incidente'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
           </div>

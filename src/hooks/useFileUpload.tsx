@@ -3,6 +3,20 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
+/**
+ * Sanitize filename to prevent path traversal and invalid characters
+ */
+function sanitizeFilename(filename: string): string {
+  let safe = filename.replace(/[\/\\]/g, '_');
+  safe = safe.replace(/\.\./g, '_');
+  safe = safe.replace(/\0/g, '');
+  safe = safe.replace(/[:\*\?"<>\|]/g, '_');
+  safe = safe.replace(/^[\.\s]+/, '');
+  safe = safe.slice(0, 200);
+  if (!safe) safe = 'unnamed_file';
+  return safe;
+}
+
 export interface FileUpload {
   file: File;
   progress: number;
@@ -34,12 +48,13 @@ export const useFileUpload = () => {
       userId: user.id
     });
 
-    const fileId = `${Date.now()}-${file.name}`;
+    const sanitizedName = sanitizeFilename(file.name);
+    const fileId = `${Date.now()}-${sanitizedName}`;
     const filePath = folder 
       ? `${user.id}/${folder}/${fileId}`
       : `${user.id}/${fileId}`;
 
-    console.log('File path:', filePath);
+    console.log('File path (sanitized):', filePath);
 
     // Initialize upload state
     setUploads(prev => ({

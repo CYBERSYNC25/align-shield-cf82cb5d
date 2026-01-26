@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -6,6 +5,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useSecureForm } from '@/hooks/useSecureForm';
+import { createPlaybookSchema, CreatePlaybookFormData } from '@/lib/validation';
 
 interface CreatePlaybookModalProps {
   open: boolean;
@@ -14,35 +15,38 @@ interface CreatePlaybookModalProps {
 
 const CreatePlaybookModal = ({ open, onOpenChange }: CreatePlaybookModalProps) => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    category: '',
-    severity: '',
-    estimatedTime: '',
-    roles: '',
-    triggers: ''
-  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    toast({
-      title: "Playbook Criado",
-      description: `Playbook "${formData.name}" foi criado com sucesso.`,
-    });
-    
-    setFormData({
+  const {
+    register,
+    handleSecureSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setValue,
+    watch,
+  } = useSecureForm<CreatePlaybookFormData>({
+    schema: createPlaybookSchema,
+    defaultValues: {
       name: '',
       description: '',
-      category: '',
-      severity: '',
+      category: 'Security',
+      severity: 'medium',
       estimatedTime: '',
       roles: '',
-      triggers: ''
-    });
-    onOpenChange(false);
-  };
+      triggers: '',
+    },
+    onSubmit: async (data) => {
+      toast({
+        title: "Playbook Criado",
+        description: `Playbook "${data.name}" foi criado com sucesso.`,
+      });
+      
+      reset();
+      onOpenChange(false);
+    },
+  });
+
+  const category = watch('category');
+  const severity = watch('severity');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -51,33 +55,38 @@ const CreatePlaybookModal = ({ open, onOpenChange }: CreatePlaybookModalProps) =
           <DialogTitle>Criar Novo Playbook</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSecureSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Nome do Playbook</Label>
             <Input
               id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              {...register('name')}
               placeholder="Ex: Resposta a Violação de Segurança..."
-              required
             />
+            {errors.name && (
+              <p className="text-sm text-destructive mt-1">{errors.name.message}</p>
+            )}
           </div>
 
           <div>
             <Label htmlFor="description">Descrição</Label>
             <Textarea
               id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              {...register('description')}
               placeholder="Descreva o propósito do playbook..."
-              required
             />
+            {errors.description && (
+              <p className="text-sm text-destructive mt-1">{errors.description.message}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Categoria</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+              <Select 
+                value={category} 
+                onValueChange={(value) => setValue('category', value as CreatePlaybookFormData['category'], { shouldValidate: true })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar..." />
                 </SelectTrigger>
@@ -88,11 +97,17 @@ const CreatePlaybookModal = ({ open, onOpenChange }: CreatePlaybookModalProps) =
                   <SelectItem value="Data Protection">Data Protection</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.category && (
+                <p className="text-sm text-destructive mt-1">{errors.category.message}</p>
+              )}
             </div>
 
             <div>
               <Label>Severidade</Label>
-              <Select value={formData.severity} onValueChange={(value) => setFormData({...formData, severity: value})}>
+              <Select 
+                value={severity} 
+                onValueChange={(value) => setValue('severity', value as CreatePlaybookFormData['severity'], { shouldValidate: true })}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar..." />
                 </SelectTrigger>
@@ -103,44 +118,53 @@ const CreatePlaybookModal = ({ open, onOpenChange }: CreatePlaybookModalProps) =
                   <SelectItem value="critical">Crítico</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.severity && (
+                <p className="text-sm text-destructive mt-1">{errors.severity.message}</p>
+              )}
             </div>
           </div>
 
           <div>
-            <Label htmlFor="time">Tempo Estimado</Label>
+            <Label htmlFor="estimatedTime">Tempo Estimado</Label>
             <Input
-              id="time"
-              value={formData.estimatedTime}
-              onChange={(e) => setFormData({...formData, estimatedTime: e.target.value})}
+              id="estimatedTime"
+              {...register('estimatedTime')}
               placeholder="Ex: 30min, 2h, 1 dia..."
             />
+            {errors.estimatedTime && (
+              <p className="text-sm text-destructive mt-1">{errors.estimatedTime.message}</p>
+            )}
           </div>
 
           <div>
             <Label htmlFor="roles">Roles Necessários</Label>
             <Input
               id="roles"
-              value={formData.roles}
-              onChange={(e) => setFormData({...formData, roles: e.target.value})}
+              {...register('roles')}
               placeholder="Ex: Security Admin, DevOps Engineer..."
             />
+            {errors.roles && (
+              <p className="text-sm text-destructive mt-1">{errors.roles.message}</p>
+            )}
           </div>
 
           <div>
             <Label htmlFor="triggers">Triggers Comuns</Label>
             <Textarea
               id="triggers"
-              value={formData.triggers}
-              onChange={(e) => setFormData({...formData, triggers: e.target.value})}
+              {...register('triggers')}
               placeholder="Descreva os eventos que acionam este playbook..."
             />
+            {errors.triggers && (
+              <p className="text-sm text-destructive mt-1">{errors.triggers.message}</p>
+            )}
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button type="submit" className="flex-1">
-              Criar Playbook
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? 'Criando...' : 'Criar Playbook'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
           </div>
