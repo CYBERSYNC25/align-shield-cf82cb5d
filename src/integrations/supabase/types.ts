@@ -489,6 +489,39 @@ export type Database = {
           },
         ]
       }
+      blocked_ips: {
+        Row: {
+          blocked_at: string
+          blocked_by: string | null
+          expires_at: string | null
+          id: string
+          ip_address: string
+          is_permanent: boolean
+          metadata: Json | null
+          reason: string
+        }
+        Insert: {
+          blocked_at?: string
+          blocked_by?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address: string
+          is_permanent?: boolean
+          metadata?: Json | null
+          reason: string
+        }
+        Update: {
+          blocked_at?: string
+          blocked_by?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: string
+          is_permanent?: boolean
+          metadata?: Json | null
+          reason?: string
+        }
+        Relationships: []
+      }
       cache_store: {
         Row: {
           created_at: string | null
@@ -2733,6 +2766,39 @@ export type Database = {
           },
         ]
       }
+      suspicious_activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string
+          details: Json | null
+          endpoint: string | null
+          id: string
+          ip_address: string
+          request_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          details?: Json | null
+          endpoint?: string | null
+          id?: string
+          ip_address: string
+          request_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          details?: Json | null
+          endpoint?: string | null
+          id?: string
+          ip_address?: string
+          request_count?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       system_audit_logs: {
         Row: {
           action_category: string
@@ -3388,6 +3454,14 @@ export type Database = {
       }
     }
     Functions: {
+      auto_block_suspicious_ip: {
+        Args: {
+          p_duration_hours?: number
+          p_ip_address: string
+          p_reason: string
+        }
+        Returns: string
+      }
       calculate_next_retry: {
         Args: { p_attempts: number; p_max_attempts?: number }
         Returns: string
@@ -3437,8 +3511,13 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      cleanup_expired_blocked_ips: { Args: never; Returns: number }
       cleanup_expired_cache: { Args: never; Returns: number }
       cleanup_old_login_attempts: {
+        Args: { p_days_to_keep?: number }
+        Returns: number
+      }
+      cleanup_old_suspicious_logs: {
         Args: { p_days_to_keep?: number }
         Returns: number
       }
@@ -3568,6 +3647,7 @@ export type Database = {
         Returns: boolean
       }
       invalidate_cache: { Args: { p_key_pattern: string }; Returns: number }
+      is_ip_blocked: { Args: { p_ip_address: string }; Returns: boolean }
       is_object_owner: {
         Args: { _object_id: string; _object_type: string; _user_id: string }
         Returns: boolean
