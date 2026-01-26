@@ -1020,6 +1020,48 @@ export type Database = {
           },
         ]
       }
+      data_classification: {
+        Row: {
+          classification_level: Database["public"]["Enums"]["data_classification_level"]
+          column_name: string
+          created_at: string
+          description: string | null
+          id: string
+          mask_pattern: string | null
+          pii_type: string | null
+          requires_audit: boolean
+          retention_days: number | null
+          table_name: string
+          updated_at: string
+        }
+        Insert: {
+          classification_level: Database["public"]["Enums"]["data_classification_level"]
+          column_name: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          mask_pattern?: string | null
+          pii_type?: string | null
+          requires_audit?: boolean
+          retention_days?: number | null
+          table_name: string
+          updated_at?: string
+        }
+        Update: {
+          classification_level?: Database["public"]["Enums"]["data_classification_level"]
+          column_name?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          mask_pattern?: string | null
+          pii_type?: string | null
+          requires_audit?: boolean
+          retention_days?: number | null
+          table_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       data_export_requests: {
         Row: {
           completed_at: string | null
@@ -2086,6 +2128,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "outbound_webhooks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pii_access_audit: {
+        Row: {
+          access_context: Json | null
+          access_reason: string | null
+          action: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          org_id: string | null
+          pii_fields: string[]
+          resource_id: string | null
+          resource_type: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_context?: Json | null
+          access_reason?: string | null
+          action: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          org_id?: string | null
+          pii_fields: string[]
+          resource_id?: string | null
+          resource_type: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_context?: Json | null
+          access_reason?: string | null
+          action?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          org_id?: string | null
+          pii_fields?: string[]
+          resource_id?: string | null
+          resource_type?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pii_access_audit_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -3559,6 +3654,10 @@ export type Database = {
         Args: { p_error_message: string; p_job_id: string }
         Returns: boolean
       }
+      field_requires_audit: {
+        Args: { p_column_name: string; p_table_name: string }
+        Returns: boolean
+      }
       get_active_users_metrics: {
         Args: { p_org_id: string }
         Returns: {
@@ -3568,6 +3667,10 @@ export type Database = {
         }[]
       }
       get_cache: { Args: { p_key: string }; Returns: Json }
+      get_field_classification: {
+        Args: { p_column_name: string; p_table_name: string }
+        Returns: Database["public"]["Enums"]["data_classification_level"]
+      }
       get_log_statistics: {
         Args: { p_hours?: number; p_org_id?: string }
         Returns: {
@@ -3652,6 +3755,21 @@ export type Database = {
         Args: { _object_id: string; _object_type: string; _user_id: string }
         Returns: boolean
       }
+      log_pii_access: {
+        Args: {
+          p_access_reason?: string
+          p_action: string
+          p_context?: Json
+          p_ip_address?: string
+          p_org_id: string
+          p_pii_fields: string[]
+          p_resource_id: string
+          p_resource_type: string
+          p_user_agent?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       record_login_attempt: {
         Args: {
           p_email: string
@@ -3732,6 +3850,11 @@ export type Database = {
         | "not_in_array"
         | "starts_with"
         | "ends_with"
+      data_classification_level:
+        | "public"
+        | "internal"
+        | "confidential"
+        | "restricted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3886,6 +4009,12 @@ export const Constants = {
         "not_in_array",
         "starts_with",
         "ends_with",
+      ],
+      data_classification_level: [
+        "public",
+        "internal",
+        "confidential",
+        "restricted",
       ],
     },
   },

@@ -6,7 +6,10 @@
  * - Formatação legível em desenvolvimento
  * - Contexto automático (function name, timestamp)
  * - warn e error sempre logados (ambos os ambientes)
+ * - Sanitização automática de PII (LGPD/GDPR)
  */
+
+import { sanitizeForLogs, sanitizeError as sanitizePiiError } from './pii-sanitizer.ts';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -28,12 +31,15 @@ class EdgeLogger {
   }
 
   private formatLog(level: LogLevel, message: string, data?: unknown): LogEntry {
+    // Always sanitize data before logging
+    const sanitizedData = data !== undefined ? sanitizeForLogs(data) : undefined;
+    
     return {
       timestamp: new Date().toISOString(),
       level,
       context: this.context,
-      message,
-      ...(data !== undefined && { data }),
+      message: sanitizeForLogs(message) as string,
+      ...(sanitizedData !== undefined && { data: sanitizedData }),
     };
   }
 
@@ -70,11 +76,50 @@ class EdgeLogger {
   }
 
   error(message: string, error?: unknown, data?: unknown): void {
-    // Errors sempre logados
-    const errorData = error !== undefined || data !== undefined 
-      ? { error, ...(typeof data === 'object' && data !== null ? data : { data }) }
+    // Errors sempre logados - com sanitização de PII
+    const sanitizedError = error !== undefined ? sanitizePiiError(error) : undefined;
+    const sanitizedData = data !== undefined ? sanitizeForLogs(data) : undefined;
+    
+    const errorData = sanitizedError !== undefined || sanitizedData !== undefined 
+      ? { 
+          error: sanitizedError, 
+          ...(typeof sanitizedData === 'object' && sanitizedData !== null ? sanitizedData : { data: sanitizedData }) 
+        }
       : undefined;
+    
     this.output(this.formatLog('error', message, errorData));
+  }
+
+  /**
+   * Log PII access for LGPD/GDPR audit trail
+   * This should be called whenever confidential or restricted data is accessed
+   */
+  async logPiiAccess(
+    supabase: { from: (table: string) => { insert: (data: unknown) => Promise<unknown> } },
+    userId: string,
+    orgId: string | undefined,
+    action: string,
+    resourceType: string,
+    resourceId: string | undefined,
+    piiFields: string[],
+    reason?: string,
+    context?: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      await supabase.from('pii_access_audit').insert({
+        user_id: userId,
+        org_id: orgId,
+        action,
+        resource_type: resourceType,
+        resource_id: resourceId,
+        pii_fields: piiFields,
+        access_reason: reason,
+        access_context: context || {}
+      });
+    } catch (err) {
+      // Log the failure but don't throw - we don't want audit logging to break functionality
+      console.error('[Logger] Failed to log PII access:', sanitizePiiError(err));
+    }
   }
 
   // Factory

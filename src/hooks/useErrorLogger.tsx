@@ -3,11 +3,14 @@
  * 
  * Provides easy-to-use logging functions for React components.
  * Logs are sent to the centralized logging system.
+ * 
+ * IMPORTANT: All data is sanitized for PII before logging (LGPD/GDPR compliant)
  */
 
 import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthSafe } from '@/hooks/useAuth';
+import { sanitizeForLogs, sanitizeStackTrace, maskPiiValue } from '@/lib/security/piiSanitizer';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'critical';
 
@@ -43,18 +46,21 @@ export function useErrorLogger(componentName?: string) {
 
     const logsToSend = logQueueRef.current.splice(0, MAX_BATCH_SIZE);
     
-    // Send each log (could be optimized to batch insert in Edge Function)
+    // Send each log with sanitization
     for (const log of logsToSend) {
       try {
+        // Sanitize all data before sending - LGPD/GDPR compliance
+        const sanitizedPayload = {
+          level: log.level,
+          source: log.source,
+          message: maskPiiValue(log.message),
+          stack_trace: sanitizeStackTrace(log.stack_trace),
+          component_name: log.component_name,
+          metadata: log.metadata ? sanitizeForLogs(log.metadata) as Record<string, unknown> : undefined,
+        };
+
         await supabase.functions.invoke('log-event', {
-          body: {
-            level: log.level,
-            source: log.source,
-            message: log.message,
-            stack_trace: log.stack_trace,
-            component_name: log.component_name,
-            metadata: log.metadata,
-          }
+          body: sanitizedPayload
         });
       } catch (e) {
         console.error('[useErrorLogger] Failed to send log:', e);
