@@ -1657,6 +1657,83 @@ export type Database = {
           },
         ]
       }
+      notification_settings: {
+        Row: {
+          alert_critical_issue: Json | null
+          alert_new_user: Json | null
+          alert_score_drop: Json | null
+          alert_score_drop_threshold: number | null
+          alert_sla_expiring: Json | null
+          alert_sync_failed: Json | null
+          alert_weekly_report: Json | null
+          created_at: string | null
+          digest_daily_enabled: boolean | null
+          digest_day_of_week: number | null
+          digest_time: string | null
+          digest_weekly_enabled: boolean | null
+          email_enabled: boolean | null
+          id: string
+          in_app_enabled: boolean | null
+          org_id: string
+          slack_enabled: boolean | null
+          slack_webhook_url: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          alert_critical_issue?: Json | null
+          alert_new_user?: Json | null
+          alert_score_drop?: Json | null
+          alert_score_drop_threshold?: number | null
+          alert_sla_expiring?: Json | null
+          alert_sync_failed?: Json | null
+          alert_weekly_report?: Json | null
+          created_at?: string | null
+          digest_daily_enabled?: boolean | null
+          digest_day_of_week?: number | null
+          digest_time?: string | null
+          digest_weekly_enabled?: boolean | null
+          email_enabled?: boolean | null
+          id?: string
+          in_app_enabled?: boolean | null
+          org_id: string
+          slack_enabled?: boolean | null
+          slack_webhook_url?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          alert_critical_issue?: Json | null
+          alert_new_user?: Json | null
+          alert_score_drop?: Json | null
+          alert_score_drop_threshold?: number | null
+          alert_sla_expiring?: Json | null
+          alert_sync_failed?: Json | null
+          alert_weekly_report?: Json | null
+          created_at?: string | null
+          digest_daily_enabled?: boolean | null
+          digest_day_of_week?: number | null
+          digest_time?: string | null
+          digest_weekly_enabled?: boolean | null
+          email_enabled?: boolean | null
+          id?: string
+          in_app_enabled?: boolean | null
+          org_id?: string
+          slack_enabled?: boolean | null
+          slack_webhook_url?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           action_label: string | null
@@ -1804,6 +1881,115 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      outbound_webhook_logs: {
+        Row: {
+          attempts: number | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          next_retry_at: string | null
+          payload: Json
+          response_body: string | null
+          status: string
+          status_code: number | null
+          webhook_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          next_retry_at?: string | null
+          payload: Json
+          response_body?: string | null
+          status?: string
+          status_code?: number | null
+          webhook_id: string
+        }
+        Update: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          next_retry_at?: string | null
+          payload?: Json
+          response_body?: string | null
+          status?: string
+          status_code?: number | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "outbound_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outbound_webhooks: {
+        Row: {
+          created_at: string | null
+          custom_headers: Json | null
+          enabled: boolean | null
+          events: string[] | null
+          failure_count: number | null
+          id: string
+          last_triggered_at: string | null
+          name: string
+          org_id: string
+          secret: string | null
+          success_count: number | null
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          custom_headers?: Json | null
+          enabled?: boolean | null
+          events?: string[] | null
+          failure_count?: number | null
+          id?: string
+          last_triggered_at?: string | null
+          name: string
+          org_id: string
+          secret?: string | null
+          success_count?: number | null
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          custom_headers?: Json | null
+          enabled?: boolean | null
+          events?: string[] | null
+          failure_count?: number | null
+          id?: string
+          last_triggered_at?: string | null
+          name?: string
+          org_id?: string
+          secret?: string | null
+          success_count?: number | null
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_webhooks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       policies: {
         Row: {
