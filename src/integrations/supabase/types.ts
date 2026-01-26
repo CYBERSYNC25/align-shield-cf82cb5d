@@ -70,6 +70,44 @@ export type Database = {
           },
         ]
       }
+      analytics_events: {
+        Row: {
+          created_at: string
+          event_name: string
+          id: string
+          org_id: string | null
+          properties: Json | null
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_name: string
+          id?: string
+          org_id?: string | null
+          properties?: Json | null
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_name?: string
+          id?: string
+          org_id?: string | null
+          properties?: Json | null
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       answer_library: {
         Row: {
           applies_to_frameworks: string[] | null
@@ -3013,6 +3051,14 @@ export type Database = {
         Args: { p_error_message: string; p_job_id: string }
         Returns: boolean
       }
+      get_active_users_metrics: {
+        Args: { p_org_id: string }
+        Returns: {
+          dau: number
+          mau: number
+          wau: number
+        }[]
+      }
       get_cache: { Args: { p_key: string }; Returns: Json }
       get_log_statistics: {
         Args: { p_hours?: number; p_org_id?: string }
@@ -3020,6 +3066,31 @@ export type Database = {
           count: number
           latest_at: string
           level: string
+        }[]
+      }
+      get_remediation_rate: {
+        Args: { p_org_id: string }
+        Returns: {
+          avg_time_to_remediate_hours: number
+          remediated_issues: number
+          remediation_rate: number
+          total_issues: number
+        }[]
+      }
+      get_time_to_first_scan: {
+        Args: { p_org_id: string }
+        Returns: {
+          avg_hours: number
+          median_hours: number
+          users_scanned: number
+          users_total: number
+        }[]
+      }
+      get_top_integrations: {
+        Args: { p_limit?: number; p_org_id: string }
+        Returns: {
+          connection_count: number
+          integration_type: string
         }[]
       }
       get_trust_center_by_slug: {
