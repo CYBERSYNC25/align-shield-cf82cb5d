@@ -1,91 +1,61 @@
 
 
-## Correção: Recursão Infinita na Tabela object_permissions
+## Correção: Dashboard acessível para Viewers (Opção A)
 
-### Problema Identificado
-A política RLS **"Owners can manage object permissions"** está causando um loop infinito porque ela consulta a própria tabela `object_permissions` para verificar se o usuário é owner, o que aciona as políticas RLS novamente.
+### Problema
+O item "Dashboard" no menu lateral aponta para `/`, e o `ProtectedRoute` redireciona viewers de `/` para `/readiness`. Isso impede que viewers acessem o Dashboard.
 
-Isso está impedindo o carregamento do Dashboard porque:
-1. O `ProtectedRoute` usa o hook `useUserRoles`
-2. O hook tenta carregar permissões da tabela `object_permissions`
-3. A query falha com erro de recursão
-4. O loading fica preso eternamente, mostrando apenas o spinner
+### Solução
+Alterar o `href` do item Dashboard no Sidebar de `/` para `/dashboard`.
 
 ---
 
-### Solução: Usar Função SECURITY DEFINER
+### Mudança Necessária
 
-Criar uma função que verifica ownership **sem ativar RLS**, seguindo o mesmo padrão já usado para `has_role` e `get_user_org_id`.
+**Arquivo:** `src/components/layout/Sidebar.tsx`
 
----
+```typescript
+// Antes (linha ~70)
+{ 
+  icon: LayoutDashboard, 
+  label: 'Dashboard', 
+  href: '/', 
+  permission: 'canViewAll' as const 
+},
 
-### Migração SQL Necessária
-
-```sql
--- 1. Criar função SECURITY DEFINER para verificar ownership
-CREATE OR REPLACE FUNCTION public.is_object_owner(
-  _user_id UUID,
-  _object_type TEXT,
-  _object_id UUID
-)
-RETURNS BOOLEAN
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.object_permissions
-    WHERE user_id = _user_id
-      AND object_type = _object_type
-      AND object_id = _object_id
-      AND permission_level = 'owner'
-  )
-$$;
-
--- 2. Remover política problemática
-DROP POLICY IF EXISTS "Owners can manage object permissions" ON public.object_permissions;
-
--- 3. Recriar política usando a função SECURITY DEFINER
-CREATE POLICY "Owners can manage object permissions"
-  ON public.object_permissions
-  FOR ALL
-  TO authenticated
-  USING (
-    public.is_object_owner(auth.uid(), object_type, object_id)
-  )
-  WITH CHECK (
-    public.is_object_owner(auth.uid(), object_type, object_id)
-  );
+// Depois
+{ 
+  icon: LayoutDashboard, 
+  label: 'Dashboard', 
+  href: '/dashboard',  // Mudança aqui
+  permission: 'canViewAll' as const 
+},
 ```
 
 ---
 
-### Por que isso funciona?
+### Por que funciona
 
-| Abordagem | Comportamento |
-|-----------|---------------|
-| Subconsulta direta na política | Aciona RLS → recursão infinita |
-| Função SECURITY DEFINER | Executa com privilégios do owner da função, **ignorando RLS** |
+| Rota | Comportamento do ProtectedRoute |
+|------|--------------------------------|
+| `/` | Se viewer → redireciona para `/readiness` |
+| `/dashboard` | Renderiza normalmente (sem redirect) |
 
-A função `is_object_owner` consulta a tabela `object_permissions` com os privilégios do criador da função (superuser), **bypassando as políticas RLS** e quebrando o ciclo de recursão.
+O `ProtectedRoute` só força redirecionamento quando `pathname === '/'`. Em `/dashboard`, ele simplesmente renderiza o conteúdo.
 
 ---
 
 ### Arquivos a Modificar
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/migrations/xxx_fix_object_permissions_recursion.sql` | Criar migração com função e política corrigida |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/layout/Sidebar.tsx` | Mudar `href: '/'` para `href: '/dashboard'` no item Dashboard |
 
 ---
 
 ### Resultado Esperado
 
-Após a correção:
-- O hook `useUserRoles` carregará as permissões corretamente
-- O `ProtectedRoute` sairá do estado de loading
-- O Dashboard abrirá normalmente
-- A funcionalidade de ownership continuará funcionando
+- Ao clicar em "Dashboard" no menu, você irá para `/dashboard`
+- O Dashboard abrirá normalmente, mesmo com role `viewer`
+- O comportamento de `/` (rota raiz) permanece inalterado
 
