@@ -3393,6 +3393,10 @@ export type Database = {
         Returns: boolean
       }
       invalidate_cache: { Args: { p_key_pattern: string }; Returns: number }
+      is_object_owner: {
+        Args: { _object_id: string; _object_type: string; _user_id: string }
+        Returns: boolean
+      }
       reset_stuck_jobs: { Args: never; Returns: number }
       search_answer_library: {
         Args: { p_limit?: number; p_search_text: string; p_user_id: string }
