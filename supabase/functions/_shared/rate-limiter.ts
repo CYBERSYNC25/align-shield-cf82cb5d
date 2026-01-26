@@ -1,6 +1,7 @@
 /**
  * Rate Limiter using Upstash Redis
  * Implements sliding window rate limiting with fail-open behavior
+ * Supports tiered rate limits based on user authentication level
  * 
  * @module rate-limiter
  */
@@ -8,6 +9,29 @@
 import { createLogger } from './logger.ts';
 
 const logger = createLogger('RateLimit');
+
+/**
+ * Rate limit tiers for different user types
+ */
+export type RateLimitTier = 
+  | 'unauthenticated'  // 100/hour per IP
+  | 'authenticated'    // 1000/hour per user
+  | 'api_free'         // 100/minute
+  | 'api_pro'          // 5000/hour
+  | 'api_enterprise'   // 20000/hour
+  | 'login';           // 5/15min
+
+/**
+ * Rate limit configuration for each tier
+ */
+export const RATE_LIMIT_CONFIGS: Record<RateLimitTier, { max: number; window: number }> = {
+  unauthenticated: { max: 100, window: 3600 },     // 100/hour
+  authenticated: { max: 1000, window: 3600 },      // 1000/hour
+  api_free: { max: 100, window: 60 },              // 100/minute
+  api_pro: { max: 5000, window: 3600 },            // 5000/hour
+  api_enterprise: { max: 20000, window: 3600 },    // 20000/hour
+  login: { max: 5, window: 900 },                  // 5/15min
+};
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -18,7 +42,7 @@ export interface RateLimitResult {
 
 /**
  * Check rate limit for a user/endpoint combination using sliding window algorithm
- * @param userId - User ID or IP address
+ * @param userId - User ID, API key ID, or IP address
  * @param endpoint - Endpoint identifier (e.g., 'sync-integration-data')
  * @param maxRequests - Maximum requests allowed in the window (default: 10)
  * @param windowSeconds - Time window in seconds (default: 60)
@@ -89,6 +113,28 @@ export async function checkRateLimit(
     // Fail-open - allow request if Redis fails
     return { allowed: true, remaining: maxRequests, resetAt: 0, limit: maxRequests };
   }
+}
+
+/**
+ * Check tiered rate limit based on user tier
+ * @param identifier - User identifier (user_id, api_key_id, or IP)
+ * @param tier - Rate limit tier
+ * @param endpoint - Endpoint name for logging
+ * @param overrideMax - Optional override for max requests
+ * @param overrideWindow - Optional override for window in seconds
+ */
+export async function checkTieredRateLimit(
+  identifier: string,
+  tier: RateLimitTier,
+  endpoint?: string,
+  overrideMax?: number,
+  overrideWindow?: number
+): Promise<RateLimitResult> {
+  const config = RATE_LIMIT_CONFIGS[tier];
+  const maxRequests = overrideMax ?? config.max;
+  const windowSeconds = overrideWindow ?? config.window;
+  
+  return checkRateLimit(identifier, endpoint || 'global', maxRequests, windowSeconds);
 }
 
 /**
