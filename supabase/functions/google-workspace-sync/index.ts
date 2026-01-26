@@ -23,6 +23,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { checkRateLimit, isServiceRole, rateLimitExceededResponse } from "../_shared/rate-limiter.ts";
+import { createCredentialLogger } from "../_shared/credential-access-logger.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -119,6 +120,7 @@ async function refreshAccessToken(
     const newAccessToken = tokenData.access_token;
     const expiresIn = tokenData.expires_in || 3600;
     const newExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+    const nowIso = new Date().toISOString();
 
     // Atualizar token no banco
     const { error: updateError } = await supabase
@@ -126,15 +128,23 @@ async function refreshAccessToken(
       .update({
         access_token: newAccessToken,
         expires_at: newExpiresAt,
-        updated_at: new Date().toISOString(),
+        updated_at: nowIso,
+        last_used_at: nowIso,
       })
       .eq('user_id', userId)
       .eq('integration_name', 'google_workspace');
 
     if (updateError) {
       console.error('[Token] Failed to save refreshed token:', updateError);
+      // Log refresh failure
+      const credLogger = createCredentialLogger(supabase, userId, 'google-workspace-sync');
+      await credLogger.logRefresh('google_workspace', false, updateError.message);
       return null;
     }
+
+    // Log successful refresh
+    const credLogger = createCredentialLogger(supabase, userId, 'google-workspace-sync');
+    await credLogger.logRefresh('google_workspace', true);
 
     console.log('[Token] Access token renovado com sucesso!');
     return newAccessToken;

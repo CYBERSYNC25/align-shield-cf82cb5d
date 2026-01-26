@@ -1081,6 +1081,39 @@ export type Database = {
           },
         ]
       }
+      encryption_key_history: {
+        Row: {
+          algorithm: string
+          created_at: string
+          deprecated_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_version: number
+          rotated_at: string | null
+        }
+        Insert: {
+          algorithm?: string
+          created_at?: string
+          deprecated_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_version: number
+          rotated_at?: string | null
+        }
+        Update: {
+          algorithm?: string
+          created_at?: string
+          deprecated_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_version?: number
+          rotated_at?: string | null
+        }
+        Relationships: []
+      }
       evidence: {
         Row: {
           audit_id: string | null
@@ -1417,6 +1450,7 @@ export type Database = {
           expires_at: string
           id: string
           integration_name: string
+          last_used_at: string | null
           metadata: Json | null
           org_id: string | null
           refresh_token: string | null
@@ -1431,6 +1465,7 @@ export type Database = {
           expires_at: string
           id?: string
           integration_name: string
+          last_used_at?: string | null
           metadata?: Json | null
           org_id?: string | null
           refresh_token?: string | null
@@ -1445,6 +1480,7 @@ export type Database = {
           expires_at?: string
           id?: string
           integration_name?: string
+          last_used_at?: string | null
           metadata?: Json | null
           org_id?: string | null
           refresh_token?: string | null
@@ -1578,6 +1614,7 @@ export type Database = {
           created_at: string
           id: string
           last_sync_at: string | null
+          last_used_at: string | null
           name: string
           org_id: string | null
           provider: string
@@ -1590,6 +1627,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_sync_at?: string | null
+          last_used_at?: string | null
           name: string
           org_id?: string | null
           provider: string
@@ -1602,6 +1640,7 @@ export type Database = {
           created_at?: string
           id?: string
           last_sync_at?: string | null
+          last_used_at?: string | null
           name?: string
           org_id?: string | null
           provider?: string
