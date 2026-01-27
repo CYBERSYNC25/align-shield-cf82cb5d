@@ -123,6 +123,14 @@ Centro de ação com visão unificada de:
 - Mapeamento automático para controles
 - Score de confiança por resposta
 
+### 🛡️ Proteção de Dados (LGPD/GDPR)
+- **Classificação de dados** por nível (public/internal/confidential/restricted)
+- **Mascaramento automático de PII** em logs (email, CPF, telefone, IP)
+- **Auditoria de acesso** a dados pessoais (append-only, imutável)
+- **Retenção automática** com exclusão e anonimização programadas
+- **Exportação de dados pessoais** (portabilidade em JSON)
+- **Exclusão de conta** com opção imediata ou agendada (30 dias)
+
 ### 🌐 Trust Center
 - Página pública de transparência
 - Customização de branding (cores, logo)
@@ -260,7 +268,8 @@ Score = (Testes Passando + Riscos Aceitos) / Total de Testes × 100
 | **Formulários** | React Hook Form + Zod |
 | **Gráficos** | Recharts |
 | **Backend** | Supabase (PostgreSQL, Auth, Storage, Edge Functions) |
-| **Segurança** | AES-256-GCM, HMAC-SHA256, RLS, Rate Limiting |
+| **Segurança** | AES-256-GCM, HMAC-SHA256, RLS, Rate Limiting, PII Sanitization |
+| **Privacidade** | LGPD/GDPR compliant, Data Classification, Audit Trail |
 
 ---
 
@@ -448,6 +457,10 @@ Para cada issue no Action Center:
 | `invite-user` | Convida novos usuários |
 | `seed-compliance-data` | Popula dados iniciais |
 | `health-check` | Verifica saúde do sistema |
+| `cleanup-pii-data` | Cron job de limpeza de dados (LGPD) |
+| `export-user-data` | Exporta dados pessoais do usuário |
+| `delete-user-account` | Exclui conta (soft/hard delete) |
+| `public-api` | API pública com rate limiting |
 
 ---
 
@@ -467,11 +480,37 @@ Todas as 40+ tabelas possuem políticas RLS que garantem:
 - Admins têm acesso expandido
 - Auditores têm acesso read-only limitado
 
-### Rate Limiting
+### Proteção contra Abuso de API
 
-- **Redis**: Upstash Redis para controle de rate limit
-- **Limites**: 100 req/min para APIs críticas
-- **Webhooks**: Validação HMAC-SHA256
+Rate limiting por tier com Upstash Redis:
+
+| Tipo de Acesso | Limite | Janela |
+|----------------|--------|--------|
+| Não autenticado (por IP) | 100 | 1 hora |
+| Autenticado (por user_id) | 1000 | 1 hora |
+| API Key Free | 100 | 1 minuto |
+| API Key Pro | 5000 | 1 hora |
+| API Key Enterprise | 20000 | 1 hora |
+| Login | 5 | 15 minutos |
+
+### Security Headers
+
+Headers aplicados em todas as respostas:
+
+| Header | Valor |
+|--------|-------|
+| X-Content-Type-Options | nosniff |
+| X-Frame-Options | DENY |
+| X-XSS-Protection | 1; mode=block |
+| Strict-Transport-Security | max-age=31536000 |
+| Content-Security-Policy | Restritiva (default-src 'self') |
+| Referrer-Policy | strict-origin-when-cross-origin |
+
+### Proteção contra IPs Maliciosos
+
+- Tabela `blocked_ips` para bloqueio manual/automático
+- Logs de atividade suspeita em `suspicious_activity_logs`
+- Auto-bloqueio após excesso de rate limit
 
 ### Validação de Webhooks
 
@@ -483,6 +522,50 @@ const isValid = await validateWebhookSignature(
 );
 ```
 
+### Conformidade LGPD/GDPR
+
+#### Classificação de Dados
+
+| Nível | Descrição | Exemplo |
+|-------|-----------|---------|
+| public | Dados públicos | Nome da organização |
+| internal | Apenas membros da org | Display name |
+| confidential | PII, requer auditoria | Email, CPF, IP |
+| restricted | NUNCA logado | Tokens, senhas |
+
+#### Mascaramento de PII
+
+| Tipo | Original | Mascarado |
+|------|----------|-----------|
+| Email | joao@empresa.com | jo***@empresa.com |
+| CPF | 123.456.789-01 | ***.456.789-** |
+| Telefone | (11) 98765-4321 | ***-**21 |
+| IP | 192.168.1.100 | 192.168.\*.\* |
+| Token | sk_live_abc123xyz789 | sk_live_abc1\*\*\*\*z789 |
+
+#### Auditoria de Acesso a PII
+
+- Tabela imutável `pii_access_audit`
+- Registra: quem, quando, qual dado, motivo
+- Apenas service_role pode inserir (via Edge Functions)
+- Admins podem visualizar logs de sua organização
+
+#### Retenção de Dados
+
+| Tipo de Dado | Retenção | Ação |
+|--------------|----------|------|
+| Contas excluídas | 30 dias | Hard delete |
+| Contas inativas | 2 anos | Anonimização |
+| Logs de auditoria | 7 anos | Imutável |
+| Exportações | 24 horas | Delete |
+| Logs de sistema | 90 dias | Delete |
+
+#### Direitos do Titular
+
+- **Portabilidade**: Exportar todos os dados em JSON
+- **Esquecimento**: Exclusão agendada (30 dias) ou imediata
+- **Acesso**: Visualizar dados pessoais em Settings
+
 ### Boas Práticas Implementadas
 
 - ✅ Senhas verificadas contra vazamentos (HIBP API)
@@ -490,6 +573,51 @@ const isValid = await validateWebhookSignature(
 - ✅ Logs de auditoria para ações críticas
 - ✅ Expiração automática de tokens de acesso
 - ✅ Sanitização de dados sensíveis em logs
+- ✅ Mascaramento automático de PII em todos os logs
+- ✅ Classificação de dados por nível de sensibilidade
+- ✅ Auditoria imutável de acesso a dados pessoais
+- ✅ Rate limiting por tier (IP, usuário, API key)
+- ✅ Security headers em todas as respostas
+- ✅ Auto-bloqueio de IPs suspeitos
+- ✅ Retenção automática com exclusão/anonimização
+- ✅ Conformidade LGPD/GDPR integrada
+
+---
+
+## 📜 Conformidade
+
+### LGPD (Lei Geral de Proteção de Dados)
+
+O APOC implementa controles nativos para conformidade com a LGPD:
+
+| Artigo | Requisito | Implementação |
+|--------|-----------|---------------|
+| Art. 18, I | Acesso aos dados | Settings > Meus Dados |
+| Art. 18, II | Correção | Edição de perfil |
+| Art. 18, IV | Anonimização | Automática após 2 anos |
+| Art. 18, V | Portabilidade | Export em JSON |
+| Art. 18, VI | Eliminação | Exclusão de conta |
+| Art. 37 | Registro de operações | pii_access_audit |
+| Art. 46 | Segurança | AES-256, RLS, Rate Limit |
+
+### GDPR (General Data Protection Regulation)
+
+| Artigo | Requisito | Implementação |
+|--------|-----------|---------------|
+| Art. 15 | Right of access | Data export |
+| Art. 17 | Right to erasure | Account deletion |
+| Art. 20 | Data portability | JSON export |
+| Art. 30 | Records of processing | Audit logs |
+| Art. 32 | Security | Encryption, access control |
+
+### SOC 2 Type II
+
+O APOC auxilia na conformidade SOC 2:
+
+- **CC6.1**: Logical and physical access controls (RLS, Auth)
+- **CC6.6**: Secure transmission (HTTPS, TLS)
+- **CC6.7**: Disposal (Data retention automation)
+- **CC7.2**: System monitoring (Audit logs, alerts)
 
 ---
 
