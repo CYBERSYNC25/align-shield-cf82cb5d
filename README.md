@@ -556,6 +556,95 @@ Acessível apenas para `admin` e `master_admin`:
 
 ---
 
+## 📁 Segurança de Uploads
+
+O sistema implementa múltiplas camadas de validação para uploads de arquivos:
+
+### Tipos Permitidos
+
+| Tipo | Extensão | Magic Bytes (Hex) |
+|------|----------|-------------------|
+| PDF | .pdf | 25 50 44 46 (%PDF) |
+| PNG | .png | 89 50 4E 47 0D 0A 1A 0A |
+| JPEG | .jpg, .jpeg | FF D8 FF |
+| DOCX | .docx | 50 4B 03 04 (ZIP) |
+| XLSX | .xlsx | 50 4B 03 04 (ZIP) |
+| CSV | .csv | Texto válido (sem binários) |
+
+### Tipos Bloqueados
+
+Executáveis e scripts são **sempre rejeitados**, independentemente da extensão declarada:
+
+```
+.exe, .sh, .bat, .cmd, .ps1, .vbs, .js, .html, .htm, .php, 
+.asp, .aspx, .jsp, .msi, .dll, .com, .scr, .pif, .jar, .py, .rb, .pl
+```
+
+Magic bytes bloqueados: `MZ` (Windows EXE), `#!` (shebang), `<?php`, `<script>`, ELF, Mach-O, Java class.
+
+### Limites de Quota
+
+| Limite | Valor | Escopo |
+|--------|-------|--------|
+| Tamanho por arquivo | 25MB | Por upload individual |
+| Uploads diários | 100MB | Por usuário |
+| Armazenamento total | 1GB | Por organização |
+
+### Sanitização
+
+1. **Renomeação UUID**: Arquivos são renomeados para UUID (nome original preservado em metadata)
+2. **EXIF Stripping**: Metadados EXIF removidos automaticamente de imagens JPEG
+3. **Hash SHA-256**: Calculado para cada arquivo (detecção de duplicatas)
+
+### Armazenamento Seguro
+
+- **Buckets privados**: `evidence` e `documents` não são públicos
+- **URLs assinadas**: Expiram em 1 hora, renovadas automaticamente via `useSignedUrl`
+- **RLS**: Usuários só acessam seus próprios arquivos via pasta `user_id/`
+
+### Validação em Camadas
+
+| Camada | Local | Validações |
+|--------|-------|------------|
+| 1. Cliente | Browser | Magic bytes, extensão, tamanho (25MB) |
+| 2. Edge Function | Servidor | Re-validação magic bytes, quota user/org, EXIF strip, hash |
+| 3. Storage | Supabase | RLS policies, bucket policies |
+
+### Componentes
+
+| Componente | Descrição |
+|------------|-----------|
+| `SecureFileUpload` | Componente React com validação client-side e progress |
+| `useSignedUrl` | Hook para URLs assinadas com auto-refresh |
+| `secure-upload` | Edge Function com validação server-side |
+| `file_uploads` | Tabela de tracking com hash e quotas |
+
+### Uso no Código
+
+```typescript
+import SecureFileUpload from '@/components/common/SecureFileUpload';
+
+// Upload seguro com callbacks
+<SecureFileUpload
+  bucket="evidence"
+  folder="audit-evidence"
+  multiple={true}
+  maxFiles={5}
+  onUploadComplete={(files) => console.log('Uploaded:', files)}
+  onError={(error) => console.error('Error:', error)}
+/>
+
+// URL assinada com auto-refresh
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+
+const { signedUrl, loading, timeRemaining } = useSignedUrl(
+  'documents', 
+  'user-id/folder/file.pdf'
+);
+```
+
+---
+
 ## 🔐 Segurança
 
 ### Criptografia de Credenciais

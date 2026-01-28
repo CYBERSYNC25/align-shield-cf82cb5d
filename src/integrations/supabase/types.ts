@@ -1246,6 +1246,65 @@ export type Database = {
           },
         ]
       }
+      file_uploads: {
+        Row: {
+          bucket: string
+          created_at: string
+          detected_type: string
+          exif_stripped: boolean | null
+          expires_at: string | null
+          file_hash: string
+          id: string
+          mime_type: string
+          org_id: string | null
+          original_name: string
+          size_bytes: number
+          storage_path: string
+          user_id: string
+          validated_at: string
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          detected_type: string
+          exif_stripped?: boolean | null
+          expires_at?: string | null
+          file_hash: string
+          id?: string
+          mime_type: string
+          org_id?: string | null
+          original_name: string
+          size_bytes: number
+          storage_path: string
+          user_id: string
+          validated_at?: string
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          detected_type?: string
+          exif_stripped?: boolean | null
+          expires_at?: string | null
+          file_hash?: string
+          id?: string
+          mime_type?: string
+          org_id?: string | null
+          original_name?: string
+          size_bytes?: number
+          storage_path?: string
+          user_id?: string
+          validated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "file_uploads_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       frameworks: {
         Row: {
           compliance_score: number | null
@@ -3620,6 +3679,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      check_org_total_quota: {
+        Args: { _org_id: string }
+        Returns: {
+          can_upload: boolean
+          limit_bytes: number
+          remaining_bytes: number
+          used_bytes: number
+        }[]
+      }
+      check_user_daily_quota: {
+        Args: { _user_id: string }
+        Returns: {
+          can_upload: boolean
+          limit_bytes: number
+          remaining_bytes: number
+          used_bytes: number
+        }[]
+      }
       claim_pending_jobs: {
         Args: { p_limit?: number }
         Returns: {
@@ -3699,6 +3776,14 @@ export type Database = {
       field_requires_audit: {
         Args: { p_column_name: string; p_table_name: string }
         Returns: boolean
+      }
+      find_duplicate_file: {
+        Args: { _file_hash: string; _org_id: string }
+        Returns: {
+          id: string
+          original_name: string
+          storage_path: string
+        }[]
       }
       get_active_users_metrics: {
         Args: { p_org_id: string }
