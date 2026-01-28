@@ -1,488 +1,213 @@
 
-# Plano: Fortalecimento da Proteção contra SSRF em Webhooks
+# Plano: Corrigir Erro de Carregamento de Permissões
 
-## Visao Geral
+## Diagnóstico do Problema
 
-O projeto ja possui validacao basica de URLs de webhook em `webhookUrlSchema` (frontend) e `webhookUrl` (backend), mas precisa ser fortalecido para cobrir:
-- Mais ranges de IPs privados e especiais
-- Cloud metadata endpoints (AWS, GCP, Azure)
-- IPv6 local/link-local
-- Protecao contra DNS rebinding
-- Controle de redirects e timeouts
-- Logging completo de tentativas
+O erro "Não foi possível carregar suas permissões" ocorre porque:
 
----
+1. **Nenhuma organização existe** na tabela `organizations`
+2. **Todos os 5 profiles têm `org_id = NULL`**
+3. **Todos os 2 user_roles têm `org_id = NULL`**
+4. **A política RLS** `"Org members can view org user_roles"` usa:
+   ```sql
+   org_id = get_user_org_id(auth.uid())
+   ```
+5. Como `get_user_org_id()` retorna `NULL` (porque profile.org_id é NULL), a comparação `NULL = NULL` sempre retorna **FALSE** em SQL
+6. **Resultado**: A query de roles retorna um array vazio, e o hook lança o toast de erro
 
-## Analise do Estado Atual
-
-### Gaps Identificados
-
-| Aspecto | Atual | Necessario |
-|---------|-------|------------|
-| IP localhost | 127.0.0.1 | Todo range 127.x.x.x |
-| IPv6 local | ::1 | ::1, fe80::, ::ffff:127.0.0.1 |
-| Metadata endpoints | Nenhum | 169.254.169.254, metadata.google, etc |
-| Protocolo | Nao verifica HTTPS | Exigir HTTPS |
-| Timeout | Sem limite | 10 segundos |
-| Redirects | Seguindo | Nao seguir |
-| SSL | Nao verificado | Verificar certificado |
-| Logging | Parcial | Completo |
-
-### Locais que Precisam de Protecao
-
-| Local | Arquivo | Risco |
-|-------|---------|-------|
-| Webhook outbound config | `useOutboundWebhooks.tsx` | Cliente envia para URL maliciosa |
-| Test webhook (frontend) | `useOutboundWebhooks.tsx:244` | Fetch sem restricoes |
-| Test Slack webhook | `useNotificationSettings.tsx:234` | Fetch sem restricoes |
-| OAuth callback URLs | `azure-oauth-start` | redirect_uri controlada |
-| Proxy API request | `proxy-api-request` | Endpoint fornecido pelo usuario |
-| Send outbound webhook | `send-outbound-webhook` | URL do webhook (server-side) |
-| SNS subscribe confirm | `integration-webhook-handler:139` | URL de confirmacao AWS |
-
----
-
-## Arquitetura da Solucao
+### Fluxo do Problema
 
 ```text
-+-------------------------------------------------------------------+
-|                     SSRF Protection Architecture                    |
-+-------------------------------------------------------------------+
-|                                                                     |
-|  +------------------+     +------------------+                     |
-|  |   Frontend       |     |   Backend        |                     |
-|  |   Validation     |     |   Validation     |                     |
-|  +------------------+     +------------------+                     |
-|           |                        |                               |
-|           v                        v                               |
-|  +------------------+     +------------------+                     |
-|  | validateWebhook  |     | validateWebhook  |                     |
-|  | UrlSchema (zod)  |     | Url.ts (shared)  |                     |
-|  +------------------+     +------------------+                     |
-|           |                        |                               |
-|           +----------+-------------+                               |
-|                      |                                             |
-|                      v                                             |
-|           +------------------+                                     |
-|           | Regras SSRF:     |                                     |
-|           | - IPv4 privados  |                                     |
-|           | - IPv6 locais    |                                     |
-|           | - Localhost      |                                     |
-|           | - Metadata APIs  |                                     |
-|           | - Apenas HTTPS   |                                     |
-|           | - DNS check      |                                     |
-|           +------------------+                                     |
-|                      |                                             |
-|                      v                                             |
-|           +------------------+                                     |
-|           | secureFetch()    | <-- Para todas as chamadas outbound |
-|           | - Timeout 10s    |                                     |
-|           | - No redirects   |                                     |
-|           | - SSL verify     |                                     |
-|           | - Full logging   |                                     |
-|           +------------------+                                     |
-|                                                                     |
-+-------------------------------------------------------------------+
+┌─────────────────────────────────────────────────────────────────┐
+│                    Fluxo de Erro Atual                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  1. Usuário faz login                                           │
+│           │                                                      │
+│           ▼                                                      │
+│  2. useUserRoles.tsx chama:                                     │
+│     supabase.from('user_roles').select('role').eq('user_id',..) │
+│           │                                                      │
+│           ▼                                                      │
+│  3. RLS Policy "Org members can view org user_roles":           │
+│     org_id = get_user_org_id(auth.uid())                        │
+│           │                                                      │
+│           ▼                                                      │
+│  4. get_user_org_id() retorna NULL (profile.org_id = NULL)      │
+│           │                                                      │
+│           ▼                                                      │
+│  5. Comparação: NULL = NULL → FALSE                             │
+│           │                                                      │
+│           ▼                                                      │
+│  6. Query retorna 0 rows (ou erro RLS)                          │
+│           │                                                      │
+│           ▼                                                      │
+│  7. Toast: "Não foi possível carregar suas permissões"          │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Fase 1: Biblioteca de Validacao SSRF
+## Análise das Políticas RLS Atuais
 
-### 1.1 Frontend - `src/lib/security/ssrfValidator.ts`
+### user_roles (conflito de políticas)
 
-Nova biblioteca com regras completas:
+| Política | Condição |
+|----------|----------|
+| `Org members can view org roles` | `(org_id IS NULL)` (legada) |
+| `Org members can view org user_roles` | `org_id = get_user_org_id(auth.uid())` |
+| `Users and masters can view roles` | `auth.uid() = user_id OR has_role(...)` (authenticated) |
 
-```typescript
-// IPs bloqueados (ranges completos)
-const BLOCKED_IP_RANGES = [
-  // Loopback (IPv4)
-  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
-  
-  // Private networks (RFC 1918)
-  /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
-  /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,
-  /^192\.168\.\d{1,3}\.\d{1,3}$/,
-  
-  // Link-local (APIPA)
-  /^169\.254\.\d{1,3}\.\d{1,3}$/,
-  
-  // Carrier-grade NAT
-  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d{1,3}\.\d{1,3}$/,
-  
-  // Loopback IPv6 and mapped
-  /^::1$/,
-  /^::ffff:127\./i,
-  /^fe80:/i,  // Link-local IPv6
-  /^fc00:/i,  // Unique local
-  /^fd00:/i,  // Unique local
-];
-
-// Hostnames bloqueados (metadata endpoints)
-const BLOCKED_HOSTNAMES = [
-  'localhost',
-  '0.0.0.0',
-  
-  // AWS metadata
-  '169.254.169.254',
-  'instance-data',
-  
-  // GCP metadata  
-  'metadata.google.internal',
-  'metadata.google',
-  
-  // Azure metadata
-  '169.254.169.254',
-  'metadata.azure.com',
-  
-  // Kubernetes
-  'kubernetes.default',
-  'kubernetes.default.svc',
-  
-  // Generic internal
-  '*.local',
-  '*.internal',
-  '*.localhost',
-];
-```
-
-### 1.2 Funcao Principal
-
-```typescript
-interface SsrfValidationResult {
-  valid: boolean;
-  error?: string;
-  blockedReason?: 'private_ip' | 'localhost' | 'metadata' | 'ipv6_local' | 'non_https' | 'blocked_hostname';
-}
-
-export function validateWebhookUrl(url: string): SsrfValidationResult
-```
-
-### 1.3 Backend - `supabase/functions/_shared/ssrf-validator.ts`
-
-Versao identica para server-side com:
-- Resolucao DNS para verificar IP real (evitar DNS rebinding)
-- Validacao adicional antes de qualquer fetch
+O problema está no conflito entre políticas que esperam `org_id` e dados que não têm `org_id`.
 
 ---
 
-## Fase 2: Secure Fetch Wrapper
+## Solução Proposta
 
-### 2.1 `supabase/functions/_shared/secure-fetch.ts`
+A abordagem mais segura é **corrigir os dados** para que o sistema multi-tenant funcione corretamente:
 
-Wrapper para todas as chamadas HTTP outbound:
+### Fase 1: Criar Organização e Associar Usuários
 
-```typescript
-interface SecureFetchOptions {
-  url: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  headers?: Record<string, string>;
-  body?: string;
-  timeoutMs?: number; // Default: 10000
-  followRedirects?: boolean; // Default: false
-  validateSsl?: boolean; // Default: true
-  logAttempt?: boolean; // Default: true
-}
+**Migration SQL para:**
+1. Criar uma organização padrão se não existir
+2. Atualizar todos os profiles para terem `org_id` da organização padrão
+3. Atualizar todos os user_roles para terem `org_id` correto
 
-interface SecureFetchResult {
-  success: boolean;
-  response?: Response;
-  error?: string;
-  blocked?: boolean;
-  blockedReason?: string;
-}
+```sql
+-- 1. Criar organização padrão se não existir
+INSERT INTO organizations (id, name, slug, plan)
+SELECT 
+  gen_random_uuid(),
+  'Organização Principal',
+  'org-principal',
+  'professional'
+WHERE NOT EXISTS (SELECT 1 FROM organizations LIMIT 1);
 
-export async function secureFetch(options: SecureFetchOptions): Promise<SecureFetchResult>
+-- 2. Associar todos os profiles à organização
+UPDATE profiles
+SET org_id = (SELECT id FROM organizations LIMIT 1),
+    role_in_org = 'admin'
+WHERE org_id IS NULL;
+
+-- 3. Associar todos os user_roles à organização
+UPDATE user_roles
+SET org_id = (SELECT id FROM organizations LIMIT 1)
+WHERE org_id IS NULL;
 ```
 
-### 2.2 Caracteristicas
+### Fase 2: Melhorar Resiliência do Hook
 
-| Feature | Implementacao |
-|---------|---------------|
-| Timeout | AbortController com 10s default |
-| Redirects | redirect: 'manual' |
-| SSL | Deno verifica por padrao |
-| Logging | Log para system_logs com IP, resultado |
-| Pre-check | Validar URL antes do fetch |
-
----
-
-## Fase 3: Atualizacao do Schema de Validacao
-
-### 3.1 Frontend - `src/lib/validation/index.ts`
-
-Substituir `webhookUrlSchema` por versao fortalecida:
+Modificar `useUserRoles.tsx` para:
+1. Não mostrar erro se simplesmente não houver roles
+2. Verificar se o problema é RLS vs. ausência de dados
+3. Tentar criar organização automaticamente se não existir
 
 ```typescript
-export const webhookUrlSchema = z
-  .string()
-  .trim()
-  .url('URL invalida')
-  .max(2048)
-  .refine(url => url.startsWith('https://'), 'Apenas HTTPS permitido')
-  .refine(url => {
-    const result = validateWebhookUrl(url);
-    return result.valid;
-  }, 'URL bloqueada por politica de seguranca SSRF');
-```
+// Melhorar tratamento de erro
+const loadUserRoles = useCallback(async () => {
+  if (!user) {
+    setLoading(false);
+    return;
+  }
 
-### 3.2 Backend - `supabase/functions/_shared/validation.ts`
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id);
 
-Atualizar `webhookUrl` com as mesmas regras.
-
----
-
-## Fase 4: Aplicar Protecao nos Pontos Vulneraveis
-
-### 4.1 `send-outbound-webhook/index.ts`
-
-```typescript
-// Antes do fetch
-const ssrfCheck = validateWebhookUrl(webhook.url);
-if (!ssrfCheck.valid) {
-  console.error(`[SSRF Blocked] ${webhook.url}: ${ssrfCheck.blockedReason}`);
-  return Response.json({ 
-    error: 'URL blocked by security policy',
-    reason: ssrfCheck.blockedReason 
-  }, { status: 400 });
-}
-
-// Usar secureFetch ao inves de fetch direto
-const result = await secureFetch({
-  url: webhook.url,
-  method: 'POST',
-  headers,
-  body: payloadString,
-  timeoutMs: 10000,
-  followRedirects: false,
-  logAttempt: true,
-});
-```
-
-### 4.2 `proxy-api-request/index.ts`
-
-```typescript
-// Validar endpoint fornecido pelo usuario
-const ssrfCheck = validateWebhookUrl(fullUrl);
-if (!ssrfCheck.valid) {
-  return Response.json({
-    error: 'Endpoint blocked by security policy',
-    reason: ssrfCheck.blockedReason,
-  }, { status: 400 });
-}
-```
-
-### 4.3 `useOutboundWebhooks.tsx` (frontend)
-
-Adicionar validacao antes do fetch de teste:
-
-```typescript
-const testWebhookMutation = useMutation({
-  mutationFn: async (webhook: OutboundWebhook) => {
-    // Validar URL primeiro
-    const ssrfCheck = validateWebhookUrl(webhook.url);
-    if (!ssrfCheck.valid) {
-      throw new Error(`URL bloqueada: ${ssrfCheck.error}`);
+    if (error) {
+      // Verificar se é erro de RLS vs. outro erro
+      if (error.code === '42501' || error.message.includes('permission')) {
+        logger.warn('RLS blocking role access - checking org setup');
+        // Tentar recuperar via verificação de org
+        await ensureUserOrganization(user.id);
+        // Retry query
+      } else {
+        throw error;
+      }
     }
-    // ... resto do codigo
-  }
-});
-```
 
-### 4.4 `useNotificationSettings.tsx` 
-
-```typescript
-const testSlackWebhookMutation = useMutation({
-  mutationFn: async (webhookUrl: string) => {
-    const ssrfCheck = validateWebhookUrl(webhookUrl);
-    if (!ssrfCheck.valid) {
-      throw new Error('URL de webhook invalida ou bloqueada');
+    // Empty result não é erro - usuário pode simplesmente não ter roles
+    setRoles(data?.map(r => r.role as AppRole) ?? []);
+  } catch (error) {
+    logger.error('Error loading roles', error);
+    // Só mostrar toast se for erro real, não ausência de dados
+    if (error instanceof Error && !error.message.includes('no rows')) {
+      toast({
+        title: 'Erro ao carregar permissões',
+        description: 'Não foi possível carregar suas permissões',
+        variant: 'destructive'
+      });
     }
-    // ... fetch
+  } finally {
+    setLoading(false);
   }
-});
+}, [user, toast]);
 ```
 
-### 4.5 `integration-webhook-handler` (AWS SNS)
+### Fase 3: Corrigir/Consolidar Políticas RLS
 
-```typescript
-if (validationResult.subscribeUrl) {
-  const ssrfCheck = validateWebhookUrl(validationResult.subscribeUrl);
-  if (!ssrfCheck.valid) {
-    logger.error('SNS subscribe URL blocked', { url: validationResult.subscribeUrl });
-    return new Response(JSON.stringify({ error: 'Invalid subscription URL' }), { status: 400 });
-  }
-  await secureFetch({ url: validationResult.subscribeUrl, method: 'GET' });
-}
-```
+Remover política legada e garantir consistência:
 
----
+```sql
+-- Remover política legada conflitante
+DROP POLICY IF EXISTS "Org members can view org roles" ON user_roles;
 
-## Fase 5: Logging de Tentativas
-
-### 5.1 Tabela de Log (usar `system_logs`)
-
-Registrar todas as tentativas de webhook:
-
-```typescript
-await supabase.from('system_logs').insert({
-  level: blocked ? 'warn' : 'info',
-  source: 'webhook',
-  message: blocked 
-    ? `SSRF blocked: ${url}` 
-    : `Webhook sent: ${url}`,
-  metadata: {
-    url,
-    blocked,
-    blocked_reason: blockedReason,
-    status_code: response?.status,
-    response_time_ms: duration,
-    user_id: userId,
-    org_id: orgId,
-  },
-  function_name: 'send-outbound-webhook',
-});
+-- Garantir que a política principal funcione mesmo sem org_id (fallback)
+CREATE OR REPLACE POLICY "Users can view own roles"
+  ON user_roles FOR SELECT
+  TO authenticated
+  USING (user_id = auth.uid());
 ```
 
 ---
 
-## Fase 6: Documentacao no README
+## Arquivos a Modificar
 
-### 6.1 Nova Secao
-
-```markdown
-### Protecao SSRF
-
-O sistema implementa protecao completa contra Server-Side Request Forgery:
-
-#### URLs Bloqueadas
-
-| Tipo | Exemplos |
-|------|----------|
-| IPs privados | 10.x.x.x, 172.16-31.x.x, 192.168.x.x |
-| Localhost | 127.x.x.x, localhost, 0.0.0.0 |
-| IPv6 local | ::1, fe80::, fc00::, fd00:: |
-| Link-local | 169.254.x.x (APIPA) |
-| Cloud metadata | 169.254.169.254, metadata.google |
-| Kubernetes | kubernetes.default.svc |
-
-#### Restricoes de Request
-
-| Configuracao | Valor |
-|--------------|-------|
-| Protocolo | Apenas HTTPS |
-| Timeout | 10 segundos |
-| Redirects | Nao seguidos |
-| SSL | Verificado |
-
-#### Aplicacao
-
-A protecao SSRF e aplicada em:
-- Configuracao de webhooks outbound
-- Teste de webhooks
-- URLs de callback OAuth
-- Proxy de API requests
-- Confirmacao de subscricoes SNS
-
-#### Logging
-
-Todas as tentativas de webhook sao logadas:
-- URL alvo
-- Status de bloqueio
-- Motivo (se bloqueado)
-- Tempo de resposta
-- Codigo HTTP
-```
-
----
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Acao | Descricao |
+| Arquivo | Ação | Descrição |
 |---------|------|-----------|
-| `src/lib/security/ssrfValidator.ts` | **NOVO** | Validacao SSRF frontend |
-| `src/lib/security/index.ts` | Modificar | Exportar ssrfValidator |
-| `supabase/functions/_shared/ssrf-validator.ts` | **NOVO** | Validacao SSRF backend |
-| `supabase/functions/_shared/secure-fetch.ts` | **NOVO** | Wrapper de fetch seguro |
-| `src/lib/validation/index.ts` | Modificar | Fortalecer webhookUrlSchema |
-| `supabase/functions/_shared/validation.ts` | Modificar | Fortalecer webhookUrl |
-| `supabase/functions/send-outbound-webhook/index.ts` | Modificar | Usar secureFetch |
-| `supabase/functions/proxy-api-request/index.ts` | Modificar | Validar endpoint |
-| `supabase/functions/integration-webhook-handler/index.ts` | Modificar | Validar SNS URL |
-| `src/hooks/useOutboundWebhooks.tsx` | Modificar | Validar antes do fetch |
-| `src/hooks/useNotificationSettings.tsx` | Modificar | Validar Slack URL |
-| `README.md` | Modificar | Secao "Protecao SSRF" |
+| **Database Migration** | Criar | Criar org, associar profiles/roles |
+| `src/hooks/useUserRoles.tsx` | Modificar | Melhorar tratamento de erros |
 
 ---
 
-## Regras SSRF Completas
+## Passos de Implementação
 
-### Bloquear por IP (Regex)
+1. **Criar migration** para corrigir os dados:
+   - Criar organização padrão
+   - Atualizar profiles.org_id
+   - Atualizar user_roles.org_id
+   - Adicionar política de fallback
 
-```typescript
-const BLOCKED_PATTERNS = [
-  // IPv4 Private
-  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,           // Loopback
-  /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,            // Class A private
-  /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/, // Class B private
-  /^192\.168\.\d{1,3}\.\d{1,3}$/,                // Class C private
-  /^169\.254\.\d{1,3}\.\d{1,3}$/,                // Link-local / metadata
-  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,    // CGNAT
-  /^0\.0\.0\.0$/,                                 // All interfaces
-  
-  // IPv6
-  /^::1$/i,                                       // Loopback
-  /^::$/,                                         // Unspecified
-  /^::ffff:127\./i,                              // IPv4-mapped loopback
-  /^::ffff:10\./i,                               // IPv4-mapped private
-  /^::ffff:192\.168\./i,                         // IPv4-mapped private
-  /^::ffff:172\.(1[6-9]|2\d|3[01])\./i,         // IPv4-mapped private
-  /^fe80:/i,                                      // Link-local
-  /^fc00:/i,                                      // Unique local
-  /^fd[0-9a-f]{2}:/i,                            // Unique local
-];
-```
+2. **Melhorar hook** para ser mais resiliente:
+   - Não mostrar erro quando resultado está vazio
+   - Log mais detalhado para debug
 
-### Bloquear por Hostname
+3. **Verificar** se o fluxo de cadastro (`handle_new_user_organization`) está funcionando para novos usuários
 
-```typescript
-const BLOCKED_HOSTNAMES = [
-  'localhost',
-  '*.localhost',
-  '*.local',
-  '*.internal',
-  '169.254.169.254',           // AWS/Azure metadata
-  'instance-data',             // AWS metadata alias
-  'metadata.google.internal',  // GCP metadata
-  'metadata.google',           // GCP metadata alias
-  'metadata.azure.com',        // Azure metadata
-  'kubernetes.default',        // K8s internal
-  'kubernetes.default.svc',    // K8s internal
-  '*.cluster.local',           // K8s DNS
-];
+---
+
+## Dados Atuais
+
+```text
+Tabela           | Total | Com org_id | Sem org_id
+-----------------|-------|------------|------------
+organizations    |   0   |    N/A     |    N/A
+profiles         |   5   |     0      |     5
+user_roles       |   2   |     0      |     2
 ```
 
 ---
 
-## Resumo de Seguranca
+## Resultado Esperado
 
-| Ameaca | Mitigacao |
-|--------|-----------|
-| Acesso a rede interna | Bloquear IPs privados |
-| Roubo de credenciais cloud | Bloquear metadata endpoints |
-| Scan de portas internas | Timeout curto (10s) |
-| Open redirect abuse | Nao seguir redirects |
-| DNS rebinding | Resolver e revalidar IP |
-| MITM | Verificar certificado SSL |
-| Exfiltracao de dados | Log completo de tentativas |
+Após as correções:
 
----
-
-## Beneficios
-
-1. **Defense in Depth**: Validacao em frontend e backend
-2. **Cloud-Aware**: Protege contra metadata APIs de AWS/GCP/Azure
-3. **IPv6 Ready**: Suporta validacao de enderecos IPv6
-4. **Auditabilidade**: Log completo de todas as tentativas
-5. **Performance**: Timeout previne hanging requests
-6. **Compliance**: Atende requisitos OWASP para SSRF
+1. Organização padrão criada
+2. Todos os profiles associados à organização
+3. Todos os user_roles associados à organização
+4. Query de roles funcionando corretamente
+5. Toast de erro não aparece mais
+6. Sistema multi-tenant funcionando corretamente
