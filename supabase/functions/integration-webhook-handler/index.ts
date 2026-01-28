@@ -39,6 +39,8 @@ import {
   runComplianceChecks, 
   calculateSlaDeadline 
 } from '../_shared/compliance-rules.ts';
+import { validateWebhookUrl } from '../_shared/ssrf-validator.ts';
+import { secureGet } from '../_shared/secure-fetch.ts';
 
 const logger = createLogger('WebhookHandler');
 
@@ -133,10 +135,37 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Handle subscription confirmation (AWS SNS)
+    // Handle subscription confirmation (AWS SNS) with SSRF protection
     if (validationResult.isSubscriptionConfirmation && validationResult.subscribeUrl) {
+      // Validate the subscription URL before fetching
+      const ssrfCheck = validateWebhookUrl(validationResult.subscribeUrl, { allowHttp: true });
+      if (!ssrfCheck.valid) {
+        logger.error('SNS subscribe URL blocked by SSRF protection', { 
+          url: validationResult.subscribeUrl,
+          reason: ssrfCheck.blockedReason 
+        });
+        return new Response(
+          JSON.stringify({ error: 'Invalid subscription URL', reason: ssrfCheck.blockedReason }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       logger.info('Confirming AWS SNS subscription');
-      await fetch(validationResult.subscribeUrl);
+      const result = await secureGet(validationResult.subscribeUrl, undefined, {
+        timeoutMs: 10000,
+        followRedirects: false,
+        logAttempt: true,
+        functionName: 'integration-webhook-handler',
+      });
+      
+      if (!result.success) {
+        logger.error('Failed to confirm SNS subscription', { error: result.error });
+        return new Response(
+          JSON.stringify({ error: 'Failed to confirm subscription' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ success: true, message: 'Subscription confirmed' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

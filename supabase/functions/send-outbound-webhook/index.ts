@@ -1,12 +1,20 @@
 /**
  * Supabase Edge Function: send-outbound-webhook
  * 
- * Sends webhook payloads to configured external URLs with HMAC signing
- * and retry logic.
+ * Sends webhook payloads to configured external URLs with HMAC signing,
+ * retry logic, and comprehensive SSRF protection.
+ * 
+ * SECURITY:
+ * - SSRF validation on all webhook URLs
+ * - 10 second timeout
+ * - No automatic redirects
+ * - Full logging of attempts
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
+import { validateWebhookUrl } from "../_shared/ssrf-validator.ts";
+import { secureFetch } from "../_shared/secure-fetch.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -87,6 +95,21 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // SSRF Protection: Validate webhook URL before proceeding
+    const ssrfCheck = validateWebhookUrl(webhook.url);
+    if (!ssrfCheck.valid) {
+      console.error(`[send-outbound-webhook] SSRF blocked: ${webhook.url} - ${ssrfCheck.blockedReason}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'URL blocked by security policy',
+          reason: ssrfCheck.blockedReason,
+          timestamp: new Date().toISOString() 
+        }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     // Prepare payload
     const webhookPayload = {
       event: payload.event_type,
@@ -135,16 +158,27 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         console.log(`[send-outbound-webhook] Attempt ${attempt}/${maxAttempts}`);
         
-        const response = await fetch(webhook.url, {
+        // Use secureFetch with SSRF protection, timeout, and no redirects
+        const result = await secureFetch({
+          url: webhook.url,
           method: 'POST',
           headers,
           body: payloadString,
+          timeoutMs: 10000,
+          followRedirects: false,
+          logAttempt: true,
+          functionName: 'send-outbound-webhook',
         });
 
-        statusCode = response.status;
-        responseBody = await response.text();
+        statusCode = result.statusCode || null;
+        responseBody = result.responseBody || null;
 
-        if (response.ok) {
+        if (result.blocked) {
+          lastError = new Error(`SSRF blocked: ${result.blockedReason}`);
+          break; // Don't retry SSRF blocks
+        }
+
+        if (result.success) {
           // Update log entry as success
           if (logEntry) {
             await supabase
@@ -184,7 +218,7 @@ const handler = async (req: Request): Promise<Response> => {
         lastError = new Error(`HTTP ${statusCode}: ${responseBody}`);
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        console.error(`[send-outbound-webhook] Attempt ${attempt} failed`, lastError);
+        console.error(`[send-outbound-webhook] Attempt ${attempt} failed`, lastError.message);
       }
 
       // Wait before retry (exponential backoff)

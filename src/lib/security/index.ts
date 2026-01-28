@@ -41,3 +41,12 @@ export {
   getMaxFileSizeMB,
   type FileValidationResult
 } from './fileValidator';
+
+// SSRF Protection (URL Validation)
+export {
+  validateWebhookUrl,
+  isValidWebhookUrl,
+  getSsrfErrorMessage,
+  type SsrfValidationResult,
+  type SsrfBlockedReason
+} from './ssrfValidator';
