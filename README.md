@@ -557,6 +557,34 @@ Acessível apenas para `admin` e `master_admin`:
 
 ---
 
+## 🔒 Segurança de Dependências
+
+### Dependências
+
+- Auditoria semanal via npm audit
+- Dependabot configurado para PRs automáticos
+- Nenhuma vulnerabilidade high/critical permitida em produção
+- Lock file (package-lock.json) sempre commitado
+
+### Política de Merge
+
+PRs não são mergeados se `npm audit` falhar com vulnerabilidades high ou critical.
+
+### Scripts Disponíveis
+
+| Script | Descrição |
+|--------|-----------|
+| `npm run audit:check` | Verifica vulnerabilidades high/critical |
+
+### Dependabot
+
+O projeto utiliza GitHub Dependabot para:
+- Verificação semanal de dependências
+- PRs automáticos para atualizações de segurança
+- Limite de 10 PRs abertos simultaneamente
+
+---
+
 ## 📁 Segurança de Uploads
 
 O sistema implementa múltiplas camadas de validação para uploads de arquivos:
