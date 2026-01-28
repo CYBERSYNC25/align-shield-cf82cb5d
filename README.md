@@ -461,6 +461,98 @@ Para cada issue no Action Center:
 | `export-user-data` | Exporta dados pessoais do usuário |
 | `delete-user-account` | Exclui conta (soft/hard delete) |
 | `public-api` | API pública com rate limiting |
+| `process-job-queue` | Processa fila de jobs assíncronos |
+
+---
+
+## 📨 Job Queue (Processamento Assíncrono)
+
+O APOC utiliza uma fila de jobs para processamento assíncrono de tarefas pesadas como sincronização de integrações, verificações de compliance e geração de relatórios.
+
+### Arquitetura
+
+| Componente | Descrição |
+|------------|-----------|
+| `job_queue` | Tabela PostgreSQL com jobs, status e metadados |
+| `process-job-queue` | Edge Function que processa a fila em lotes |
+| `useJobQueue` | Hook React para criar e monitorar jobs |
+| `/jobs` | Página de gestão para administradores |
+
+### Tipos de Jobs
+
+| Tipo | Descrição | Prioridade Padrão |
+|------|-----------|-------------------|
+| `sync_integration` | Sincroniza recursos de integrações externas | Alta (2) |
+| `run_compliance_check` | Executa verificação de compliance em recursos | Normal (3) |
+| `generate_report` | Gera relatórios de compliance em PDF/Excel | Normal (3) |
+| `send_notification` | Envia notificações por email ou Slack | Baixa (4) |
+| `cleanup_data` | Limpeza de dados antigos e expirados | Mínima (5) |
+
+### Status de Jobs
+
+| Status | Descrição |
+|--------|-----------|
+| `pending` | Aguardando processamento |
+| `processing` | Sendo executado no momento |
+| `completed` | Finalizado com sucesso |
+| `failed` | Falhou após todas as tentativas |
+| `cancelled` | Cancelado manualmente |
+
+### Retry com Exponential Backoff
+
+- **Max Attempts**: 3 tentativas por job
+- **Backoff**: 1 min → 5 min → 15 min entre tentativas
+- **Stuck Jobs**: Jobs "travados" (processing > 15min) são resetados automaticamente
+
+### Prioridades
+
+| Nível | Nome | Processamento |
+|-------|------|---------------|
+| 1 | Urgente | Primeiro da fila |
+| 2 | Alta | Prioridade elevada |
+| 3 | Normal | Padrão |
+| 4 | Baixa | Quando não há urgentes |
+| 5 | Mínima | Últimos a processar |
+
+### Uso no Código
+
+```typescript
+import { useCreateJob, useJobStatus } from '@/hooks/useJobQueue';
+
+// Criar um job
+const { mutate: createJob, data: jobId } = useCreateJob();
+
+createJob({
+  jobType: 'sync_integration',
+  payload: { provider: 'aws', integrationId: 'abc123' },
+  priority: 2, // Alta
+  metadata: { triggeredBy: 'user_action' }
+});
+
+// Monitorar status (polling automático enquanto pending/processing)
+const { data: job } = useJobStatus(jobId);
+// job.status: 'pending' | 'processing' | 'completed' | 'failed'
+```
+
+### Funções SQL Auxiliares
+
+| Função | Descrição |
+|--------|-----------|
+| `enqueue_job()` | Adiciona job à fila com validações |
+| `claim_pending_jobs()` | Busca e marca jobs para processamento (FOR UPDATE SKIP LOCKED) |
+| `complete_job()` | Marca job como concluído com resultado |
+| `fail_job()` | Marca job como falho, agenda retry se possível |
+| `reset_stuck_jobs()` | Reseta jobs travados há mais de 15min |
+| `calculate_next_retry()` | Calcula próximo horário de retry com backoff |
+
+### Página de Gestão (/jobs)
+
+Acessível apenas para `admin` e `master_admin`:
+
+- **Cards de Métricas**: Pendentes, Processando, Concluídos (24h), Falhos (24h), Taxa/hora
+- **Gráfico**: Jobs processados por hora (últimas 24h)
+- **Tabela**: Lista de jobs com filtros (status, tipo, período)
+- **Ações**: Ver detalhes, Retry (failed), Cancelar (pending)
 
 ---
 

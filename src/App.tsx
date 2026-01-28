@@ -36,6 +36,7 @@ import Developers from "./pages/Developers";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 import DPA from "./pages/legal/DPA";
+import Jobs from "./pages/Jobs";
 
 const queryClient = new QueryClient();
 
@@ -160,6 +161,12 @@ const App = () => (
           <Route path="/developers" element={
             <ProtectedRoute>
               <Developers />
+            </ProtectedRoute>
+          } />
+          {/* Jobs Queue Management - Admin only */}
+          <Route path="/jobs" element={
+            <ProtectedRoute>
+              <Jobs />
             </ProtectedRoute>
           } />
           {/* Auditor Portal - Public Route (no auth required) */}

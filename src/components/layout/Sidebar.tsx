@@ -20,7 +20,8 @@ import {
   Target,
   Activity,
   Package,
-  ClipboardList
+  ClipboardList,
+  ListTodo
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -158,6 +159,13 @@ const sidebarItems: SidebarItem[] = [
         label: 'Relatórios',
         icon: BarChart3,
         href: '/reports'
+      },
+      {
+        id: 'jobs',
+        label: 'Fila de Jobs',
+        icon: ListTodo,
+        href: '/jobs',
+        badge: 'Admin'
       }
     ]
   },
