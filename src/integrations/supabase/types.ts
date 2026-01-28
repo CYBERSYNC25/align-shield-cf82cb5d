@@ -3430,6 +3430,86 @@ export type Database = {
           },
         ]
       }
+      user_sessions: {
+        Row: {
+          browser: string | null
+          browser_version: string | null
+          city: string | null
+          country: string | null
+          country_code: string | null
+          created_at: string
+          device_info: string
+          device_type: string | null
+          expires_at: string
+          id: string
+          ip_address: string | null
+          is_current: boolean | null
+          last_active_at: string
+          org_id: string | null
+          os: string | null
+          os_version: string | null
+          revoked: boolean | null
+          revoked_at: string | null
+          revoked_reason: string | null
+          session_token_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          browser?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string
+          device_info?: string
+          device_type?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean | null
+          last_active_at?: string
+          org_id?: string | null
+          os?: string | null
+          os_version?: string | null
+          revoked?: boolean | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          session_token_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          browser?: string | null
+          browser_version?: string | null
+          city?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string
+          device_info?: string
+          device_type?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          is_current?: boolean | null
+          last_active_at?: string
+          org_id?: string | null
+          os?: string | null
+          os_version?: string | null
+          revoked?: boolean | null
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          session_token_hash?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_sessions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendors: {
         Row: {
           category: string
@@ -3727,6 +3807,7 @@ export type Database = {
       }
       cleanup_expired_blocked_ips: { Args: never; Returns: number }
       cleanup_expired_cache: { Args: never; Returns: number }
+      cleanup_expired_sessions: { Args: never; Returns: number }
       cleanup_old_login_attempts: {
         Args: { p_days_to_keep?: number }
         Returns: number
@@ -3743,6 +3824,10 @@ export type Database = {
         Args: { p_job_id: string; p_result?: Json }
         Returns: boolean
       }
+      count_user_active_sessions: {
+        Args: { p_user_id?: string }
+        Returns: number
+      }
       create_notification: {
         Args: {
           p_action_label?: string
@@ -3758,6 +3843,28 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      create_user_session: {
+        Args: {
+          p_browser?: string
+          p_browser_version?: string
+          p_city?: string
+          p_country?: string
+          p_country_code?: string
+          p_device_info?: string
+          p_device_type?: string
+          p_ip_address?: string
+          p_os?: string
+          p_os_version?: string
+          p_session_token_hash?: string
+          p_user_id: string
+        }
+        Returns: {
+          is_new_country: boolean
+          is_new_device: boolean
+          revoked_session_id: string
+          session_id: string
+        }[]
       }
       enqueue_job: {
         Args: {
@@ -3852,6 +3959,24 @@ export type Database = {
           show_score: boolean
         }[]
       }
+      get_user_active_sessions: {
+        Args: { p_user_id?: string }
+        Returns: {
+          browser: string
+          browser_version: string
+          city: string
+          country: string
+          country_code: string
+          created_at: string
+          device_info: string
+          device_type: string
+          id: string
+          ip_address: string
+          is_current: boolean
+          last_active_at: string
+          os: string
+        }[]
+      }
       get_user_object_permissions: {
         Args: { _user_id: string }
         Returns: {
@@ -3882,6 +4007,7 @@ export type Database = {
         Args: { _object_id: string; _object_type: string; _user_id: string }
         Returns: boolean
       }
+      is_session_active: { Args: { p_session_id: string }; Returns: boolean }
       log_pii_access: {
         Args: {
           p_access_reason?: string
@@ -3908,6 +4034,14 @@ export type Database = {
         Returns: undefined
       }
       reset_stuck_jobs: { Args: never; Returns: number }
+      revoke_all_other_sessions: {
+        Args: { p_current_session_id: string }
+        Returns: number
+      }
+      revoke_session: {
+        Args: { p_reason?: string; p_session_id: string }
+        Returns: boolean
+      }
       role_requires_mfa: { Args: { _user_id: string }; Returns: boolean }
       search_answer_library: {
         Args: { p_limit?: number; p_search_text: string; p_user_id: string }
@@ -3936,6 +4070,10 @@ export type Database = {
           status: string
           table_name: string
         }[]
+      }
+      update_session_activity: {
+        Args: { p_session_id: string }
+        Returns: boolean
       }
       user_has_mfa_enabled: { Args: { _user_id: string }; Returns: boolean }
       validate_api_key: {

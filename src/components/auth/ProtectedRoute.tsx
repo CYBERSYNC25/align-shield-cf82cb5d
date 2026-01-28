@@ -4,9 +4,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useOnboardingWizard } from '@/hooks/useOnboardingWizard';
 import { useMFA } from '@/hooks/useMFA';
+import { useSessionActivity } from '@/hooks/useSessionActivity';
+import { useCreateSession } from '@/hooks/useUserSessions';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 import { MFARequiredBanner } from '@/components/auth/MFARequiredBanner';
+import { SessionTimeoutModal } from '@/components/auth/SessionTimeoutModal';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -17,9 +20,23 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isViewer, loading: rolesLoading, roles, isAdmin, isMasterAdmin } = useUserRoles();
   const { state: onboardingState } = useOnboardingWizard();
   const { mfaStatus, isLoading: mfaLoading } = useMFA();
+  const { showWarningModal, timeRemaining, continueSession, logout } = useSessionActivity();
+  const createSession = useCreateSession();
   const location = useLocation();
   const navigate = useNavigate();
   const [hasRedirected, setHasRedirected] = useState(false);
+  const [sessionCreated, setSessionCreated] = useState(false);
+
+  // Create session on login
+  useEffect(() => {
+    if (user && !sessionCreated && !localStorage.getItem('current_session_id')) {
+      createSession.mutate(undefined, {
+        onSuccess: () => {
+          setSessionCreated(true);
+        },
+      });
+    }
+  }, [user, sessionCreated, createSession]);
 
   // Redirect based on role after authentication
   useEffect(() => {
@@ -62,6 +79,14 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     <>
       {requiresMfaSetup && <MFARequiredBanner variant="warning" />}
       {children}
+      
+      {/* Session timeout warning modal */}
+      <SessionTimeoutModal
+        open={showWarningModal}
+        timeRemaining={timeRemaining}
+        onContinue={continueSession}
+        onLogout={logout}
+      />
     </>
   );
 };

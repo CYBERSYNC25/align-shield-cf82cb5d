@@ -116,3 +116,6 @@ verify_jwt = false
 
 [functions.secure-upload]
 verify_jwt = false
+
+[functions.session-manager]
+verify_jwt = false
