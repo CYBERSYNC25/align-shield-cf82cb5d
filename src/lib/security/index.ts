@@ -27,3 +27,17 @@ export {
   type ClassificationLevel,
   type PiiType
 } from './piiSanitizer';
+
+// File Validation (Upload Security)
+export {
+  validateFile,
+  validateFileType,
+  validateFileSize,
+  calculateFileHash,
+  generateSecureFilename,
+  sanitizeFilename,
+  formatBytes,
+  getAllowedExtensions,
+  getMaxFileSizeMB,
+  type FileValidationResult
+} from './fileValidator';
