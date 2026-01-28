@@ -70,16 +70,35 @@ export const useUserRoles = () => {
         .select('role')
         .eq('user_id', user.id);
 
-      if (error) throw error;
-
-      setRoles(data.map(r => r.role as AppRole));
+      if (error) {
+        // Check if it's a real error vs RLS blocking
+        // Code 42501 = insufficient_privilege, PGRST116 = no rows
+        const isRlsError = error.code === '42501' || 
+                          error.message?.toLowerCase().includes('permission') ||
+                          error.message?.toLowerCase().includes('policy');
+        
+        if (isRlsError) {
+          logger.warn('RLS may be blocking role access', { code: error.code, message: error.message });
+          // Don't show error toast for RLS issues - user simply has no roles assigned
+          setRoles([]);
+        } else {
+          throw error;
+        }
+      } else {
+        // Empty result is valid - user may simply have no roles assigned
+        setRoles(data?.map(r => r.role as AppRole) ?? []);
+      }
     } catch (error) {
       logger.error('Error loading roles', error);
-      toast({
-        title: 'Erro ao carregar permissões',
-        description: 'Não foi possível carregar suas permissões',
-        variant: 'destructive'
-      });
+      // Only show toast for unexpected errors, not empty results or RLS blocks
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (!errorMessage.includes('no rows') && !errorMessage.includes('PGRST116')) {
+        toast({
+          title: 'Erro ao carregar permissões',
+          description: 'Não foi possível carregar suas permissões',
+          variant: 'destructive'
+        });
+      }
     } finally {
       setLoading(false);
     }
