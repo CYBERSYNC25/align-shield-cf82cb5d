@@ -10,6 +10,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { createLogger } from '../_shared/logger.ts';
 import { checkRateLimit, rateLimitHeaders, rateLimitExceededResponse } from '../_shared/rate-limiter.ts';
+import { validateAuth, errorResponse } from '../_shared/auth.ts';
 
 const logger = createLogger('GenerateAnswers');
 
@@ -392,33 +393,14 @@ Deno.serve(async (req) => {
       );
     }
     
-    // Verify authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Verify authentication using shared helper
+    const authResult = await validateAuth(req.headers.get('Authorization'));
+    
+    if (!authResult.success) {
+      return errorResponse(authResult.error, authResult.status, corsHeaders);
     }
     
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    
-    // Verify JWT and get user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-    
-    const userId = claimsData.claims.sub as string;
+    const { userId, userClient: supabase } = authResult;
     
     // Rate limiting - 3 requests per minute (heavy AI operation)
     const rateLimit = await checkRateLimit(userId, 'generate-questionnaire-answers', 3, 60);

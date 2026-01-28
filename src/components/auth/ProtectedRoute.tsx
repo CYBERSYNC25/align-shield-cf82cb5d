@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, useRef } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -26,17 +26,34 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const [hasRedirected, setHasRedirected] = useState(false);
   const [sessionCreated, setSessionCreated] = useState(false);
+  
+  // Use ref to prevent multiple session creation attempts
+  const sessionCreateAttempted = useRef(false);
 
-  // Create session on login
+  // Create session on login - only try once per mount
   useEffect(() => {
-    if (user && !sessionCreated && !localStorage.getItem('current_session_id')) {
+    const existingSessionId = localStorage.getItem('current_session_id');
+    
+    // Only attempt if: user exists, not already attempted, and no existing session
+    if (user && !sessionCreateAttempted.current && !existingSessionId) {
+      sessionCreateAttempted.current = true;
+      
       createSession.mutate(undefined, {
         onSuccess: () => {
           setSessionCreated(true);
         },
+        onError: (error) => {
+          // Log but don't block - session tracking is optional
+          console.warn('Session creation failed (non-blocking):', error.message);
+          // Mark as "created" to prevent UI blocking
+          setSessionCreated(true);
+        },
       });
+    } else if (existingSessionId) {
+      // Already have a session
+      setSessionCreated(true);
     }
-  }, [user, sessionCreated, createSession]);
+  }, [user]); // Only depend on user, not createSession
 
   // Redirect based on role after authentication
   useEffect(() => {

@@ -10,7 +10,6 @@
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { encryptToken } from "../_shared/crypto-utils.ts";
 import { 
   generateTotpSecret, 
@@ -18,6 +17,7 @@ import {
   generateQrCodeUrl,
   generateBackupCodes 
 } from "../_shared/totp-utils.ts";
+import { validateAuth, createAdminClient, errorResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,38 +30,17 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const encryptionKey = Deno.env.get("TOKEN_ENCRYPTION_KEY")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }), 
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Validate authentication using shared helper
+    const authResult = await validateAuth(req.headers.get("Authorization"));
+    
+    if (!authResult.success) {
+      return errorResponse(authResult.error, authResult.status, corsHeaders);
     }
 
-    // Get user
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-    
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }), 
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const userId = claimsData.claims.sub;
-    const userEmail = claimsData.claims.email as string;
-
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const { userId, email } = authResult;
+    const adminClient = createAdminClient();
 
     // Check if user already has MFA enabled
     const { data: existingMfa } = await adminClient
@@ -71,16 +50,17 @@ serve(async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (existingMfa?.enabled_at) {
-      return new Response(
-        JSON.stringify({ error: "MFA já está habilitado. Desabilite primeiro para reconfigurar." }), 
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      return errorResponse(
+        "MFA já está habilitado. Desabilite primeiro para reconfigurar.",
+        400,
+        corsHeaders
       );
     }
 
     // Generate new TOTP secret and backup codes
     const secret = generateTotpSecret();
     const backupCodes = generateBackupCodes(10);
-    const otpauthUrl = generateOtpAuthUrl(secret, userEmail, 'APOC');
+    const otpauthUrl = generateOtpAuthUrl(secret, email || 'user', 'APOC');
     const qrCodeUrl = generateQrCodeUrl(otpauthUrl);
 
     // Encrypt sensitive data before storing
@@ -101,10 +81,7 @@ serve(async (req: Request): Promise<Response> => {
 
     if (upsertError) {
       console.error('Failed to save MFA settings:', upsertError);
-      return new Response(
-        JSON.stringify({ error: "Falha ao inicializar configuração MFA" }), 
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("Falha ao inicializar configuração MFA", 500, corsHeaders);
     }
 
     console.log('MFA setup initiated for user:', userId);
@@ -123,9 +100,6 @@ serve(async (req: Request): Promise<Response> => {
   } catch (error: unknown) {
     console.error('MFA setup error:', error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return new Response(
-      JSON.stringify({ error: message }), 
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(message, 500, corsHeaders);
   }
 });

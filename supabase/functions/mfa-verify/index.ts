@@ -11,10 +11,9 @@
  */
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { decryptToken } from "../_shared/crypto-utils.ts";
-import { encryptToken } from "../_shared/crypto-utils.ts";
+import { decryptToken, encryptToken } from "../_shared/crypto-utils.ts";
 import { verifyTotp, verifyBackupCode } from "../_shared/totp-utils.ts";
+import { validateAuth, createAdminClient, errorResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,55 +33,30 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const encryptionKey = Deno.env.get("TOKEN_ENCRYPTION_KEY")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }), 
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
     // Parse request body
     const body: VerifyRequest = await req.json();
     const { code, action } = body;
 
     if (!code || !action) {
-      return new Response(
-        JSON.stringify({ error: "Código e ação são obrigatórios" }), 
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("Código e ação são obrigatórios", 400, corsHeaders);
     }
 
     // Validate action
     if (!['setup', 'login', 'sensitive'].includes(action)) {
-      return new Response(
-        JSON.stringify({ error: "Ação inválida" }), 
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("Ação inválida", 400, corsHeaders);
     }
 
-    // Get user
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Validate authentication using shared helper
+    const authResult = await validateAuth(req.headers.get("Authorization"));
     
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims?.sub) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }), 
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!authResult.success) {
+      return errorResponse(authResult.error, authResult.status, corsHeaders);
     }
 
-    const userId = claimsData.claims.sub;
-    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+    const { userId } = authResult;
+    const adminClient = createAdminClient();
 
     // Get MFA settings
     const { data: mfaSettings, error: fetchError } = await adminClient
@@ -92,18 +66,12 @@ serve(async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (fetchError || !mfaSettings) {
-      return new Response(
-        JSON.stringify({ error: "MFA não configurado para este usuário" }), 
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("MFA não configurado para este usuário", 404, corsHeaders);
     }
 
     // For login/sensitive actions, MFA must be enabled
     if ((action === 'login' || action === 'sensitive') && !mfaSettings.enabled_at) {
-      return new Response(
-        JSON.stringify({ error: "MFA não está habilitado" }), 
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return errorResponse("MFA não está habilitado", 400, corsHeaders);
     }
 
     // Decrypt secret
@@ -207,9 +175,6 @@ serve(async (req: Request): Promise<Response> => {
   } catch (error: unknown) {
     console.error('MFA verify error:', error);
     const message = error instanceof Error ? error.message : "Internal server error";
-    return new Response(
-      JSON.stringify({ error: message }), 
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return errorResponse(message, 500, corsHeaders);
   }
 });
