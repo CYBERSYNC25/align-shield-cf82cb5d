@@ -9,6 +9,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { parseUserAgent } from "../_shared/device-parser.ts";
 import { getClientIp, getGeoLocation, formatLocation } from "../_shared/geolocation.ts";
+import { validateAuth, createAdminClient, errorResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,46 +26,20 @@ serve(async (req: Request) => {
     const url = new URL(req.url);
     const action = url.pathname.split('/').pop();
     
-    // Get auth header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Create Supabase clients
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Validate authentication using shared helper
+    const authResult = await validateAuth(req.headers.get('Authorization'));
     
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-    
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Verify user
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!authResult.success) {
+      return errorResponse(authResult.error, authResult.status, corsHeaders);
     }
     
-    const userId = claimsData.claims.sub;
+    const { userId, userClient } = authResult;
+    const supabaseAdmin = createAdminClient();
 
     switch (action) {
       case 'create': {
         if (req.method !== 'POST') {
-          return new Response(
-            JSON.stringify({ error: 'Method not allowed' }),
-            { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Method not allowed', 405, corsHeaders);
         }
 
         // Parse device info
@@ -93,17 +68,13 @@ serve(async (req: Request) => {
 
         if (createError) {
           console.error('Create session error:', createError);
-          return new Response(
-            JSON.stringify({ error: 'Failed to create session' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Failed to create session', 500, corsHeaders, 'SESSION_CREATE_FAILED');
         }
 
         const session = sessionResult?.[0];
         
         // Handle new device notification
         if (session?.is_new_device) {
-          // Create in-app notification
           await supabaseAdmin.rpc('create_notification', {
             p_user_id: userId,
             p_title: 'Novo login detectado',
@@ -155,31 +126,22 @@ serve(async (req: Request) => {
 
       case 'update-activity': {
         if (req.method !== 'POST') {
-          return new Response(
-            JSON.stringify({ error: 'Method not allowed' }),
-            { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Method not allowed', 405, corsHeaders);
         }
 
         const body = await req.json();
         const sessionId = body.sessionId;
 
         if (!sessionId) {
-          return new Response(
-            JSON.stringify({ error: 'Session ID required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Session ID required', 400, corsHeaders);
         }
 
-        const { data: updated, error: updateError } = await supabase
+        const { data: updated, error: updateError } = await userClient
           .rpc('update_session_activity', { p_session_id: sessionId });
 
         if (updateError) {
           console.error('Update activity error:', updateError);
-          return new Response(
-            JSON.stringify({ error: 'Failed to update activity' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Failed to update activity', 500, corsHeaders);
         }
 
         return new Response(
@@ -190,10 +152,7 @@ serve(async (req: Request) => {
 
       case 'revoke': {
         if (req.method !== 'POST') {
-          return new Response(
-            JSON.stringify({ error: 'Method not allowed' }),
-            { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Method not allowed', 405, corsHeaders);
         }
 
         const body = await req.json();
@@ -201,21 +160,15 @@ serve(async (req: Request) => {
         const reason = body.reason || 'manual';
 
         if (!sessionId) {
-          return new Response(
-            JSON.stringify({ error: 'Session ID required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Session ID required', 400, corsHeaders);
         }
 
-        const { data: revoked, error: revokeError } = await supabase
+        const { data: revoked, error: revokeError } = await userClient
           .rpc('revoke_session', { p_session_id: sessionId, p_reason: reason });
 
         if (revokeError) {
           console.error('Revoke session error:', revokeError);
-          return new Response(
-            JSON.stringify({ error: 'Failed to revoke session' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Failed to revoke session', 500, corsHeaders);
         }
 
         return new Response(
@@ -226,31 +179,22 @@ serve(async (req: Request) => {
 
       case 'revoke-all-others': {
         if (req.method !== 'POST') {
-          return new Response(
-            JSON.stringify({ error: 'Method not allowed' }),
-            { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Method not allowed', 405, corsHeaders);
         }
 
         const body = await req.json();
         const currentSessionId = body.currentSessionId;
 
         if (!currentSessionId) {
-          return new Response(
-            JSON.stringify({ error: 'Current session ID required' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Current session ID required', 400, corsHeaders);
         }
 
-        const { data: count, error: revokeError } = await supabase
+        const { data: count, error: revokeError } = await userClient
           .rpc('revoke_all_other_sessions', { p_current_session_id: currentSessionId });
 
         if (revokeError) {
           console.error('Revoke all sessions error:', revokeError);
-          return new Response(
-            JSON.stringify({ error: 'Failed to revoke sessions' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Failed to revoke sessions', 500, corsHeaders);
         }
 
         return new Response(
@@ -261,21 +205,15 @@ serve(async (req: Request) => {
 
       case 'list': {
         if (req.method !== 'GET') {
-          return new Response(
-            JSON.stringify({ error: 'Method not allowed' }),
-            { status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Method not allowed', 405, corsHeaders);
         }
 
-        const { data: sessions, error: listError } = await supabase
+        const { data: sessions, error: listError } = await userClient
           .rpc('get_user_active_sessions');
 
         if (listError) {
           console.error('List sessions error:', listError);
-          return new Response(
-            JSON.stringify({ error: 'Failed to list sessions' }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+          return errorResponse('Failed to list sessions', 500, corsHeaders);
         }
 
         return new Response(
@@ -285,16 +223,10 @@ serve(async (req: Request) => {
       }
 
       default:
-        return new Response(
-          JSON.stringify({ error: 'Unknown action' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        return errorResponse('Unknown action', 400, corsHeaders);
     }
   } catch (error) {
     console.error('Session manager error:', error);
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    return errorResponse('Internal server error', 500, corsHeaders, 'SESSION_MANAGER_INTERNAL');
   }
 });
