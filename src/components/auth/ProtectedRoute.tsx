@@ -3,8 +3,10 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useOnboardingWizard } from '@/hooks/useOnboardingWizard';
+import { useMFA } from '@/hooks/useMFA';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
+import { MFARequiredBanner } from '@/components/auth/MFARequiredBanner';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -12,8 +14,9 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading: authLoading } = useAuth();
-  const { isViewer, loading: rolesLoading, roles } = useUserRoles();
+  const { isViewer, loading: rolesLoading, roles, isAdmin, isMasterAdmin } = useUserRoles();
   const { state: onboardingState } = useOnboardingWizard();
+  const { mfaStatus, isLoading: mfaLoading } = useMFA();
   const location = useLocation();
   const navigate = useNavigate();
   const [hasRedirected, setHasRedirected] = useState(false);
@@ -34,7 +37,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }, [user, rolesLoading, roles, isViewer, location.pathname, navigate, hasRedirected]);
 
   // Loading state
-  if (authLoading || (user && rolesLoading) || (user && onboardingState.isLoading)) {
+  if (authLoading || (user && rolesLoading) || (user && onboardingState.isLoading) || (user && mfaLoading)) {
     return (
       <div className="min-h-screen bg-gradient-dashboard flex items-center justify-center">
         <LoadingSpinner size="lg" />
@@ -52,7 +55,15 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return <OnboardingWizard />;
   }
 
-  return <>{children}</>;
+  // Show MFA required banner for admins without MFA
+  const requiresMfaSetup = (isAdmin() || isMasterAdmin()) && mfaStatus && !mfaStatus.enabled;
+
+  return (
+    <>
+      {requiresMfaSetup && <MFARequiredBanner variant="warning" />}
+      {children}
+    </>
+  );
 };
 
 export default ProtectedRoute;

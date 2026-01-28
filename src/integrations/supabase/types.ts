@@ -3291,6 +3291,48 @@ export type Database = {
           },
         ]
       }
+      user_mfa_settings: {
+        Row: {
+          backup_codes_encrypted: string | null
+          backup_codes_used: number | null
+          created_at: string
+          enabled_at: string | null
+          id: string
+          last_used_at: string | null
+          recovery_email: string | null
+          secret_encrypted: string
+          updated_at: string
+          user_id: string
+          verified_at: string | null
+        }
+        Insert: {
+          backup_codes_encrypted?: string | null
+          backup_codes_used?: number | null
+          created_at?: string
+          enabled_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          recovery_email?: string | null
+          secret_encrypted: string
+          updated_at?: string
+          user_id: string
+          verified_at?: string | null
+        }
+        Update: {
+          backup_codes_encrypted?: string | null
+          backup_codes_used?: number | null
+          created_at?: string
+          enabled_at?: string | null
+          id?: string
+          last_used_at?: string | null
+          recovery_email?: string | null
+          secret_encrypted?: string
+          updated_at?: string
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           assigned_at: string | null
@@ -3781,6 +3823,7 @@ export type Database = {
         Returns: undefined
       }
       reset_stuck_jobs: { Args: never; Returns: number }
+      role_requires_mfa: { Args: { _user_id: string }; Returns: boolean }
       search_answer_library: {
         Args: { p_limit?: number; p_search_text: string; p_user_id: string }
         Returns: {
@@ -3809,6 +3852,7 @@ export type Database = {
           table_name: string
         }[]
       }
+      user_has_mfa_enabled: { Args: { _user_id: string }; Returns: boolean }
       validate_api_key: {
         Args: { p_key_hash: string }
         Returns: {
