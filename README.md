@@ -645,6 +645,103 @@ const { signedUrl, loading, timeRemaining } = useSignedUrl(
 
 ---
 
+## 🔐 Gerenciamento de Sessões
+
+O sistema implementa controle avançado de sessões para máxima segurança:
+
+### Limites
+
+| Limite | Valor | Ação |
+|--------|-------|------|
+| Sessões simultâneas | 5 por usuário | Revoga a mais antiga automaticamente |
+| Timeout por inatividade | 30 minutos | Logout automático |
+| Warning antes do timeout | 5 minutos | Modal de confirmação |
+| Validade da sessão | 30 dias | Requer re-autenticação |
+| Update de atividade | 60 segundos | Throttled para performance |
+
+### Funcionalidades
+
+| Feature | Descrição |
+|---------|-----------|
+| **Tracking de Dispositivos** | Registra browser, OS e tipo (desktop/mobile/tablet) |
+| **Geolocalização** | Detecta cidade/país via IP (ip-api.com) |
+| **Warning de Inatividade** | Modal aos 25min com countdown visual |
+| **Auto-logout** | Encerra sessão após 30min sem atividade |
+| **Notificações de Segurança** | Alert in-app para novo dispositivo |
+| **Alertas de Localização** | Aviso quando login de país diferente |
+
+### Arquitetura
+
+```text
+┌────────────────────────────────────────────────────────────┐
+│                 Session Management Flow                     │
+├────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Login → session-manager/create                            │
+│           │                                                 │
+│           ├── Parse User-Agent (browser, OS, device type)  │
+│           ├── Get IP → Geolocation (city, country)         │
+│           ├── Check session limit (max 5)                  │
+│           ├── Create user_sessions record                  │
+│           └── Send notifications (new device/country)      │
+│                                                             │
+│  Ativo → useSessionActivity (hook)                         │
+│           │                                                 │
+│           ├── Detect: mousemove, keydown, scroll, click    │
+│           ├── Update last_active_at (every 60s)           │
+│           ├── Warning modal at 25min                       │
+│           └── Auto-logout at 30min                         │
+│                                                             │
+│  Gestão → /settings/security → "Sessões Ativas"           │
+│           │                                                 │
+│           ├── List all active sessions                     │
+│           ├── Revoke individual session                    │
+│           └── Revoke all other sessions                    │
+│                                                             │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Componentes
+
+| Componente | Descrição |
+|------------|-----------|
+| `user_sessions` | Tabela PostgreSQL com tracking completo |
+| `session-manager` | Edge Function para CRUD de sessões |
+| `useSessionActivity` | Hook de monitoramento de atividade |
+| `useUserSessions` | Hook para listar/revogar sessões |
+| `SessionTimeoutModal` | Modal de warning com countdown |
+| `ManageSessionsModal` | UI de gestão em Settings |
+
+### Segurança
+
+| Ameaça | Mitigação |
+|--------|-----------|
+| Session hijacking | Token hash para invalidação |
+| Brute force | Limite de 5 sessões simultâneas |
+| Session fixation | Nova sessão a cada login |
+| Inatividade | Timeout de 30min com warning |
+| Roubo de conta | Alert para novo dispositivo |
+| Acesso não autorizado | Alert para país diferente |
+
+### Uso
+
+```typescript
+// Listar sessões ativas
+import { useUserSessions } from '@/hooks/useUserSessions';
+const { data: sessions, isLoading } = useUserSessions();
+
+// Revogar sessão
+import { useRevokeSession } from '@/hooks/useUserSessions';
+const { mutate: revoke } = useRevokeSession();
+revoke({ sessionId: 'uuid', reason: 'manual' });
+
+// Monitorar atividade (automático no ProtectedRoute)
+import { useSessionActivity } from '@/hooks/useSessionActivity';
+const { showWarningModal, timeRemaining, continueSession } = useSessionActivity();
+```
+
+---
+
 ## 🔐 Segurança
 
 ### Criptografia de Credenciais
