@@ -29,22 +29,72 @@ export const safeEmail = z.string().trim().email().max(255).toLowerCase();
 
 export const safeUrl = z.string().trim().url().max(2048);
 
+/**
+ * Enhanced webhook URL validation with comprehensive SSRF protection
+ * 
+ * Blocks:
+ * - Private IPs: 10.x.x.x, 172.16-31.x.x, 192.168.x.x
+ * - Localhost: 127.x.x.x, localhost, 0.0.0.0
+ * - IPv6 local: ::1, fe80::, fc00::, fd00::
+ * - Link-local: 169.254.x.x (APIPA/cloud metadata)
+ * - Cloud metadata: 169.254.169.254, metadata.google, metadata.azure.com
+ * - Kubernetes: kubernetes.default.svc, *.cluster.local
+ * - Non-HTTPS protocols
+ */
 export const webhookUrl = safeUrl.refine((url) => {
   try {
     const parsed = new URL(url);
     const hostname = parsed.hostname.toLowerCase();
     
-    if (hostname === 'localhost') return false;
-    if (hostname === '127.0.0.1') return false;
-    if (/^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/.test(hostname)) return false;
-    if (['::1', '0.0.0.0'].includes(hostname)) return false;
-    if (hostname.endsWith('.local')) return false;
+    // Must be HTTPS
+    if (parsed.protocol !== 'https:') return false;
+    
+    // Blocked IPv4 patterns
+    const blockedIpv4 = [
+      /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,           // Loopback
+      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,            // Class A private
+      /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/, // Class B private
+      /^192\.168\.\d{1,3}\.\d{1,3}$/,               // Class C private
+      /^169\.254\.\d{1,3}\.\d{1,3}$/,               // Link-local / metadata
+      /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,   // CGNAT
+      /^0\.0\.0\.0$/,                                // All interfaces
+    ];
+    
+    for (const pattern of blockedIpv4) {
+      if (pattern.test(hostname)) return false;
+    }
+    
+    // Blocked IPv6 patterns
+    const blockedIpv6 = [
+      /^::1$/i, /^::$/, /^::ffff:127\./i, /^::ffff:10\./i,
+      /^::ffff:192\.168\./i, /^::ffff:172\.(1[6-9]|2\d|3[01])\./i,
+      /^::ffff:169\.254\./i, /^fe80:/i, /^fc[0-9a-f]{2}:/i, /^fd[0-9a-f]{2}:/i,
+    ];
+    
+    for (const pattern of blockedIpv6) {
+      if (pattern.test(hostname)) return false;
+    }
+    
+    // Blocked hostnames (exact match)
+    const blockedHostnames = [
+      'localhost', '169.254.169.254', 'instance-data',
+      'metadata.google.internal', 'metadata.google', 'metadata.azure.com',
+      'kubernetes.default', 'kubernetes.default.svc', 'kubernetes.default.svc.cluster.local',
+    ];
+    
+    if (blockedHostnames.includes(hostname)) return false;
+    
+    // Blocked hostname patterns (suffix match)
+    const blockedSuffixes = ['.localhost', '.local', '.internal', '.cluster.local'];
+    for (const suffix of blockedSuffixes) {
+      if (hostname.endsWith(suffix)) return false;
+    }
     
     return true;
   } catch {
     return false;
   }
-}, 'URL cannot point to localhost or internal IPs');
+}, 'URL blocked by SSRF protection policy');
 
 export const safeFilename = z.string()
   .trim()

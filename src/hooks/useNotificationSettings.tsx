@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { validateWebhookUrl, getSsrfErrorMessage } from "@/lib/security/ssrfValidator";
 
 export interface ChannelConfig {
   email: boolean;
@@ -231,19 +232,46 @@ export function useNotificationSettings() {
   
   const testSlackWebhookMutation = useMutation({
     mutationFn: async (webhookUrl: string) => {
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: "🔔 Teste de webhook do APOC - Conexão bem-sucedida!",
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Falha ao enviar mensagem de teste para o Slack');
+      // SSRF Protection: Validate Slack webhook URL
+      const ssrfCheck = validateWebhookUrl(webhookUrl);
+      if (!ssrfCheck.valid) {
+        throw new Error(getSsrfErrorMessage(ssrfCheck));
       }
       
-      return true;
+      // Use AbortController for 10s timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: "🔔 Teste de webhook do APOC - Conexão bem-sucedida!",
+          }),
+          signal: controller.signal,
+          redirect: 'manual', // Don't follow redirects
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Block redirects
+        if ([301, 302, 303, 307, 308].includes(response.status)) {
+          throw new Error('Redirect bloqueado por política de segurança');
+        }
+        
+        if (!response.ok) {
+          throw new Error('Falha ao enviar mensagem de teste para o Slack');
+        }
+        
+        return true;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error('Timeout: Slack não respondeu em 10 segundos');
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       toast({

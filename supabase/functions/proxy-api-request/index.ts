@@ -12,6 +12,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { validateWebhookUrl } from './_shared/ssrf-validator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -265,6 +266,20 @@ serve(async (req) => {
     if (query_params && Object.keys(query_params).length > 0) {
       const queryString = new URLSearchParams(query_params).toString();
       fullUrl += `?${queryString}`;
+    }
+
+    // SSRF Protection: Validate the endpoint URL
+    const ssrfCheck = validateWebhookUrl(fullUrl, { allowHttp: false });
+    if (!ssrfCheck.valid) {
+      console.error(`[proxy-api-request] SSRF blocked: ${fullUrl} - ${ssrfCheck.blockedReason}`);
+      return new Response(
+        JSON.stringify({
+          error: 'Endpoint blocked by security policy',
+          reason: ssrfCheck.blockedReason,
+          message: 'The requested endpoint is not allowed. Only public HTTPS endpoints are permitted.',
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const requestHeaders: Record<string, string> = {

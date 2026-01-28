@@ -27,6 +27,7 @@
 - [Estrutura de Páginas](#estrutura-de-páginas)
 - [Edge Functions](#edge-functions-api)
 - [Segurança](#segurança)
+- [Proteção SSRF](#proteção-ssrf)
 - [Documentação](#documentação)
 
 ---
@@ -739,6 +740,50 @@ revoke({ sessionId: 'uuid', reason: 'manual' });
 import { useSessionActivity } from '@/hooks/useSessionActivity';
 const { showWarningModal, timeRemaining, continueSession } = useSessionActivity();
 ```
+
+---
+
+## 🛡️ Proteção SSRF
+
+O sistema implementa proteção completa contra Server-Side Request Forgery (SSRF):
+
+### URLs Bloqueadas
+
+| Tipo | Exemplos |
+|------|----------|
+| IPs privados | 10.x.x.x, 172.16-31.x.x, 192.168.x.x |
+| Localhost | 127.x.x.x, localhost, 0.0.0.0 |
+| IPv6 local | ::1, fe80::, fc00::, fd00:: |
+| Link-local | 169.254.x.x (APIPA) |
+| Cloud metadata | 169.254.169.254, metadata.google |
+| Kubernetes | kubernetes.default.svc |
+
+### Restrições de Request
+
+| Configuração | Valor |
+|--------------|-------|
+| Protocolo | Apenas HTTPS |
+| Timeout | 10 segundos |
+| Redirects | Não seguidos |
+| SSL | Verificado |
+
+### Aplicação
+
+A proteção SSRF é aplicada em:
+- Configuração de webhooks outbound
+- Teste de webhooks (frontend e backend)
+- URLs de callback OAuth
+- Proxy de API requests
+- Confirmação de subscrições SNS
+
+### Logging
+
+Todas as tentativas de webhook são logadas em `system_logs`:
+- URL alvo (sanitizada)
+- Status de bloqueio
+- Motivo (se bloqueado)
+- Tempo de resposta
+- Código HTTP
 
 ---
 

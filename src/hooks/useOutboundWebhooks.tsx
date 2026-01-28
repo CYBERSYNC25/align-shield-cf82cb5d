@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { validateWebhookUrl, getSsrfErrorMessage } from "@/lib/security/ssrfValidator";
 
 export interface OutboundWebhook {
   id: string;
@@ -208,6 +209,12 @@ export function useOutboundWebhooks() {
   
   const testWebhookMutation = useMutation({
     mutationFn: async (webhook: OutboundWebhook) => {
+      // SSRF Protection: Validate URL before sending
+      const ssrfCheck = validateWebhookUrl(webhook.url);
+      if (!ssrfCheck.valid) {
+        throw new Error(getSsrfErrorMessage(ssrfCheck));
+      }
+      
       const testPayload = {
         event: 'test',
         timestamp: new Date().toISOString(),
@@ -241,17 +248,38 @@ export function useOutboundWebhooks() {
         headers['X-Webhook-Signature'] = `sha256=${signatureHex}`;
       }
       
-      const response = await fetch(webhook.url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(testPayload),
-      });
+      // Use AbortController for 10s timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      try {
+        const response = await fetch(webhook.url, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(testPayload),
+          signal: controller.signal,
+          redirect: 'manual', // Don't follow redirects
+        });
+        
+        clearTimeout(timeoutId);
+        
+        // Block redirects
+        if ([301, 302, 303, 307, 308].includes(response.status)) {
+          throw new Error('Redirect bloqueado por política de segurança');
+        }
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return true;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          throw new Error('Timeout: webhook não respondeu em 10 segundos');
+        }
+        throw error;
       }
-      
-      return true;
     },
     onSuccess: () => {
       toast({

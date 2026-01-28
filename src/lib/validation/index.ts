@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { validateWebhookUrl, getSsrfErrorMessage } from '@/lib/security/ssrfValidator';
 
 // ============= Safe Primitives =============
 
@@ -41,27 +42,33 @@ export const urlSchema = z
     'URL deve usar HTTPS'
   );
 
-export const webhookUrlSchema = urlSchema.refine(
-  (url) => {
-    try {
-      const parsed = new URL(url);
-      const hostname = parsed.hostname.toLowerCase();
-      
-      if (hostname === 'localhost' || hostname === '127.0.0.1') return false;
-      
-      const ipv4Private = /^(10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.)/;
-      if (ipv4Private.test(hostname)) return false;
-      
-      if (['::1', '0.0.0.0', ''].includes(hostname)) return false;
-      if (hostname.endsWith('.local')) return false;
-      
-      return true;
-    } catch {
-      return false;
+/**
+ * Enhanced webhook URL schema with comprehensive SSRF protection
+ * 
+ * Blocks:
+ * - Private IPs (10.x, 172.16-31.x, 192.168.x)
+ * - Localhost (127.x.x.x, localhost, 0.0.0.0)
+ * - IPv6 local (::1, fe80::, fc00::, fd00::)
+ * - Link-local (169.254.x.x)
+ * - Cloud metadata endpoints (169.254.169.254, metadata.google)
+ * - Kubernetes internal (kubernetes.default.svc)
+ * - Non-HTTPS protocols
+ */
+export const webhookUrlSchema = z
+  .string()
+  .trim()
+  .url('URL inválida')
+  .max(2048, 'URL muito longa')
+  .refine(
+    (url) => {
+      const result = validateWebhookUrl(url);
+      return result.valid;
+    },
+    (url) => {
+      const result = validateWebhookUrl(url);
+      return { message: getSsrfErrorMessage(result) };
     }
-  },
-  'URL não pode apontar para localhost ou IPs internos'
-);
+  );
 
 export const safeFilenameSchema = z
   .string()
