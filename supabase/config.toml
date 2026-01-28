@@ -104,3 +104,12 @@ verify_jwt = false
 
 [functions.cleanup-pii-data]
 verify_jwt = false
+
+[functions.mfa-setup]
+verify_jwt = false
+
+[functions.mfa-verify]
+verify_jwt = false
+
+[functions.mfa-disable]
+verify_jwt = false

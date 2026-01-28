@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
+import { useMFA } from '@/hooks/useMFA';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -18,6 +20,7 @@ import {
 
 const Header = () => {
   const { user, signOut } = useAuth();
+  const { mfaStatus } = useMFA();
 
   const getUserInitials = () => {
     if (user?.user_metadata?.display_name) {
@@ -90,12 +93,38 @@ const Header = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center space-x-3 px-3 py-2 hover:bg-muted/50 hover-scale rounded-lg">
-                <Avatar className="h-9 w-9 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
-                  <AvatarImage src="" />
-                  <AvatarFallback className="bg-gradient-primary text-primary-foreground font-semibold">
-                    {getUserInitials()}
-                  </AvatarFallback>
-                </Avatar>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative">
+                        <Avatar className="h-9 w-9 ring-2 ring-primary/20 hover:ring-primary/40 transition-all duration-200">
+                          <AvatarImage src="" />
+                          <AvatarFallback className="bg-gradient-primary text-primary-foreground font-semibold">
+                            {getUserInitials()}
+                          </AvatarFallback>
+                        </Avatar>
+                        {mfaStatus?.enabled && (
+                          <div className="absolute -bottom-0.5 -right-0.5 bg-success rounded-full p-0.5 ring-2 ring-background">
+                            <ShieldCheck className="h-3 w-3 text-white" />
+                          </div>
+                        )}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      {mfaStatus?.enabled ? (
+                        <div className="flex items-center gap-1 text-success">
+                          <ShieldCheck className="h-3 w-3" />
+                          MFA Ativo
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Shield className="h-3 w-3" />
+                          MFA Desabilitado
+                        </div>
+                      )}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="text-left hidden md:block">
                   <p className="text-sm font-semibold text-foreground">{getUserName()}</p>
                   <p className="text-xs text-muted-foreground">Administrador • {getUserCompany()}</p>

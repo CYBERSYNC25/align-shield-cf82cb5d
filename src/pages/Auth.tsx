@@ -4,14 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
+import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
 import { loginSchema } from '@/lib/auth-schemas';
 import { useLoginRateLimiter } from '@/hooks/useLoginRateLimiter';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
  * Página de Autenticação
@@ -33,6 +35,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 const Auth = () => {
   const { user, signIn, loading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { status: rateLimitStatus, checkCanAttempt, recordAttempt, getTimeRemaining } = useLoginRateLimiter();
   
   // Estados de loading e validação
@@ -45,6 +48,10 @@ const Auth = () => {
   
   // Estado para mostrar alerta de lockout
   const [showLockoutAlert, setShowLockoutAlert] = useState(false);
+
+  // MFA challenge state
+  const [showMfaChallenge, setShowMfaChallenge] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
   // Redirect if already authenticated
   if (user && !loading) {
@@ -69,13 +76,13 @@ const Auth = () => {
     setShowLockoutAlert(false);
     
     const formData = new FormData(e.target as HTMLFormElement);
-    const data = {
+    const loginData = {
       email: formData.get('email') as string,
       password: formData.get('password') as string
     };
     
     // SECURITY: Check rate limiting before processing
-    const canAttempt = await checkCanAttempt(data.email);
+    const canAttempt = await checkCanAttempt(loginData.email);
     if (!canAttempt) {
       setShowLockoutAlert(true);
       toast({
@@ -87,7 +94,7 @@ const Auth = () => {
     }
     
     // Validação Zod
-    const validation = loginSchema.safeParse(data);
+    const validation = loginSchema.safeParse(loginData);
     if (!validation.success) {
       const errors: Record<string, string> = {};
       validation.error.errors.forEach(err => {
@@ -112,11 +119,11 @@ const Auth = () => {
     setIsLoading(true);
     
     // Tenta login
-    const { error } = await signIn(data.email, data.password);
+    const { error } = await signIn(loginData.email, loginData.password);
     
     if (error) {
       // SECURITY: Record failed attempt
-      await recordAttempt(data.email, false, error.message);
+      await recordAttempt(loginData.email, false, error.message);
       
       // Mapeia erros do Supabase para mensagens amigáveis
       let errorMessage = error.message;
@@ -141,12 +148,41 @@ const Auth = () => {
       // Reset CAPTCHA
       turnstileRef.current?.reset();
       setCaptchaToken('');
+      setIsLoading(false);
     } else {
       // SECURITY: Record successful attempt
-      await recordAttempt(data.email, true);
+      await recordAttempt(loginData.email, true);
+      
+      // Get current session to check MFA
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // Check if MFA is enabled for this user
+        const { data: mfaSettings } = await supabase
+          .from('user_mfa_settings')
+          .select('enabled_at')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        if (mfaSettings?.enabled_at) {
+          // Show MFA challenge modal
+          setPendingUserId(session.user.id);
+          setShowMfaChallenge(true);
+          setIsLoading(false);
+        } else {
+          // No MFA - proceed with login
+          navigate('/');
+        }
+      } else {
+        navigate('/');
+      }
     }
-    
-    setIsLoading(false);
+  };
+
+  const handleMfaVerified = () => {
+    setShowMfaChallenge(false);
+    setPendingUserId(null);
+    navigate('/');
   };
 
   if (loading) {
@@ -259,6 +295,15 @@ const Auth = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* MFA Challenge Modal */}
+      <MFAChallengeModal
+        open={showMfaChallenge}
+        onOpenChange={setShowMfaChallenge}
+        onVerified={handleMfaVerified}
+        actionDescription="fazer login"
+        action="login"
+      />
     </div>
   );
 };
