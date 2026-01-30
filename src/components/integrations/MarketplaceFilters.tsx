@@ -1,4 +1,4 @@
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
+import { FrameworkType } from "@/lib/integrations-catalog";
 
 export type IntegrationCategory = 'cloud' | 'iam' | 'sdlc' | 'security' | 'productivity' | 'observability';
 export type IntegrationStatus = 'all' | 'available' | 'connected' | 'coming_soon' | 'beta';
@@ -21,6 +22,8 @@ interface MarketplaceFiltersProps {
   onCategoryChange: (value: IntegrationCategory | 'all') => void;
   status: IntegrationStatus;
   onStatusChange: (value: IntegrationStatus) => void;
+  framework: FrameworkType | 'all';
+  onFrameworkChange: (value: FrameworkType | 'all') => void;
   activeFiltersCount: number;
   onClearFilters: () => void;
 }
@@ -43,6 +46,13 @@ const STATUS_OPTIONS: { value: IntegrationStatus; label: string }[] = [
   { value: 'beta', label: 'Beta' },
 ];
 
+const FRAMEWORK_OPTIONS: { value: FrameworkType | 'all'; label: string; icon: string }[] = [
+  { value: 'all', label: 'Todos Frameworks', icon: '📋' },
+  { value: 'ISO 27001', label: 'ISO 27001', icon: '🔒' },
+  { value: 'SOC 2', label: 'SOC 2', icon: '🛡️' },
+  { value: 'LGPD', label: 'LGPD', icon: '🇧🇷' },
+];
+
 export const MarketplaceFilters = ({
   search,
   onSearchChange,
@@ -50,6 +60,8 @@ export const MarketplaceFilters = ({
   onCategoryChange,
   status,
   onStatusChange,
+  framework,
+  onFrameworkChange,
   activeFiltersCount,
   onClearFilters,
 }: MarketplaceFiltersProps) => {
@@ -106,6 +118,23 @@ export const MarketplaceFilters = ({
             {STATUS_OPTIONS.map((opt) => (
               <SelectItem key={opt.value} value={opt.value}>
                 {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={framework} onValueChange={(v) => onFrameworkChange(v as FrameworkType | 'all')}>
+          <SelectTrigger className="w-[160px] bg-background/50">
+            <Shield className="h-4 w-4 mr-2 text-muted-foreground" />
+            <SelectValue placeholder="Framework" />
+          </SelectTrigger>
+          <SelectContent>
+            {FRAMEWORK_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                <span className="flex items-center gap-2">
+                  <span>{opt.icon}</span>
+                  <span>{opt.label}</span>
+                </span>
               </SelectItem>
             ))}
           </SelectContent>

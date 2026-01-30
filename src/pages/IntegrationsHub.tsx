@@ -45,7 +45,9 @@ import { Auth0Evidence } from "@/hooks/useAuth0Sync";
 import { 
   integrationsCatalog, 
   IntegrationDefinition,
-  isIntegrationFunctional
+  isIntegrationFunctional,
+  getIntegrationFrameworks,
+  FrameworkType
 } from "@/lib/integrations-catalog";
 import { useIntegrationStatus } from "@/hooks/useIntegrationStatus";
 import { fuzzyMatch, getSearchScore, POPULAR_INTEGRATION_IDS, COMING_SOON_INTEGRATIONS } from "@/lib/marketplace-utils";
@@ -65,6 +67,7 @@ export default function IntegrationsHub() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<IntegrationCategory | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<IntegrationStatus>('all');
+  const [frameworkFilter, setFrameworkFilter] = useState<FrameworkType | 'all'>('all');
   const [activeTab, setActiveTab] = useState('all');
 
   // Modal states
@@ -149,6 +152,14 @@ export default function IntegrationsHub() {
           return false;
         }
         
+        // Framework filter
+        if (frameworkFilter !== 'all') {
+          const integrationFrameworks = getIntegrationFrameworks(integration.id);
+          if (!integrationFrameworks.includes(frameworkFilter)) {
+            return false;
+          }
+        }
+        
         // Status filter based on tab
         if (activeTab === 'connected' && !isConnected(integration.id)) {
           return false;
@@ -178,7 +189,7 @@ export default function IntegrationsHub() {
         if (aConnected !== bConnected) return bConnected - aConnected;
         return a.name.localeCompare(b.name);
       });
-  }, [searchTerm, categoryFilter, activeTab, aws, google, azure, mikrotik, auth0, okta, cloudflare, jira, github, gitlab, slack, bamboohr, crowdstrike, intune]);
+  }, [searchTerm, categoryFilter, frameworkFilter, activeTab, aws, google, azure, mikrotik, auth0, okta, cloudflare, jira, github, gitlab, slack, bamboohr, crowdstrike, intune]);
 
   // Popular integrations
   const popularIntegrations = useMemo(() => {
@@ -191,13 +202,15 @@ export default function IntegrationsHub() {
     if (searchTerm) count++;
     if (categoryFilter !== 'all') count++;
     if (statusFilter !== 'all') count++;
+    if (frameworkFilter !== 'all') count++;
     return count;
-  }, [searchTerm, categoryFilter, statusFilter]);
+  }, [searchTerm, categoryFilter, statusFilter, frameworkFilter]);
 
   const clearFilters = () => {
     setSearchTerm('');
     setCategoryFilter('all');
     setStatusFilter('all');
+    setFrameworkFilter('all');
   };
 
   // Handle connect
@@ -375,6 +388,8 @@ export default function IntegrationsHub() {
           onCategoryChange={setCategoryFilter}
           status={statusFilter}
           onStatusChange={setStatusFilter}
+          framework={frameworkFilter}
+          onFrameworkChange={setFrameworkFilter}
           activeFiltersCount={activeFiltersCount}
           onClearFilters={clearFilters}
         />

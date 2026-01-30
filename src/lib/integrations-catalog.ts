@@ -1,5 +1,8 @@
+import { EVIDENCE_CONTROL_MAP, FRAMEWORK_CONTROL_CODES } from './evidence-control-map';
+
 export type IntegrationCategory = 'cloud' | 'iam' | 'sdlc' | 'productivity' | 'endpoint';
 export type IntegrationStatus = 'connected' | 'available' | 'coming_soon';
+export type FrameworkType = 'ISO 27001' | 'SOC 2' | 'LGPD';
 
 export interface IntegrationDefinition {
   id: string;
@@ -9,6 +12,36 @@ export interface IntegrationDefinition {
   logo: string | null;
   isNew?: boolean;
   provider: string;
+}
+
+/**
+ * Obtém os frameworks de compliance que uma integração atende
+ * baseado no mapeamento de controles existente
+ */
+export function getIntegrationFrameworks(integrationId: string): FrameworkType[] {
+  const rules = EVIDENCE_CONTROL_MAP.filter(r => r.integrationId === integrationId);
+  const allControlCodes = [...new Set(rules.flatMap(r => r.controlCodes))];
+  
+  const frameworks: FrameworkType[] = [];
+  
+  for (const [framework, codes] of Object.entries(FRAMEWORK_CONTROL_CODES)) {
+    const hasMatch = allControlCodes.some(code => 
+      codes.some(fc => code.includes(fc) || fc.includes(code))
+    );
+    if (hasMatch) {
+      frameworks.push(framework as FrameworkType);
+    }
+  }
+  
+  return frameworks;
+}
+
+/**
+ * Obtém a contagem de controles que uma integração automatiza
+ */
+export function getIntegrationControlsCount(integrationId: string): number {
+  const rules = EVIDENCE_CONTROL_MAP.filter(r => r.integrationId === integrationId);
+  return new Set(rules.flatMap(r => r.controlCodes)).size;
 }
 
 export const CATEGORY_LABELS: Record<IntegrationCategory, string> = {
