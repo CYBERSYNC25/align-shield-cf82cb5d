@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/hover-card";
 import { motion } from "framer-motion";
 import { IntegrationPopover } from "./IntegrationPopover";
-import { EVIDENCE_CONTROL_MAP } from "@/lib/evidence-control-map";
+import { getIntegrationFrameworks, getIntegrationControlsCount } from "@/lib/integrations-catalog";
 
 interface MarketplaceIntegrationCardProps {
   integration: {
@@ -37,9 +37,10 @@ const CATEGORY_CONFIG: Record<string, { label: string; icon: string; color: stri
   observability: { label: 'Observability', icon: '👁️', color: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400' },
 };
 
-const getControlsCount = (integrationId: string): number => {
-  const rules = EVIDENCE_CONTROL_MAP.filter(r => r.integrationId === integrationId);
-  return new Set(rules.flatMap(r => r.controlCodes)).size;
+const FRAMEWORK_BADGE_CONFIG: Record<string, { color: string }> = {
+  'ISO 27001': { color: 'border-blue-500/50 text-blue-600 dark:text-blue-400 bg-blue-500/5' },
+  'SOC 2': { color: 'border-purple-500/50 text-purple-600 dark:text-purple-400 bg-purple-500/5' },
+  'LGPD': { color: 'border-green-500/50 text-green-600 dark:text-green-400 bg-green-500/5' },
 };
 
 export const MarketplaceIntegrationCard = ({
@@ -55,7 +56,8 @@ export const MarketplaceIntegrationCard = ({
     icon: '📦', 
     color: 'bg-muted text-muted-foreground' 
   };
-  const controlsCount = getControlsCount(integration.id);
+  const controlsCount = getIntegrationControlsCount(integration.id);
+  const frameworks = getIntegrationFrameworks(integration.id);
 
   const renderLogo = () => {
     // Manual entry uses icon instead of logo
@@ -155,6 +157,21 @@ export const MarketplaceIntegrationCard = ({
               <p className="text-sm text-muted-foreground line-clamp-2 mb-4 min-h-[40px]">
                 {integration.description}
               </p>
+
+              {/* Framework Badges */}
+              {frameworks.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-3">
+                  {frameworks.map(fw => (
+                    <Badge 
+                      key={fw} 
+                      variant="outline" 
+                      className={`text-[10px] px-1.5 py-0 ${FRAMEWORK_BADGE_CONFIG[fw]?.color || ''}`}
+                    >
+                      {fw}
+                    </Badge>
+                  ))}
+                </div>
+              )}
 
               {/* Controls Count */}
               {controlsCount > 0 && (
