@@ -1,15 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Load Supabase configuration from environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+// Load Supabase configuration from environment variables (fallback para evitar tela branca no Lovable/outros hosts)
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ofbyxnpprwwuieabwhdo.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mYnl4bnBwcnd3dWllYWJ3aGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MDY4NTEsImV4cCI6MjA3MzE4Mjg1MX0.aHH2NWUQZnvV6FALdBIP5SB02YbrE8u12lXI1DtIbiw'
 
-// Validate required environment variables
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing required Supabase environment variables: VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY')
-}
-
-// Cliente Supabase
+// Cliente Supabase (usa fallback quando env não está definido, ex.: deploy no Lovable)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
