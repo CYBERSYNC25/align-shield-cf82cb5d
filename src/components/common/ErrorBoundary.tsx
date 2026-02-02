@@ -47,6 +47,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   private async persistErrorToBackend(error: Error, errorInfo: ErrorInfo) {
     try {
+      if (typeof supabase?.functions?.invoke !== 'function') return;
       await supabase.functions.invoke('log-event', {
         body: {
           level: 'critical',
