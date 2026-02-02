@@ -4,9 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- Security Headers -->
+    <!-- Security Headers: X-Frame-Options e frame-ancestors devem ser enviados pelo servidor (HTTP headers), não via meta -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="Content-Security-Policy" 
       content="default-src 'self'; 
         script-src 'self' 'unsafe-inline' 'unsafe-eval' challenges.cloudflare.com; 
@@ -15,7 +14,6 @@
         img-src 'self' data: https: blob:; 
         connect-src 'self' https://ofbyxnpprwwuieabwhdo.supabase.co wss://ofbyxnpprwwuieabwhdo.supabase.co https://challenges.cloudflare.com https://*.upstash.io;
         frame-src 'self' challenges.cloudflare.com;
-        frame-ancestors 'none';
         base-uri 'self';
         form-action 'self';" />
     

@@ -44,9 +44,11 @@ async function sendLogToBackend(payload: {
       metadata: payload.metadata ? sanitizeForLogs(payload.metadata) as Record<string, unknown> : undefined
     };
 
-    await supabase.functions.invoke('log-event', {
-      body: sanitizedPayload
-    });
+    if (typeof supabase?.functions?.invoke === 'function') {
+      await supabase.functions.invoke('log-event', {
+        body: sanitizedPayload
+      });
+    }
   } catch (e) {
     // Silently fail - we don't want error logging to cause more errors
     console.error('[GlobalErrorHandler] Failed to send log:', e);
