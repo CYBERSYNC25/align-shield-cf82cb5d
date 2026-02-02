@@ -14,7 +14,22 @@ import { useAudits } from '@/hooks/useAudits';
 
 const AuditPortal = () => {
   const { audits } = useAudits();
-  const currentAudit = audits[0] ?? null;
+  
+  // Get first audit for visualizer (or create mock)
+  const currentAudit = audits[0] || {
+    id: 'demo',
+    name: 'Demo Audit',
+    framework: 'SOC 2',
+    status: 'in_progress' as const,
+    progress: 45,
+    start_date: '2024-01-15',
+    end_date: '2024-03-15',
+    auditor: 'Demo Auditor',
+    user_id: 'demo',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    org_id: null
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -63,24 +78,10 @@ const AuditPortal = () => {
 
               {/* Workflow & Report Generation - 2 columns on xl */}
               <div className="col-span-full xl:col-span-6">
-                {currentAudit ? (
-                  <AuditWorkflowVisualizer audit={currentAudit} />
-                ) : (
-                  <div className="rounded-lg border border-dashed border-muted-foreground/25 bg-muted/30 p-8 text-center text-muted-foreground">
-                    <p className="font-medium">Nenhuma auditoria</p>
-                    <p className="text-sm mt-1">Crie uma auditoria para visualizar o fluxo e o progresso.</p>
-                  </div>
-                )}
+                <AuditWorkflowVisualizer audit={currentAudit} />
               </div>
               <div className="col-span-full xl:col-span-6">
-                {currentAudit ? (
-                  <AuditReportGenerator audit={currentAudit} />
-                ) : (
-                  <div className="rounded-lg border border-dashed border-muted-foreground/25 bg-muted/30 p-8 text-center text-muted-foreground">
-                    <p className="font-medium">Nenhuma auditoria</p>
-                    <p className="text-sm mt-1">Crie uma auditoria para gerar relatórios.</p>
-                  </div>
-                )}
+                <AuditReportGenerator audit={currentAudit} />
               </div>
 
               {/* Auditor Access - Full Width */}

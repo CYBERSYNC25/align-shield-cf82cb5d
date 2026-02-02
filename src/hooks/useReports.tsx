@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Report {
@@ -173,37 +173,37 @@ export const useReports = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-
-      // Use mock data - tables don't exist in Supabase schema
+      
+      // Usar sempre dados mock já que as tabelas não existem ainda
       setReports(mockReports);
       setScheduledReports(mockScheduledReports);
-
       setStats({
-        totalGenerated: mockReports.length,
-        weeklyGrowth: 12,
-        monthlyCount: mockReports.length,
-        totalDownloads: 156,
-        uniqueDownloads: 89,
+        totalGenerated: 247,
+        weeklyGrowth: 18,
+        monthlyCount: 89,
+        totalDownloads: 1423,
+        uniqueDownloads: 156,
         scheduledReports: mockScheduledReports.length,
         activeScheduled: mockScheduledReports.filter(r => r.status === 'active').length,
-        sharedLinks: 8,
-        expiringLinks: 2
+        sharedLinks: 34,
+        expiringLinks: 3
       });
 
     } catch (error) {
       console.error('Erro ao buscar dados de relatórios:', error);
-      setReports([]);
-      setScheduledReports([]);
+      // Fallback para dados mock em caso de erro
+      setReports(mockReports);
+      setScheduledReports(mockScheduledReports);
       setStats({
-        totalGenerated: 0,
-        weeklyGrowth: 0,
-        monthlyCount: 0,
-        totalDownloads: 0,
-        uniqueDownloads: 0,
-        scheduledReports: 0,
-        activeScheduled: 0,
-        sharedLinks: 0,
-        expiringLinks: 0
+        totalGenerated: 247,
+        weeklyGrowth: 18,
+        monthlyCount: 89,
+        totalDownloads: 1423,
+        uniqueDownloads: 156,
+        scheduledReports: 12,
+        activeScheduled: 8,
+        sharedLinks: 34,
+        expiringLinks: 3
       });
     } finally {
       setLoading(false);

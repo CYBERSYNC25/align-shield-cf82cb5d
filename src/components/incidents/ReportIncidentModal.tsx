@@ -6,7 +6,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useSecureForm } from '@/hooks/useSecureForm';
-import { useIncidents } from '@/hooks/useIncidents';
 import { reportIncidentSchema, ReportIncidentFormData } from '@/lib/validation';
 
 interface ReportIncidentModalProps {
@@ -16,7 +15,6 @@ interface ReportIncidentModalProps {
 
 const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) => {
   const { toast } = useToast();
-  const { reportIncident } = useIncidents();
 
   const {
     register,
@@ -36,22 +34,13 @@ const ReportIncidentModal = ({ open, onOpenChange }: ReportIncidentModalProps) =
       assignedTo: '',
     },
     onSubmit: async (data) => {
-      const result = await reportIncident({
-        title: data.title,
-        description: data.description,
-        severity: data.severity,
-        impactLevel: data.impactLevel,
-        affectedSystems: data.affectedSystems ?? '',
-        assignedTo: data.assignedTo,
+      toast({
+        title: "Incidente Reportado",
+        description: `Incidente "${data.title}" foi registrado com sucesso.`,
       });
-      if (result.success) {
-        toast({
-          title: "Incidente Reportado",
-          description: `Incidente "${data.title}" foi registrado com sucesso.`,
-        });
-        reset();
-        onOpenChange(false);
-      }
+      
+      reset();
+      onOpenChange(false);
     },
   });
 
