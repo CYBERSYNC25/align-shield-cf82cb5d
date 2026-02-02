@@ -1,157 +1,106 @@
 
-# Plano: Corrigir Erros de Build que Causam Tela Branca
+
+# Plano: Corrigir Erro de Build de Produção (Cliente Supabase Duplicado)
 
 ## Diagnóstico
 
-A tela branca é causada por **dois erros de build** que impedem a aplicação de carregar:
+**O problema NÃO é com as credenciais do banco** - elas estão corretas.
 
-### Erro 1: Sintaxe inválida em `security-middleware.ts`
+O problema é que existem **dois clientes Supabase** no projeto:
+
+| Arquivo | Problema |
+|---------|----------|
+| `src/integrations/supabase/client.ts` | Cliente correto com credenciais hardcoded |
+| `src/lib/supabase.ts` | Usa `import.meta.env.VITE_*` e lança erro se não encontrar |
+
+Durante o build de produção, as variáveis `VITE_*` podem não estar disponíveis, causando:
 
 ```typescript
-// PROBLEMA - Union type como interface (sintaxe incorreta)
-export interface SecurityValidationResult {
-  valid: true;
-  ip: string;
-} | {
-  valid: false;      // ← Erro: Expected ',', got ';'
-  response: Response;
-  reason: string;
+// src/lib/supabase.ts - linha 8-10
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing required Supabase environment variables...')  // ← QUEBRA O BUILD
 }
 ```
 
-**Correção:** Trocar `interface` por `type` (interfaces não suportam union types diretamente).
-
-### Erro 2: Mismatch de tipos em `useIncidents.tsx`
-
-O banco de dados retorna campos em `snake_case`, mas as interfaces TypeScript esperam `camelCase`:
-
-| Banco (snake_case) | Interface (camelCase) |
-|--------------------|-----------------------|
-| `reported_by` | `reportedAt` |
-| `assigned_to` | `assignedTo` |
-| `affected_systems` | `affectedSystems` |
-| `estimated_time` | `estimatedTime` |
-| `last_used` | `lastUsed` |
-| `usage_count` | `usageCount` |
-| `last_tested` | `lastTested` |
-| `next_test` | `nextTest` |
+Três hooks importam do arquivo problemático:
+- `src/hooks/useReports.tsx`
+- `src/hooks/useAccess.tsx`
+- `src/hooks/useRisks.tsx`
 
 ---
 
-## Implementação
+## Solução
 
-### Correção 1: `security-middleware.ts` (linha 86-93)
+### Opção 1: Corrigir o `src/lib/supabase.ts` (Menos invasiva)
 
-Alterar de `interface` para `type`:
+Usar fallback para as credenciais hardcoded, igual ao `client.ts`:
 
 ```typescript
-export type SecurityValidationResult = {
-  valid: true;
-  ip: string;
-} | {
-  valid: false;
-  response: Response;
-  reason: string;
-};
+// Linha 3-10 de src/lib/supabase.ts
+const supabaseUrl = 'https://ofbyxnpprwwuieabwhdo.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
+
+// Remover o throw de validação
 ```
 
-### Correção 2: `useIncidents.tsx`
+### Opção 2: Unificar para usar apenas `@/integrations/supabase/client` (Recomendada)
 
-Criar funções de mapeamento para converter os dados do banco para o formato das interfaces:
-
-```typescript
-// Função auxiliar para mapear dados do banco para a interface Incident
-function mapIncidentFromDB(dbRow: any): Incident {
-  return {
-    id: dbRow.id,
-    title: dbRow.title,
-    description: dbRow.description,
-    severity: dbRow.severity,
-    status: dbRow.status,
-    reportedAt: dbRow.created_at,
-    assignedTo: dbRow.assigned_to || '',
-    assignedRole: '',
-    affectedSystems: dbRow.affected_systems || [],
-    impactLevel: 'medium',
-    estimatedResolution: '',
-    updates: 0,
-    watchers: 0,
-    playbook: '',
-    created_at: dbRow.created_at,
-    updated_at: dbRow.updated_at,
-  };
-}
-
-function mapPlaybookFromDB(dbRow: any): IncidentPlaybook {
-  return {
-    id: dbRow.id,
-    name: dbRow.name,
-    category: dbRow.category,
-    severity: dbRow.severity,
-    estimatedTime: dbRow.estimated_time || '',
-    lastUsed: dbRow.last_used || '',
-    usageCount: dbRow.usage_count || 0,
-    steps: dbRow.steps || 0,
-    roles: dbRow.roles || [],
-    description: dbRow.description || '',
-    triggers: dbRow.triggers || [],
-    created_at: dbRow.created_at,
-    updated_at: dbRow.updated_at,
-  };
-}
-
-function mapBCPPlanFromDB(dbRow: any): BCPPlan {
-  return {
-    id: dbRow.id,
-    name: dbRow.name,
-    type: dbRow.status || 'recovery',
-    status: dbRow.status || 'scheduled',
-    lastTested: dbRow.last_tested || '',
-    nextTest: dbRow.next_test || '',
-    rto: dbRow.rto || '',
-    rpo: dbRow.rpo || '',
-    coverage: dbRow.coverage || 0,
-    criticalSystems: dbRow.systems || [],
-    testResults: '',
-    created_at: dbRow.created_at,
-    updated_at: dbRow.updated_at,
-  };
-}
-```
-
-E atualizar as linhas 254, 266, 278, 281-283 para usar os mappers:
+Atualizar os 3 hooks para importar do cliente oficial:
 
 ```typescript
-// Linha 254
-setIncidents((incidentsData || []).map(mapIncidentFromDB));
+// Antes
+import { supabase } from '@/lib/supabase';
 
-// Linha 266
-setPlaybooks((playbooksData || []).map(mapPlaybookFromDB));
-
-// Linha 278
-setBcpPlans((bcpData || []).map(mapBCPPlanFromDB));
-
-// Linhas 281-283
-const allIncidents = (incidentsData || []).map(mapIncidentFromDB);
-const allBcpPlans = (bcpData || []).map(mapBCPPlanFromDB);
-const allPlaybooks = (playbooksData || []).map(mapPlaybookFromDB);
+// Depois
+import { supabase } from '@/integrations/supabase/client';
 ```
 
 ---
 
-## Arquivos a Modificar
+## Implementação Recomendada (Opção 2)
 
-| Arquivo | Linha(s) | Correção |
-|---------|----------|----------|
-| `supabase/functions/_shared/security-middleware.ts` | 86-93 | Trocar `interface` por `type` |
-| `src/hooks/useIncidents.tsx` | 6-55 (após) | Adicionar funções de mapeamento |
-| `src/hooks/useIncidents.tsx` | 254, 266, 278, 281-283 | Usar mappers em vez de cast direto |
+| Arquivo | Ação |
+|---------|------|
+| `src/hooks/useReports.tsx` | Alterar import para `@/integrations/supabase/client` |
+| `src/hooks/useAccess.tsx` | Alterar import para `@/integrations/supabase/client` |
+| `src/hooks/useRisks.tsx` | Alterar import para `@/integrations/supabase/client` |
+| `src/lib/supabase.ts` | Remover validação que lança erro OU deletar arquivo |
+
+### Mudança Concreta
+
+Para cada um dos 3 hooks, linha 2:
+
+```typescript
+// DE:
+import { supabase } from '@/lib/supabase';
+
+// PARA:
+import { supabase } from '@/integrations/supabase/client';
+```
+
+E em `src/lib/supabase.ts`, linhas 4-10:
+
+```typescript
+// DE:
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing required Supabase environment variables...')
+}
+
+// PARA:
+const supabaseUrl = 'https://ofbyxnpprwwuieabwhdo.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mYnl4bnBwcnd3dWllYWJ3aGRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MDY4NTEsImV4cCI6MjA3MzE4Mjg1MX0.aHH2NWUQZnvV6FALdBIP5SB02YbrE8u12lXI1DtIbiw';
+```
 
 ---
 
 ## Resultado Esperado
 
 Após as correções:
-1. O build passa sem erros
-2. A aplicação carrega normalmente (não fica em tela branca)
-3. Os dados de incidentes, playbooks e planos BCP são exibidos corretamente
+1. O build de produção passa sem erros
+2. Nenhum `throw` é executado durante a inicialização
+3. Todos os hooks usam o mesmo cliente Supabase
+4. Aplicação carrega normalmente
+
