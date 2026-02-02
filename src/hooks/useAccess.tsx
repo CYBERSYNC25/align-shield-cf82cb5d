@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { useIntegratedSystems } from './useIntegratedSystems';
 
@@ -188,42 +188,85 @@ export const useAccess = () => {
     hasRealData 
   } = useIntegratedSystems();
 
+  // Combine real integration data with mock data as fallback
   const systems = useMemo(() => {
     if (hasRealData && integratedSystems.length > 0) {
+      // Use real data from integrations
       return integratedSystems;
     }
-    return [];
+    // Fallback to mock data if no integrations connected
+    return mockSystems;
   }, [integratedSystems, hasRealData]);
 
   const anomalies = useMemo(() => {
     if (hasRealData && detectedAnomalies.length > 0) {
+      // Use real anomalies detected from integration data
       return detectedAnomalies;
     }
-    return [];
+    // Fallback to mock anomalies
+    return mockAnomalies;
   }, [detectedAnomalies, hasRealData]);
 
-  const fetchCampaigns = async () => {
+  // Check if Supabase is properly configured
+  const isSupabaseConfigured = () => {
     try {
-      // Use mock data - table doesn't exist in Supabase schema
+      return supabase && process.env.NODE_ENV === 'production';
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const fetchCampaigns = async () => {
+    if (!isSupabaseConfigured()) {
+      console.log('Using mock data for access campaigns');
       setCampaigns(mockCampaigns);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('access_campaigns')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching campaigns:', error);
+        setCampaigns(mockCampaigns);
+        return;
+      }
+
+      setCampaigns(data || mockCampaigns);
     } catch (err) {
       console.error('Error:', err);
-      setCampaigns([]);
+      setCampaigns(mockCampaigns);
     }
   };
 
   const createCampaign = async (campaignData: Omit<AccessCampaign, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      // Mock create - table doesn't exist in Supabase schema
+    if (!isSupabaseConfigured()) {
       const newCampaign: AccessCampaign = {
         ...campaignData,
-        id: crypto.randomUUID(),
+        id: Math.random().toString(36).substr(2, 9),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
       setCampaigns(prev => [newCampaign, ...prev]);
       toast.success('Campanha criada com sucesso');
       return newCampaign;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('access_campaigns')
+        .insert([campaignData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCampaigns(prev => [data, ...prev]);
+      toast.success('Campanha criada com sucesso');
+      return data;
     } catch (err) {
       console.error('Error creating campaign:', err);
       toast.error('Erro ao criar campanha');
@@ -232,11 +275,28 @@ export const useAccess = () => {
   };
 
   const updateCampaign = async (id: string, updates: Partial<AccessCampaign>) => {
+    if (!isSupabaseConfigured()) {
+      setCampaigns(prev => prev.map(campaign => 
+        campaign.id === id 
+          ? { ...campaign, ...updates, updated_at: new Date().toISOString() }
+          : campaign
+      ));
+      toast.success('Campanha atualizada com sucesso');
+      return;
+    }
+
     try {
-      // Mock update - table doesn't exist in Supabase schema
+      const { data, error } = await supabase
+        .from('access_campaigns')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
 
       setCampaigns(prev => prev.map(campaign => 
-        campaign.id === id ? { ...campaign, ...updates, updated_at: new Date().toISOString() } : campaign
+        campaign.id === id ? data : campaign
       ));
       toast.success('Campanha atualizada com sucesso');
     } catch (err) {
@@ -248,7 +308,14 @@ export const useAccess = () => {
 
   const resolveAnomaly = async (id: string, resolution: { status: AccessAnomaly['status']; assigned_to?: string }) => {
     try {
-      // Mock resolve - using integration data
+      const { data, error } = await supabase
+        .from('access_anomalies')
+        .update({ ...resolution, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
       toast.success('Anomalia atualizada com sucesso');
     } catch (err) {
       console.error('Error resolving anomaly:', err);

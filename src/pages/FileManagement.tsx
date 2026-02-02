@@ -22,7 +22,7 @@ const FileManagement = () => {
   const [documentFiles, setDocumentFiles] = useState<{ name: string; url: string; type?: string }[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Carrega arquivos do Storage do Supabase (buckets evidence e documents)
+  // Load files from storage (simulated for demo)
   useEffect(() => {
     if (user) {
       loadFiles();

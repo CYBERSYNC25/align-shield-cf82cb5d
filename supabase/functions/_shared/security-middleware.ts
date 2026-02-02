@@ -83,14 +83,14 @@ const SUSPICIOUS_USER_AGENTS = [
   /nuclei/i,
 ];
 
-export type SecurityValidationResult = {
+export interface SecurityValidationResult {
   valid: true;
   ip: string;
 } | {
   valid: false;
   response: Response;
   reason: string;
-};
+}
 
 /**
  * Extract client IP from request headers

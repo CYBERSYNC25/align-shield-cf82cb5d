@@ -326,6 +326,7 @@ export function useFrameworks() {
 
       if (controlsError) throw controlsError;
       
+      // Se há dados reais, usar. Senão, usar mock para desenvolvimento
       if (frameworksData && frameworksData.length > 0) {
         setFrameworks(frameworksData);
         setControls(controlsData?.map(c => ({
@@ -337,13 +338,13 @@ export function useFrameworks() {
           findings: c.findings || [],
         })) || []);
       } else {
-        setFrameworks([]);
-        setControls([]);
+        setFrameworks(getMockFrameworks());
+        setControls(getMockControls());
       }
     } catch (error) {
       console.error('Erro ao buscar frameworks:', error);
-      setFrameworks([]);
-      setControls([]);
+      setFrameworks(getMockFrameworks());
+      setControls(getMockControls());
     } finally {
       setLoading(false);
     }
