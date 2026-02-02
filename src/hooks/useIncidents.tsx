@@ -138,6 +138,70 @@ export interface ReportIncidentInput {
   assignedTo: string;
 }
 
+/** Mapeia linha do banco (snake_case) para a interface Incident (camelCase). */
+function mapIncidentFromDB(dbRow: Record<string, unknown>): Incident {
+  const status = (dbRow.status as string) || 'investigating';
+  const severity = (dbRow.severity as Incident['severity']) || 'medium';
+  return {
+    id: (dbRow.id as string) || '',
+    title: (dbRow.title as string) || '',
+    description: (dbRow.description as string) || '',
+    severity: ['low', 'medium', 'high', 'critical'].includes(severity) ? severity : 'medium',
+    status: ['investigating', 'identified', 'resolving', 'resolved'].includes(status) ? status as Incident['status'] : 'investigating',
+    reportedAt: (dbRow.reported_by as string) || (dbRow.created_at as string) || '',
+    assignedTo: (dbRow.assigned_to as string) || '',
+    assignedRole: '',
+    affectedSystems: Array.isArray(dbRow.affected_systems) ? (dbRow.affected_systems as string[]) : [],
+    impactLevel: 'medium',
+    estimatedResolution: '',
+    updates: 0,
+    watchers: 0,
+    playbook: '',
+    created_at: (dbRow.created_at as string) || '',
+    updated_at: (dbRow.updated_at as string) || '',
+  };
+}
+
+/** Mapeia linha do banco para a interface IncidentPlaybook. */
+function mapPlaybookFromDB(dbRow: Record<string, unknown>): IncidentPlaybook {
+  return {
+    id: (dbRow.id as string) || '',
+    name: (dbRow.name as string) || '',
+    category: (dbRow.category as string) || '',
+    severity: (dbRow.severity as IncidentPlaybook['severity']) || 'medium',
+    estimatedTime: (dbRow.estimated_time as string) || '',
+    lastUsed: (dbRow.last_used as string) || '',
+    usageCount: typeof dbRow.usage_count === 'number' ? dbRow.usage_count : 0,
+    steps: typeof dbRow.steps === 'number' ? dbRow.steps : 0,
+    roles: Array.isArray(dbRow.roles) ? (dbRow.roles as string[]) : [],
+    description: (dbRow.description as string) || '',
+    triggers: Array.isArray(dbRow.triggers) ? (dbRow.triggers as string[]) : [],
+    created_at: (dbRow.created_at as string) || '',
+    updated_at: (dbRow.updated_at as string) || '',
+  };
+}
+
+/** Mapeia linha do banco para a interface BCPPlan. */
+function mapBCPPlanFromDB(dbRow: Record<string, unknown>): BCPPlan {
+  const status = (dbRow.status as string) || 'scheduled';
+  const validStatuses: BCPPlan['status'][] = ['tested', 'updated', 'scheduled', 'expired'];
+  return {
+    id: (dbRow.id as string) || '',
+    name: (dbRow.name as string) || '',
+    type: (dbRow.type as string) || 'recovery',
+    status: validStatuses.includes(status as BCPPlan['status']) ? (status as BCPPlan['status']) : 'scheduled',
+    lastTested: (dbRow.last_tested as string) || '',
+    nextTest: (dbRow.next_test as string) || '',
+    rto: (dbRow.rto as string) || '',
+    rpo: (dbRow.rpo as string) || '',
+    coverage: typeof dbRow.coverage === 'number' ? dbRow.coverage : 0,
+    criticalSystems: Array.isArray(dbRow.systems) ? (dbRow.systems as string[]) : [],
+    testResults: (dbRow.test_results as string) || '',
+    created_at: (dbRow.created_at as string) || '',
+    updated_at: (dbRow.updated_at as string) || '',
+  };
+}
+
 export const useIncidents = () => {
   const { user } = useAuth();
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -309,7 +373,7 @@ export const useIncidents = () => {
         console.warn('Dados de incidentes não disponíveis:', incidentsError);
         setIncidents([]);
       } else {
-        setIncidents((incidentsData || []).map(mapIncidentFromDB));
+        setIncidents((incidentsData || []).map((row) => mapIncidentFromDB(row as Record<string, unknown>)));
       }
 
       const { data: playbooksData, error: playbooksError } = await supabase
@@ -321,7 +385,7 @@ export const useIncidents = () => {
         console.error('Erro ao buscar playbooks:', playbooksError);
         setPlaybooks([]);
       } else {
-        setPlaybooks((playbooksData || []).map(mapPlaybookFromDB));
+        setPlaybooks((playbooksData || []).map((row) => mapPlaybookFromDB(row as Record<string, unknown>)));
       }
 
       const { data: bcpData, error: bcpError } = await supabase
@@ -333,31 +397,30 @@ export const useIncidents = () => {
         console.error('Erro ao buscar planos BCP:', bcpError);
         setBcpPlans([]);
       } else {
-        setBcpPlans((bcpData || []).map(mapBCPPlanFromDB));
+        setBcpPlans((bcpData || []).map((row) => mapBCPPlanFromDB(row as Record<string, unknown>)));
       }
 
-      const allIncidents = (incidentsData || []).map(mapIncidentFromDB);
-      const allBcpPlans = (bcpData || []).map(mapBCPPlanFromDB);
-      const allPlaybooks = (playbooksData || []).map(mapPlaybookFromDB);
+      const allIncidents = (incidentsData || []).map((row) => mapIncidentFromDB(row as Record<string, unknown>));
+      const allBcpPlans = (bcpData || []).map((row) => mapBCPPlanFromDB(row as Record<string, unknown>));
+      const allPlaybooks = (playbooksData || []).map((row) => mapPlaybookFromDB(row as Record<string, unknown>));
 
       const incidentBreakdown = allIncidents.reduce(
         (acc, incident) => {
-          const sev = (incident as { severity?: string }).severity ?? incident.severity;
-          acc[sev as keyof typeof acc]++;
+          acc[incident.severity]++;
           return acc;
         },
         { critical: 0, high: 0, medium: 0, low: 0 }
       );
 
       setStats({
-        activeIncidents: allIncidents.filter((i: { status?: string }) => ['investigating', 'identified', 'resolving'].includes(i.status ?? '')).length,
+        activeIncidents: allIncidents.filter((i) => ['investigating', 'identified', 'resolving'].includes(i.status)).length,
         incidentBreakdown,
         mttr: allIncidents.length ? '4.2h' : '0h',
         mttrTarget: '6h',
         mttrProgress: allIncidents.length ? 70 : 0,
         availability: '99.94%',
         availabilityChange: '+0.02%',
-        bcpTests: allBcpPlans.filter((p: { status?: string }) => p.status === 'tested').length,
+        bcpTests: allBcpPlans.filter((p) => p.status === 'tested').length,
         scheduledTests: 3
       });
 
