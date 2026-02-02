@@ -54,6 +54,64 @@ export interface BCPPlan {
   updated_at: string;
 }
 
+// Mapper functions to convert DB snake_case to interface camelCase
+function mapIncidentFromDB(dbRow: Record<string, unknown>): Incident {
+  return {
+    id: dbRow.id as string,
+    title: dbRow.title as string,
+    description: (dbRow.description as string) || '',
+    severity: (dbRow.severity as Incident['severity']) || 'medium',
+    status: (dbRow.status as Incident['status']) || 'investigating',
+    reportedAt: (dbRow.created_at as string) || '',
+    assignedTo: (dbRow.assigned_to as string) || '',
+    assignedRole: '',
+    affectedSystems: (dbRow.affected_systems as string[]) || [],
+    impactLevel: 'medium',
+    estimatedResolution: '',
+    updates: 0,
+    watchers: 0,
+    playbook: '',
+    created_at: (dbRow.created_at as string) || '',
+    updated_at: (dbRow.updated_at as string) || '',
+  };
+}
+
+function mapPlaybookFromDB(dbRow: Record<string, unknown>): IncidentPlaybook {
+  return {
+    id: dbRow.id as string,
+    name: dbRow.name as string,
+    category: dbRow.category as string,
+    severity: (dbRow.severity as IncidentPlaybook['severity']) || 'medium',
+    estimatedTime: (dbRow.estimated_time as string) || '',
+    lastUsed: (dbRow.last_used as string) || '',
+    usageCount: (dbRow.usage_count as number) || 0,
+    steps: (dbRow.steps as number) || 0,
+    roles: (dbRow.roles as string[]) || [],
+    description: (dbRow.description as string) || '',
+    triggers: (dbRow.triggers as string[]) || [],
+    created_at: (dbRow.created_at as string) || '',
+    updated_at: (dbRow.updated_at as string) || '',
+  };
+}
+
+function mapBCPPlanFromDB(dbRow: Record<string, unknown>): BCPPlan {
+  return {
+    id: dbRow.id as string,
+    name: dbRow.name as string,
+    type: (dbRow.status as string) || 'recovery',
+    status: (dbRow.status as BCPPlan['status']) || 'scheduled',
+    lastTested: (dbRow.last_tested as string) || '',
+    nextTest: (dbRow.next_test as string) || '',
+    rto: (dbRow.rto as string) || '',
+    rpo: (dbRow.rpo as string) || '',
+    coverage: (dbRow.coverage as number) || 0,
+    criticalSystems: (dbRow.systems as string[]) || [],
+    testResults: '',
+    created_at: (dbRow.created_at as string) || '',
+    updated_at: (dbRow.updated_at as string) || '',
+  };
+}
+
 export interface IncidentStats {
   activeIncidents: number;
   incidentBreakdown: {
@@ -251,7 +309,7 @@ export const useIncidents = () => {
         console.warn('Dados de incidentes não disponíveis:', incidentsError);
         setIncidents([]);
       } else {
-        setIncidents((incidentsData as Incident[]) || []);
+        setIncidents((incidentsData || []).map(mapIncidentFromDB));
       }
 
       const { data: playbooksData, error: playbooksError } = await supabase
@@ -263,7 +321,7 @@ export const useIncidents = () => {
         console.error('Erro ao buscar playbooks:', playbooksError);
         setPlaybooks([]);
       } else {
-        setPlaybooks((playbooksData as IncidentPlaybook[]) || []);
+        setPlaybooks((playbooksData || []).map(mapPlaybookFromDB));
       }
 
       const { data: bcpData, error: bcpError } = await supabase
@@ -275,12 +333,12 @@ export const useIncidents = () => {
         console.error('Erro ao buscar planos BCP:', bcpError);
         setBcpPlans([]);
       } else {
-        setBcpPlans((bcpData as BCPPlan[]) || []);
+        setBcpPlans((bcpData || []).map(mapBCPPlanFromDB));
       }
 
-      const allIncidents = (incidentsData as Incident[]) || [];
-      const allBcpPlans = (bcpData as BCPPlan[]) || [];
-      const allPlaybooks = (playbooksData as IncidentPlaybook[]) || [];
+      const allIncidents = (incidentsData || []).map(mapIncidentFromDB);
+      const allBcpPlans = (bcpData || []).map(mapBCPPlanFromDB);
+      const allPlaybooks = (playbooksData || []).map(mapPlaybookFromDB);
 
       const incidentBreakdown = allIncidents.reduce(
         (acc, incident) => {
