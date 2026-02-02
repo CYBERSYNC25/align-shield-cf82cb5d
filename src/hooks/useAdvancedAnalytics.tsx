@@ -124,42 +124,7 @@ export function useAdvancedAnalytics(dateRange: DateRange) {
   // Process score time series with annotations
   const { scoreTimeSeries, annotations } = useMemo(() => {
     if (!checkHistory || checkHistory.length === 0) {
-      // Generate mock data for demo
-      const days = differenceInDays(dateRange.to, dateRange.from) || 90;
-      const mockData: ScoreDataPoint[] = [];
-      const mockAnnotations: EventAnnotation[] = [];
-      
-      for (let i = 0; i <= days; i++) {
-        const date = format(subDays(dateRange.to, days - i), 'yyyy-MM-dd');
-        const baseScore = 70 + Math.sin(i / 10) * 15 + Math.random() * 5;
-        mockData.push({
-          date,
-          score: Math.min(100, Math.max(0, Math.round(baseScore))),
-          passing: Math.round(baseScore * 0.8),
-          failing: Math.round((100 - baseScore) * 0.5),
-          riskAccepted: Math.round(Math.random() * 5),
-        });
-      }
-
-      // Add sample annotations
-      if (mockData.length > 30) {
-        mockAnnotations.push({
-          date: mockData[Math.floor(mockData.length * 0.3)].date,
-          score: mockData[Math.floor(mockData.length * 0.3)].score,
-          label: 'AWS Integrado',
-          type: 'integration_added',
-        });
-      }
-      if (mockData.length > 60) {
-        mockAnnotations.push({
-          date: mockData[Math.floor(mockData.length * 0.7)].date,
-          score: mockData[Math.floor(mockData.length * 0.7)].score,
-          label: 'Drift Detectado',
-          type: 'drift',
-        });
-      }
-
-      return { scoreTimeSeries: mockData, annotations: mockAnnotations };
+      return { scoreTimeSeries: [], annotations: [] };
     }
 
     // Process real data
@@ -219,13 +184,7 @@ export function useAdvancedAnalytics(dateRange: DateRange) {
   // Process MTTR breakdown by severity
   const mttrBreakdown = useMemo((): MTTRDataPoint[] => {
     if (!alerts || alerts.length === 0) {
-      // Generate mock data
-      return [
-        { week: 'Sem 1', critical: 4, high: 18, medium: 24, low: 12, criticalCount: 2, highCount: 5, mediumCount: 8, lowCount: 6 },
-        { week: 'Sem 2', critical: 3, high: 15, medium: 20, low: 10, criticalCount: 1, highCount: 4, mediumCount: 7, lowCount: 5 },
-        { week: 'Sem 3', critical: 5, high: 22, medium: 28, low: 14, criticalCount: 3, highCount: 6, mediumCount: 9, lowCount: 7 },
-        { week: 'Sem 4', critical: 2, high: 12, medium: 18, low: 8, criticalCount: 1, highCount: 3, mediumCount: 6, lowCount: 4 },
-      ];
+      return [];
     }
 
     // Group by week and severity
@@ -275,14 +234,7 @@ export function useAdvancedAnalytics(dateRange: DateRange) {
   // Calculate top failing rules with trends
   const topFailingRules = useMemo((): RuleTrend[] => {
     if (!alerts || alerts.length === 0) {
-      // Generate mock data
-      return [
-        { ruleId: 'github-public-repo', ruleTitle: 'GitHub - Repositórios Públicos', integrationName: 'GitHub', currentPeriodFails: 8, previousPeriodFails: 12, trend: 'improving', percentChange: -33 },
-        { ruleId: 'slack-admin-mfa', ruleTitle: 'Slack - Admin sem MFA', integrationName: 'Slack', currentPeriodFails: 9, previousPeriodFails: 5, trend: 'worsening', percentChange: 80 },
-        { ruleId: 'aws-public-bucket', ruleTitle: 'AWS - Buckets Públicos', integrationName: 'AWS', currentPeriodFails: 6, previousPeriodFails: 6, trend: 'stable', percentChange: 0 },
-        { ruleId: 'azure-mfa-disabled', ruleTitle: 'Azure - MFA Desabilitado', integrationName: 'Azure', currentPeriodFails: 4, previousPeriodFails: 7, trend: 'improving', percentChange: -43 },
-        { ruleId: 'okta-inactive-users', ruleTitle: 'Okta - Usuários Inativos', integrationName: 'Okta', currentPeriodFails: 11, previousPeriodFails: 8, trend: 'worsening', percentChange: 38 },
-      ];
+      return [];
     }
 
     const midPoint = new Date((dateRange.from.getTime() + dateRange.to.getTime()) / 2);

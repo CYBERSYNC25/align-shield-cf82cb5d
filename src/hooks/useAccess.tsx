@@ -188,41 +188,21 @@ export const useAccess = () => {
     hasRealData 
   } = useIntegratedSystems();
 
-  // Combine real integration data with mock data as fallback
   const systems = useMemo(() => {
     if (hasRealData && integratedSystems.length > 0) {
-      // Use real data from integrations
       return integratedSystems;
     }
-    // Fallback to mock data if no integrations connected
-    return mockSystems;
+    return [];
   }, [integratedSystems, hasRealData]);
 
   const anomalies = useMemo(() => {
     if (hasRealData && detectedAnomalies.length > 0) {
-      // Use real anomalies detected from integration data
       return detectedAnomalies;
     }
-    // Fallback to mock anomalies
-    return mockAnomalies;
+    return [];
   }, [detectedAnomalies, hasRealData]);
 
-  // Check if Supabase is properly configured
-  const isSupabaseConfigured = () => {
-    try {
-      return supabase && process.env.NODE_ENV === 'production';
-    } catch (error) {
-      return false;
-    }
-  };
-
   const fetchCampaigns = async () => {
-    if (!isSupabaseConfigured()) {
-      console.log('Using mock data for access campaigns');
-      setCampaigns(mockCampaigns);
-      return;
-    }
-
     try {
       const { data, error } = await supabase
         .from('access_campaigns')
@@ -231,30 +211,18 @@ export const useAccess = () => {
 
       if (error) {
         console.error('Error fetching campaigns:', error);
-        setCampaigns(mockCampaigns);
+        setCampaigns([]);
         return;
       }
 
-      setCampaigns(data || mockCampaigns);
+      setCampaigns(data ?? []);
     } catch (err) {
       console.error('Error:', err);
-      setCampaigns(mockCampaigns);
+      setCampaigns([]);
     }
   };
 
   const createCampaign = async (campaignData: Omit<AccessCampaign, 'id' | 'created_at' | 'updated_at'>) => {
-    if (!isSupabaseConfigured()) {
-      const newCampaign: AccessCampaign = {
-        ...campaignData,
-        id: Math.random().toString(36).substr(2, 9),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      setCampaigns(prev => [newCampaign, ...prev]);
-      toast.success('Campanha criada com sucesso');
-      return newCampaign;
-    }
-
     try {
       const { data, error } = await supabase
         .from('access_campaigns')
@@ -275,16 +243,6 @@ export const useAccess = () => {
   };
 
   const updateCampaign = async (id: string, updates: Partial<AccessCampaign>) => {
-    if (!isSupabaseConfigured()) {
-      setCampaigns(prev => prev.map(campaign => 
-        campaign.id === id 
-          ? { ...campaign, ...updates, updated_at: new Date().toISOString() }
-          : campaign
-      ));
-      toast.success('Campanha atualizada com sucesso');
-      return;
-    }
-
     try {
       const { data, error } = await supabase
         .from('access_campaigns')

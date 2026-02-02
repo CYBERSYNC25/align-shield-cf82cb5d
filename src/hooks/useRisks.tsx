@@ -229,8 +229,8 @@ export const useRisks = () => {
       // Verificar se Supabase está configurado verificando se a URL não é placeholder
       const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
         import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
-        import.meta.env.VITE_SUPABASE_ANON_KEY && 
-        import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder-key';
+        import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY && 
+        import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY !== 'placeholder-key';
       
       if (!isSupabaseConfigured) {
         // Modo mock quando Supabase não está configurado
@@ -268,12 +268,11 @@ export const useRisks = () => {
 
       if (risksError) {
         console.warn('Dados de riscos não disponíveis:', risksError);
-        setRisks(mockRisks);
+        setRisks([]);
       } else {
         setRisks(risksData || []);
       }
 
-      // Buscar fornecedores
       const { data: vendorsData, error: vendorsError } = await supabase
         .from('vendors')
         .select('*')
@@ -281,12 +280,11 @@ export const useRisks = () => {
 
       if (vendorsError) {
         console.error('Erro ao buscar fornecedores:', vendorsError);
-        setVendors(mockVendors);
+        setVendors([]);
       } else {
         setVendors(vendorsData || []);
       }
 
-      // Buscar avaliações
       const { data: assessmentsData, error: assessmentsError } = await supabase
         .from('risk_assessments')
         .select('*')
@@ -294,15 +292,14 @@ export const useRisks = () => {
 
       if (assessmentsError) {
         console.error('Erro ao buscar avaliações:', assessmentsError);
-        setAssessments(mockAssessments);
+        setAssessments([]);
       } else {
         setAssessments(assessmentsData || []);
       }
 
-      // Calcular estatísticas
-      const allRisks = risksData || mockRisks;
-      const allVendors = vendorsData || mockVendors;
-      const allAssessments = assessmentsData || mockAssessments;
+      const allRisks = risksData || [];
+      const allVendors = vendorsData || [];
+      const allAssessments = assessmentsData || [];
 
       const riskBreakdown = allRisks.reduce(
         (acc, risk) => {
@@ -325,19 +322,18 @@ export const useRisks = () => {
 
     } catch (error) {
       console.error('Erro ao buscar dados de risco:', error);
-      // Fallback para dados mock em caso de erro
-      setRisks(mockRisks);
-      setVendors(mockVendors);
-      setAssessments(mockAssessments);
+      setRisks([]);
+      setVendors([]);
+      setAssessments([]);
       setStats({
-        activeRisks: 47,
-        riskBreakdown: { critical: 3, high: 12, medium: 18, low: 14 },
-        criticalVendors: 23,
-        totalVendors: 89,
-        implementedControls: 156,
-        controlEffectiveness: 89,
-        pendingAssessments: 12,
-        assessmentsDue: 7
+        activeRisks: 0,
+        riskBreakdown: { critical: 0, high: 0, medium: 0, low: 0 },
+        criticalVendors: 0,
+        totalVendors: 0,
+        implementedControls: 0,
+        controlEffectiveness: 0,
+        pendingAssessments: 0,
+        assessmentsDue: 0
       });
     } finally {
       setLoading(false);
@@ -346,22 +342,6 @@ export const useRisks = () => {
 
   const updateRiskStatus = async (riskId: string, newStatus: Risk['status']) => {
     try {
-      if (!supabase) {
-        // Simular atualização em modo mock
-        setRisks(prev => 
-          prev.map(risk => 
-            risk.id === riskId 
-              ? { ...risk, status: newStatus, updated_at: new Date().toISOString() }
-              : risk
-          )
-        );
-        toast({
-          title: "Status Atualizado",
-          description: "Status do risco foi atualizado com sucesso.",
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('risks')
         .update({ 
@@ -393,22 +373,6 @@ export const useRisks = () => {
 
   const updateVendorCompliance = async (vendorId: string, complianceScore: number) => {
     try {
-      if (!supabase) {
-        // Simular atualização em modo mock
-        setVendors(prev => 
-          prev.map(vendor => 
-            vendor.id === vendorId 
-              ? { ...vendor, complianceScore, updated_at: new Date().toISOString() }
-              : vendor
-          )
-        );
-        toast({
-          title: "Compliance Atualizada",
-          description: "Score de compliance do fornecedor foi atualizado.",
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('vendors')
         .update({ 
@@ -444,17 +408,6 @@ export const useRisks = () => {
         title: "Enviando Avaliação",
         description: `Enviando avaliação "${templateName}" para o fornecedor.`,
       });
-
-      if (!supabase) {
-        // Simular envio em modo mock
-        setTimeout(() => {
-          toast({
-            title: "Avaliação Enviada",
-            description: "A avaliação foi enviada com sucesso!",
-          });
-        }, 2000);
-        return;
-      }
 
       // Implementar lógica de envio real aqui
       // Por exemplo, criar uma nova entrada na tabela risk_assessments

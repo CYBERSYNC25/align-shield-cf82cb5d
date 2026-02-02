@@ -173,37 +173,60 @@ export const useReports = () => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      
-      // Usar sempre dados mock já que as tabelas não existem ainda
-      setReports(mockReports);
-      setScheduledReports(mockScheduledReports);
+
+      const { data: reportsData, error: reportsError } = await supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      const { data: scheduledData, error: scheduledError } = await supabase
+        .from('scheduled_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (reportsError) {
+        console.warn('Dados de relatórios não disponíveis:', reportsError);
+        setReports([]);
+      } else {
+        setReports((reportsData as Report[]) ?? []);
+      }
+
+      if (scheduledError) {
+        console.warn('Dados de agendamentos não disponíveis:', scheduledError);
+        setScheduledReports([]);
+      } else {
+        setScheduledReports((scheduledData as ScheduledReport[]) ?? []);
+      }
+
+      const allReports = (reportsData as Report[]) ?? [];
+      const allScheduled = (scheduledData as ScheduledReport[]) ?? [];
+
       setStats({
-        totalGenerated: 247,
-        weeklyGrowth: 18,
-        monthlyCount: 89,
-        totalDownloads: 1423,
-        uniqueDownloads: 156,
-        scheduledReports: mockScheduledReports.length,
-        activeScheduled: mockScheduledReports.filter(r => r.status === 'active').length,
-        sharedLinks: 34,
-        expiringLinks: 3
+        totalGenerated: allReports.length,
+        weeklyGrowth: 0,
+        monthlyCount: allReports.length,
+        totalDownloads: 0,
+        uniqueDownloads: 0,
+        scheduledReports: allScheduled.length,
+        activeScheduled: allScheduled.filter(r => r.status === 'active').length,
+        sharedLinks: 0,
+        expiringLinks: 0
       });
 
     } catch (error) {
       console.error('Erro ao buscar dados de relatórios:', error);
-      // Fallback para dados mock em caso de erro
-      setReports(mockReports);
-      setScheduledReports(mockScheduledReports);
+      setReports([]);
+      setScheduledReports([]);
       setStats({
-        totalGenerated: 247,
-        weeklyGrowth: 18,
-        monthlyCount: 89,
-        totalDownloads: 1423,
-        uniqueDownloads: 156,
-        scheduledReports: 12,
-        activeScheduled: 8,
-        sharedLinks: 34,
-        expiringLinks: 3
+        totalGenerated: 0,
+        weeklyGrowth: 0,
+        monthlyCount: 0,
+        totalDownloads: 0,
+        uniqueDownloads: 0,
+        scheduledReports: 0,
+        activeScheduled: 0,
+        sharedLinks: 0,
+        expiringLinks: 0
       });
     } finally {
       setLoading(false);

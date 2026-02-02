@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Incident {
@@ -70,8 +71,17 @@ export interface IncidentStats {
   scheduledTests: number;
 }
 
+export interface ReportIncidentInput {
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  impactLevel: string;
+  affectedSystems: string;
+  assignedTo: string;
+}
+
 export const useIncidents = () => {
-  console.log('useIncidents hook initialized');
+  const { user } = useAuth();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [playbooks, setPlaybooks] = useState<IncidentPlaybook[]>([]);
   const [bcpPlans, setBcpPlans] = useState<BCPPlan[]>([]);
@@ -229,41 +239,9 @@ export const useIncidents = () => {
   ];
 
   const fetchIncidents = async () => {
-    console.log('fetchIncidents called');
     try {
       setLoading(true);
-      
-      if (!supabase) {
-        // Modo mock quando Supabase não está configurado
-        console.log('Using mock data');
-        setIncidents(mockIncidents);
-        setPlaybooks(mockPlaybooks);
-        setBcpPlans(mockBcpPlans);
-        
-        // Calcular estatísticas dos dados mock
-        const incidentBreakdown = mockIncidents.reduce(
-          (acc, incident) => {
-            acc[incident.severity]++;
-            return acc;
-          },
-          { critical: 0, high: 0, medium: 0, low: 0 }
-        );
 
-        setStats({
-          activeIncidents: mockIncidents.filter(i => ['investigating', 'identified', 'resolving'].includes(i.status)).length,
-          incidentBreakdown,
-          mttr: '4.2h',
-          mttrTarget: '6h',
-          mttrProgress: 70,
-          availability: '99.94%',
-          availabilityChange: '+0.02%',
-          bcpTests: mockBcpPlans.filter(p => p.status === 'tested').length + 12,
-          scheduledTests: 3
-        });
-        return;
-      }
-
-      // Buscar incidentes
       const { data: incidentsData, error: incidentsError } = await supabase
         .from('incidents')
         .select('*')
@@ -271,12 +249,11 @@ export const useIncidents = () => {
 
       if (incidentsError) {
         console.warn('Dados de incidentes não disponíveis:', incidentsError);
-        setIncidents(mockIncidents);
+        setIncidents([]);
       } else {
-        setIncidents(incidentsData || []);
+        setIncidents((incidentsData as Incident[]) || []);
       }
 
-      // Buscar playbooks
       const { data: playbooksData, error: playbooksError } = await supabase
         .from('incident_playbooks')
         .select('*')
@@ -284,12 +261,11 @@ export const useIncidents = () => {
 
       if (playbooksError) {
         console.error('Erro ao buscar playbooks:', playbooksError);
-        setPlaybooks(mockPlaybooks);
+        setPlaybooks([]);
       } else {
-        setPlaybooks(playbooksData || []);
+        setPlaybooks((playbooksData as IncidentPlaybook[]) || []);
       }
 
-      // Buscar planos BCP
       const { data: bcpData, error: bcpError } = await supabase
         .from('bcp_plans')
         .select('*')
@@ -297,52 +273,51 @@ export const useIncidents = () => {
 
       if (bcpError) {
         console.error('Erro ao buscar planos BCP:', bcpError);
-        setBcpPlans(mockBcpPlans);
+        setBcpPlans([]);
       } else {
-        setBcpPlans(bcpData || []);
+        setBcpPlans((bcpData as BCPPlan[]) || []);
       }
 
-      // Calcular estatísticas
-      const allIncidents = incidentsData || mockIncidents;
-      const allBcpPlans = bcpData || mockBcpPlans;
+      const allIncidents = (incidentsData as Incident[]) || [];
+      const allBcpPlans = (bcpData as BCPPlan[]) || [];
+      const allPlaybooks = (playbooksData as IncidentPlaybook[]) || [];
 
       const incidentBreakdown = allIncidents.reduce(
         (acc, incident) => {
-          acc[incident.severity]++;
+          const sev = (incident as { severity?: string }).severity ?? incident.severity;
+          acc[sev as keyof typeof acc]++;
           return acc;
         },
         { critical: 0, high: 0, medium: 0, low: 0 }
       );
 
       setStats({
-        activeIncidents: allIncidents.filter(i => ['investigating', 'identified', 'resolving'].includes(i.status)).length,
+        activeIncidents: allIncidents.filter((i: { status?: string }) => ['investigating', 'identified', 'resolving'].includes(i.status ?? '')).length,
         incidentBreakdown,
-        mttr: '4.2h',
+        mttr: allIncidents.length ? '4.2h' : '0h',
         mttrTarget: '6h',
-        mttrProgress: 70,
+        mttrProgress: allIncidents.length ? 70 : 0,
         availability: '99.94%',
         availabilityChange: '+0.02%',
-        bcpTests: allBcpPlans.filter(p => p.status === 'tested').length + 12,
+        bcpTests: allBcpPlans.filter((p: { status?: string }) => p.status === 'tested').length,
         scheduledTests: 3
       });
 
     } catch (error) {
       console.error('Erro ao buscar dados de incidentes:', error);
-      // Fallback para dados mock em caso de erro
-      console.log('Falling back to mock data due to error');
-      setIncidents(mockIncidents || []);
-      setPlaybooks(mockPlaybooks || []);
-      setBcpPlans(mockBcpPlans || []);
+      setIncidents([]);
+      setPlaybooks([]);
+      setBcpPlans([]);
       setStats({
-        activeIncidents: 3,
-        incidentBreakdown: { critical: 1, high: 1, medium: 1, low: 0 },
-        mttr: '4.2h',
+        activeIncidents: 0,
+        incidentBreakdown: { critical: 0, high: 0, medium: 0, low: 0 },
+        mttr: '0h',
         mttrTarget: '6h',
-        mttrProgress: 70,
+        mttrProgress: 0,
         availability: '99.94%',
         availabilityChange: '+0.02%',
-        bcpTests: 12,
-        scheduledTests: 3
+        bcpTests: 0,
+        scheduledTests: 0
       });
     } finally {
       setLoading(false);
@@ -351,22 +326,6 @@ export const useIncidents = () => {
 
   const updateIncidentStatus = async (incidentId: string, newStatus: Incident['status']) => {
     try {
-      if (!supabase) {
-        // Simular atualização em modo mock
-        setIncidents(prev => 
-          prev.map(incident => 
-            incident.id === incidentId 
-              ? { ...incident, status: newStatus, updated_at: new Date().toISOString() }
-              : incident
-          )
-        );
-        toast({
-          title: "Status Atualizado",
-          description: "Status do incidente foi atualizado com sucesso.",
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('incidents')
         .update({ 
@@ -407,22 +366,6 @@ export const useIncidents = () => {
         ? severityOrder[currentIndex + 1] as Incident['severity']
         : incident.severity;
 
-      if (!supabase) {
-        // Simular escalonamento em modo mock
-        setIncidents(prev => 
-          prev.map(inc => 
-            inc.id === incidentId 
-              ? { ...inc, severity: newSeverity, updated_at: new Date().toISOString() }
-              : inc
-          )
-        );
-        toast({
-          title: "Incidente Escalonado",
-          description: `Incidente escalonado para severidade ${newSeverity}.`,
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('incidents')
         .update({ 
@@ -462,17 +405,6 @@ export const useIncidents = () => {
         description: `Iniciando execução de "${playbook.name}"...`,
       });
 
-      if (!supabase) {
-        // Simular execução em modo mock
-        setTimeout(() => {
-          toast({
-            title: "Playbook Iniciado",
-            description: "O playbook foi iniciado com sucesso!",
-          });
-        }, 2000);
-        return;
-      }
-
       // Atualizar contador de uso
       const { error } = await supabase
         .from('incident_playbooks')
@@ -504,6 +436,36 @@ export const useIncidents = () => {
     }
   };
 
+  const reportIncident = async (data: ReportIncidentInput): Promise<{ success: boolean; error?: string }> => {
+    if (!user) {
+      toast({ title: "Erro", description: "Faça login para reportar um incidente.", variant: "destructive" });
+      return { success: false, error: "Não autenticado" };
+    }
+    try {
+      const affectedSystemsArray = data.affectedSystems
+        ? data.affectedSystems.split(/[,;]/).map(s => s.trim()).filter(Boolean)
+        : [];
+      const { error } = await supabase
+        .from('incidents')
+        .insert({
+          title: data.title,
+          description: data.description,
+          severity: data.severity,
+          status: 'investigating',
+          affected_systems: affectedSystemsArray.length ? affectedSystemsArray : null,
+          assigned_to: data.assignedTo || null,
+          user_id: user.id,
+        });
+      if (error) throw error;
+      await fetchIncidents();
+      return { success: true };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao registrar incidente.";
+      toast({ title: "Erro", description: message, variant: "destructive" });
+      return { success: false, error: message };
+    }
+  };
+
   const runBcpTest = async (planId: string) => {
     try {
       const plan = bcpPlans.find(p => p.id === planId);
@@ -513,17 +475,6 @@ export const useIncidents = () => {
         title: "Executando Teste BCP",
         description: `Iniciando teste de "${plan.name}"...`,
       });
-
-      if (!supabase) {
-        // Simular teste em modo mock
-        setTimeout(() => {
-          toast({
-            title: "Teste BCP Iniciado",
-            description: "O teste de continuidade foi iniciado com sucesso!",
-          });
-        }, 2000);
-        return;
-      }
 
       // Atualizar status do plano
       const { error } = await supabase
@@ -557,7 +508,6 @@ export const useIncidents = () => {
   };
 
   useEffect(() => {
-    console.log('useIncidents useEffect called');
     fetchIncidents();
   }, []);
 
@@ -567,6 +517,7 @@ export const useIncidents = () => {
     bcpPlans: bcpPlans || [],
     stats,
     loading,
+    reportIncident,
     updateIncidentStatus,
     escalateIncident,
     executePlaybook,

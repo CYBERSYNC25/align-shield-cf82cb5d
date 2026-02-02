@@ -108,8 +108,7 @@ export function usePolicies() {
       setPolicies(data || []);
     } catch (error) {
       logger.warn('Dados de políticas não disponíveis', error);
-      // Use dados mocados se falhar
-      setPolicies(getMockPolicies());
+      setPolicies([]);
     } finally {
       setLoading(false);
     }
