@@ -72,138 +72,104 @@ export const useReports = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Mock data - substitua por dados reais do Supabase quando configurado
-  const mockReports: Report[] = [
-    {
-      id: '1',
-      name: 'SOC 2 Readiness Report',
-      description: 'Avaliação completa de conformidade SOC 2 Type II com gaps e recomendações',
-      type: 'executive',
-      format: 'PDF',
-      framework: 'SOC 2',
-      readiness: 89,
-      status: 'ready',
-      lastGenerated: '2 horas atrás',
-      size: '4.2 MB',
-      pages: 47,
-      sections: ['Trust Services Criteria', 'Control Assessment', 'Evidence Summary', 'Gap Analysis'],
-      audience: 'Auditores Externos',
-      created_at: '2024-11-01T10:00:00Z',
-      updated_at: '2024-11-20T14:30:00Z'
-    },
-    {
-      id: '2',
-      name: 'ISO 27001 Compliance Scorecard',
-      description: 'Scorecard executivo de conformidade ISO 27001:2022 com métricas de maturidade',
-      type: 'dashboard',
-      format: 'PDF',
-      framework: 'ISO 27001',
-      readiness: 92,
-      status: 'ready',
-      lastGenerated: '1 dia atrás',
-      size: '2.8 MB',
-      pages: 32,
-      sections: ['ISMS Overview', 'Annex A Controls', 'Risk Assessment', 'Management Review'],
-      audience: 'C-Level',
-      created_at: '2024-11-01T10:00:00Z',
-      updated_at: '2024-11-19T09:15:00Z'
-    },
-    {
-      id: '3',
-      name: 'LGPD Maturity Assessment',
-      description: 'Avaliação de maturidade LGPD com registro de atividades de tratamento',
-      type: 'detailed',
-      format: 'Excel',
-      framework: 'LGPD',
-      readiness: 76,
-      status: 'updating',
-      lastGenerated: '3 dias atrás',
-      size: '1.9 MB',
-      pages: 28,
-      sections: ['Princípios LGPD', 'Base Legal', 'DPO Report', 'Incident Response'],
-      audience: 'Jurídico & DPO',
-      created_at: '2024-11-01T10:00:00Z',
-      updated_at: '2024-11-17T16:45:00Z'
-    }
-  ];
+  const emptyReportStats: ReportStats = {
+    totalGenerated: 0,
+    weeklyGrowth: 0,
+    monthlyCount: 0,
+    totalDownloads: 0,
+    uniqueDownloads: 0,
+    scheduledReports: 0,
+    activeScheduled: 0,
+    sharedLinks: 0,
+    expiringLinks: 0
+  };
 
-  const mockScheduledReports: ScheduledReport[] = [
-    {
-      id: '1',
-      name: 'Executive Security Summary',
-      description: 'Relatório executivo semanal com KPIs de segurança',
-      schedule: 'Toda segunda-feira às 08:00',
-      nextRun: '25/11/2024 08:00',
-      lastRun: '18/11/2024 08:00',
-      status: 'active',
-      format: 'PDF',
-      recipients: [
-        { name: 'CEO', email: 'ceo@empresa.com' },
-        { name: 'CISO', email: 'ciso@empresa.com' },
-        { name: 'CTO', email: 'cto@empresa.com' }
-      ],
-      deliveryMethod: 'email',
-      successRate: 100,
-      lastStatus: 'success',
-      created_at: '2024-11-01T10:00:00Z',
-      updated_at: '2024-11-18T08:00:00Z'
-    },
-    {
-      id: '2',
-      name: 'Compliance Dashboard Monthly',
-      description: 'Dashboard mensal de conformidade para auditores',
-      schedule: '1º dia útil do mês às 09:00',
-      nextRun: '01/12/2024 09:00',
-      lastRun: '01/11/2024 09:00',
-      status: 'active',
-      format: 'PowerPoint',
-      recipients: [
-        { name: 'Compliance Officer', email: 'compliance@empresa.com' },
-        { name: 'Risk Manager', email: 'risk@empresa.com' },
-        { name: 'External Auditor', email: 'auditor@auditfirm.com' }
-      ],
-      deliveryMethod: 'email',
-      successRate: 95,
-      lastStatus: 'success',
-      created_at: '2024-11-01T10:00:00Z',
-      updated_at: '2024-11-01T09:00:00Z'
-    }
-  ];
+  const mapRowToReport = (row: Record<string, unknown>): Report => ({
+    id: row.id as string,
+    name: row.name as string,
+    description: (row.description as string) ?? '',
+    type: (row.type as Report['type']) ?? 'executive',
+    format: (row.format as Report['format']) ?? 'PDF',
+    framework: (row.framework as string) ?? '',
+    readiness: (row.readiness as number) ?? 0,
+    status: (row.status as Report['status']) ?? 'ready',
+    lastGenerated: (row.last_generated as string) ?? '',
+    size: (row.size as string) ?? '',
+    pages: (row.pages as number) ?? 0,
+    sections: Array.isArray(row.sections) ? (row.sections as string[]) : [],
+    audience: (row.audience as string) ?? '',
+    metrics: Array.isArray(row.metrics) ? (row.metrics as string[]) : undefined,
+    filters: row.filters,
+    recipients: Array.isArray(row.recipients) ? (row.recipients as string[]) : undefined,
+    created_at: (row.created_at as string) ?? '',
+    updated_at: (row.updated_at as string) ?? ''
+  });
 
   const fetchReports = async () => {
     try {
       setLoading(true);
-      
-      // Usar sempre dados mock já que as tabelas não existem ainda
-      setReports(mockReports);
-      setScheduledReports(mockScheduledReports);
-      setStats({
-        totalGenerated: 247,
-        weeklyGrowth: 18,
-        monthlyCount: 89,
-        totalDownloads: 1423,
-        uniqueDownloads: 156,
-        scheduledReports: mockScheduledReports.length,
-        activeScheduled: mockScheduledReports.filter(r => r.status === 'active').length,
-        sharedLinks: 34,
-        expiringLinks: 3
-      });
 
+      const { data: reportsData, error: reportsError } = await supabase
+        .from('reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (reportsError) {
+        console.warn('Erro ao buscar relatórios:', reportsError);
+        setReports([]);
+      } else {
+        setReports((reportsData ?? []).map((row) => mapRowToReport(row as Record<string, unknown>)));
+      }
+
+      const { data: scheduledData, error: scheduledError } = await supabase
+        .from('scheduled_reports')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (scheduledError) {
+        setScheduledReports([]);
+      } else {
+        const rows = (scheduledData ?? []) as Record<string, unknown>[];
+        setScheduledReports(rows.map((row) => ({
+          id: row.id as string,
+          name: row.name as string,
+          description: (row.description as string) ?? '',
+          schedule: (row.schedule as string) ?? '',
+          nextRun: row.next_run != null ? String(row.next_run) : '',
+          lastRun: row.last_run != null ? String(row.last_run) : '',
+          status: (row.status as 'active' | 'paused') ?? 'active',
+          format: (row.format as string) ?? '',
+          recipients: Array.isArray(row.recipients) ? (row.recipients as ScheduledReport['recipients']) : [],
+          deliveryMethod: (row.delivery_method as ScheduledReport['deliveryMethod']) ?? 'email',
+          successRate: (row.success_rate as number) ?? 100,
+          lastStatus: (row.last_status as ScheduledReport['lastStatus']) ?? 'success',
+          created_at: (row.created_at as string) ?? '',
+          updated_at: (row.updated_at as string) ?? ''
+        })));
+      }
+
+      const reportsList = reportsData ?? [];
+      const scheduledList = scheduledData ?? [];
+      setStats({
+        totalGenerated: reportsList.length,
+        weeklyGrowth: 0,
+        monthlyCount: reportsList.length,
+        totalDownloads: 0,
+        uniqueDownloads: 0,
+        scheduledReports: scheduledList.length,
+        activeScheduled: scheduledList.filter((r: { status?: string }) => r.status === 'active').length,
+        sharedLinks: 0,
+        expiringLinks: 0
+      });
     } catch (error) {
       console.error('Erro ao buscar dados de relatórios:', error);
-      // Fallback para dados mock em caso de erro
-      setReports(mockReports);
-      setScheduledReports(mockScheduledReports);
-      setStats({
-        totalGenerated: 247,
-        weeklyGrowth: 18,
-        monthlyCount: 89,
-        totalDownloads: 1423,
-        uniqueDownloads: 156,
-        scheduledReports: 12,
-        activeScheduled: 8,
-        sharedLinks: 34,
-        expiringLinks: 3
+      setReports([]);
+      setScheduledReports([]);
+      setStats(emptyReportStats);
+      toast({
+        title: 'Erro ao carregar relatórios',
+        description: 'Não foi possível carregar os dados. Tente novamente.',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -217,7 +183,6 @@ export const useReports = () => {
         description: "O relatório está sendo gerado e será enviado por email.",
       });
 
-      // Simular geração em modo mock
       setReports(prev => 
         prev.map(report => 
           report.id === reportId 
@@ -253,7 +218,11 @@ export const useReports = () => {
 
   const toggleScheduledReport = async (reportId: string, newStatus: 'active' | 'paused') => {
     try {
-      // Simular toggle em modo mock
+      const { error } = await supabase
+        .from('scheduled_reports')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', reportId);
+      if (error) throw error;
       setScheduledReports(prev => 
         prev.map(report => 
           report.id === reportId 

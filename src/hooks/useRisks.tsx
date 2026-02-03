@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
@@ -91,176 +91,21 @@ export const useRisks = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Mock data - substitua por dados reais do Supabase quando configurado
-  const mockRisks: Risk[] = [
-    {
-      id: '1',
-      title: 'Falha de Backup Crítico',
-      description: 'Risco de perda de dados por falha no sistema de backup principal',
-      category: 'Operacional',
-      probability: 'medium',
-      impact: 'high',
-      riskScore: 12,
-      level: 'high',
-      owner: 'Carlos Silva',
-      ownerRole: 'Infrastructure Lead',
-      status: 'active',
-      trend: 'stable',
-      lastReview: '15/11/2024',
-      nextReview: '15/02/2025',
-      controls: ['Backup Automatizado', 'Monitoramento 24/7', 'Testes Regulares'],
-      created_at: '2024-11-01T10:00:00Z',
-      updated_at: '2024-11-15T14:30:00Z'
-    },
-    {
-      id: '2',
-      title: 'Vazamento de Dados Pessoais',
-      description: 'Exposição não autorizada de dados pessoais de clientes',
-      category: 'Segurança',
-      probability: 'low',
-      impact: 'critical',
-      riskScore: 15,
-      level: 'critical',
-      owner: 'Ana Rodrigues',
-      ownerRole: 'DPO',
-      status: 'active',
-      trend: 'decreasing',
-      lastReview: '10/11/2024',
-      nextReview: '10/01/2025',
-      controls: ['Criptografia End-to-End', 'DLP', 'Treinamento LGPD'],
-      created_at: '2024-11-01T10:00:00Z',
-      updated_at: '2024-11-10T16:45:00Z'
-    },
-    {
-      id: '3',
-      title: 'Ataque de Ransomware',
-      description: 'Criptografia maliciosa de sistemas críticos por ransomware',
-      category: 'Cibersegurança',
-      probability: 'high',
-      impact: 'critical',
-      riskScore: 20,
-      level: 'critical',
-      owner: 'Maria Santos',
-      ownerRole: 'CISO',
-      status: 'active',
-      trend: 'increasing',
-      lastReview: '12/11/2024',
-      nextReview: '12/12/2024',
-      controls: ['EDR', 'Backup Offline', 'Treinamento Phishing'],
-      created_at: '2024-11-01T10:00:00Z',
-      updated_at: '2024-11-12T09:15:00Z'
-    }
-  ];
-
-  const mockVendors: Vendor[] = [
-    {
-      id: '1',
-      name: 'CloudSecure Inc.',
-      category: 'Cloud Infrastructure',
-      criticality: 'critical',
-      riskLevel: 'high',
-      contractValue: '$120k/ano',
-      lastAssessment: '15/10/2024',
-      nextAssessment: '15/04/2025',
-      complianceScore: 85,
-      status: 'active',
-      certifications: ['SOC 2', 'ISO 27001', 'FedRAMP'],
-      pendingActions: 3,
-      created_at: '2024-10-01T10:00:00Z',
-      updated_at: '2024-11-15T14:30:00Z'
-    },
-    {
-      id: '2',
-      name: 'DataProtect Solutions',
-      category: 'Security Services',
-      criticality: 'high',
-      riskLevel: 'medium',
-      contractValue: '$85k/ano',
-      lastAssessment: '22/09/2024',
-      nextAssessment: '22/03/2025',
-      complianceScore: 92,
-      status: 'active',
-      certifications: ['ISO 27001', 'PCI DSS'],
-      pendingActions: 1,
-      created_at: '2024-09-01T10:00:00Z',
-      updated_at: '2024-11-22T16:45:00Z'
-    }
-  ];
-
-  const mockAssessments: RiskAssessment[] = [
-    {
-      id: '1',
-      vendor: 'CloudSecure Inc.',
-      template: 'SOC 2 Vendor Assessment',
-      status: 'in_progress',
-      progress: 65,
-      sentDate: '15/11/2024',
-      dueDate: '25/11/2024',
-      completedQuestions: 29,
-      totalQuestions: 45,
-      riskFlags: 2,
-      contactPerson: 'James Wilson',
-      contactEmail: 'james@cloudsecure.com',
-      created_at: '2024-11-15T10:00:00Z',
-      updated_at: '2024-11-20T14:30:00Z'
-    },
-    {
-      id: '2',
-      vendor: 'DataProtect Solutions',
-      template: 'LGPD Data Processing',
-      status: 'completed',
-      progress: 100,
-      sentDate: '08/11/2024',
-      dueDate: '18/11/2024',
-      completedQuestions: 32,
-      totalQuestions: 32,
-      riskFlags: 0,
-      contactPerson: 'Sarah Chen',
-      contactEmail: 'sarah@dataprotect.com',
-      created_at: '2024-11-08T10:00:00Z',
-      updated_at: '2024-11-18T16:45:00Z'
-    }
-  ];
+  const emptyStats: RiskStats = {
+    activeRisks: 0,
+    riskBreakdown: { critical: 0, high: 0, medium: 0, low: 0 },
+    criticalVendors: 0,
+    totalVendors: 0,
+    implementedControls: 0,
+    controlEffectiveness: 0,
+    pendingAssessments: 0,
+    assessmentsDue: 0
+  };
 
   const fetchRisks = async () => {
     try {
       setLoading(true);
-      
-      // Verificar se Supabase está configurado verificando se a URL não é placeholder
-      const isSupabaseConfigured = import.meta.env.VITE_SUPABASE_URL && 
-        import.meta.env.VITE_SUPABASE_URL !== 'https://placeholder.supabase.co' &&
-        import.meta.env.VITE_SUPABASE_ANON_KEY && 
-        import.meta.env.VITE_SUPABASE_ANON_KEY !== 'placeholder-key';
-      
-      if (!isSupabaseConfigured) {
-        // Modo mock quando Supabase não está configurado
-        setRisks(mockRisks);
-        setVendors(mockVendors);
-        setAssessments(mockAssessments);
-        
-        // Calcular estatísticas dos dados mock
-        const riskBreakdown = mockRisks.reduce(
-          (acc, risk) => {
-            acc[risk.level]++;
-            return acc;
-          },
-          { critical: 0, high: 0, medium: 0, low: 0 }
-        );
 
-        setStats({
-          activeRisks: mockRisks.filter(r => r.status === 'active').length,
-          riskBreakdown,
-          criticalVendors: mockVendors.filter(v => v.criticality === 'critical').length,
-          totalVendors: mockVendors.length,
-          implementedControls: 156,
-          controlEffectiveness: 89,
-          pendingAssessments: mockAssessments.filter(a => ['sent', 'in_progress'].includes(a.status)).length,
-          assessmentsDue: mockAssessments.filter(a => a.status === 'overdue').length
-        });
-        return;
-      }
-
-      // Buscar riscos
       const { data: risksData, error: risksError } = await supabase
         .from('risks')
         .select('*')
@@ -268,12 +113,11 @@ export const useRisks = () => {
 
       if (risksError) {
         console.warn('Dados de riscos não disponíveis:', risksError);
-        setRisks(mockRisks);
+        setRisks([]);
       } else {
-        setRisks(risksData || []);
+        setRisks(risksData ?? []);
       }
 
-      // Buscar fornecedores
       const { data: vendorsData, error: vendorsError } = await supabase
         .from('vendors')
         .select('*')
@@ -281,12 +125,11 @@ export const useRisks = () => {
 
       if (vendorsError) {
         console.error('Erro ao buscar fornecedores:', vendorsError);
-        setVendors(mockVendors);
+        setVendors([]);
       } else {
-        setVendors(vendorsData || []);
+        setVendors(vendorsData ?? []);
       }
 
-      // Buscar avaliações
       const { data: assessmentsData, error: assessmentsError } = await supabase
         .from('risk_assessments')
         .select('*')
@@ -294,50 +137,44 @@ export const useRisks = () => {
 
       if (assessmentsError) {
         console.error('Erro ao buscar avaliações:', assessmentsError);
-        setAssessments(mockAssessments);
+        setAssessments([]);
       } else {
-        setAssessments(assessmentsData || []);
+        setAssessments(assessmentsData ?? []);
       }
 
-      // Calcular estatísticas
-      const allRisks = risksData || mockRisks;
-      const allVendors = vendorsData || mockVendors;
-      const allAssessments = assessmentsData || mockAssessments;
+      const allRisks = risksData ?? [];
+      const allVendors = vendorsData ?? [];
+      const allAssessments = assessmentsData ?? [];
 
       const riskBreakdown = allRisks.reduce(
         (acc, risk) => {
-          acc[risk.level]++;
+          const level = (risk as Risk).level ?? 'low';
+          acc[level] = (acc[level] ?? 0) + 1;
           return acc;
         },
         { critical: 0, high: 0, medium: 0, low: 0 }
       );
 
       setStats({
-        activeRisks: allRisks.filter(r => r.status === 'active').length,
+        activeRisks: allRisks.filter((r: Risk) => r.status === 'active').length,
         riskBreakdown,
-        criticalVendors: allVendors.filter(v => v.criticality === 'critical').length,
+        criticalVendors: allVendors.filter((v: Vendor) => v.criticality === 'critical').length,
         totalVendors: allVendors.length,
-        implementedControls: 156,
-        controlEffectiveness: 89,
-        pendingAssessments: allAssessments.filter(a => ['sent', 'in_progress'].includes(a.status)).length,
-        assessmentsDue: allAssessments.filter(a => a.status === 'overdue').length
+        implementedControls: 0,
+        controlEffectiveness: 0,
+        pendingAssessments: allAssessments.filter((a: RiskAssessment) => ['sent', 'in_progress'].includes(a.status)).length,
+        assessmentsDue: allAssessments.filter((a: RiskAssessment) => a.status === 'overdue').length
       });
-
     } catch (error) {
       console.error('Erro ao buscar dados de risco:', error);
-      // Fallback para dados mock em caso de erro
-      setRisks(mockRisks);
-      setVendors(mockVendors);
-      setAssessments(mockAssessments);
-      setStats({
-        activeRisks: 47,
-        riskBreakdown: { critical: 3, high: 12, medium: 18, low: 14 },
-        criticalVendors: 23,
-        totalVendors: 89,
-        implementedControls: 156,
-        controlEffectiveness: 89,
-        pendingAssessments: 12,
-        assessmentsDue: 7
+      setRisks([]);
+      setVendors([]);
+      setAssessments([]);
+      setStats(emptyStats);
+      toast({
+        title: 'Erro ao carregar riscos',
+        description: 'Não foi possível carregar os dados. Tente novamente.',
+        variant: 'destructive'
       });
     } finally {
       setLoading(false);
@@ -346,22 +183,6 @@ export const useRisks = () => {
 
   const updateRiskStatus = async (riskId: string, newStatus: Risk['status']) => {
     try {
-      if (!supabase) {
-        // Simular atualização em modo mock
-        setRisks(prev => 
-          prev.map(risk => 
-            risk.id === riskId 
-              ? { ...risk, status: newStatus, updated_at: new Date().toISOString() }
-              : risk
-          )
-        );
-        toast({
-          title: "Status Atualizado",
-          description: "Status do risco foi atualizado com sucesso.",
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('risks')
         .update({ 
@@ -393,22 +214,6 @@ export const useRisks = () => {
 
   const updateVendorCompliance = async (vendorId: string, complianceScore: number) => {
     try {
-      if (!supabase) {
-        // Simular atualização em modo mock
-        setVendors(prev => 
-          prev.map(vendor => 
-            vendor.id === vendorId 
-              ? { ...vendor, complianceScore, updated_at: new Date().toISOString() }
-              : vendor
-          )
-        );
-        toast({
-          title: "Compliance Atualizada",
-          description: "Score de compliance do fornecedor foi atualizado.",
-        });
-        return;
-      }
-
       const { error } = await supabase
         .from('vendors')
         .update({ 
@@ -445,20 +250,7 @@ export const useRisks = () => {
         description: `Enviando avaliação "${templateName}" para o fornecedor.`,
       });
 
-      if (!supabase) {
-        // Simular envio em modo mock
-        setTimeout(() => {
-          toast({
-            title: "Avaliação Enviada",
-            description: "A avaliação foi enviada com sucesso!",
-          });
-        }, 2000);
-        return;
-      }
-
-      // Implementar lógica de envio real aqui
-      // Por exemplo, criar uma nova entrada na tabela risk_assessments
-
+      // Implementar lógica de envio real na tabela risk_assessments quando disponível
       toast({
         title: "Avaliação Enviada",
         description: "A avaliação foi enviada com sucesso!",
@@ -599,11 +391,10 @@ export const useRisks = () => {
   const updateRisk = async (riskId: string, updates: Partial<Risk>) => {
     try {
       if (!user) {
-        // Mock update for development
-        setRisks(risks.map(r => r.id === riskId ? { ...r, ...updates, updated_at: new Date().toISOString() } : r));
         toast({
-          title: "Risco atualizado",
-          description: "Risco atualizado com sucesso (mock)"
+          title: "Erro",
+          description: "Usuário não autenticado.",
+          variant: "destructive"
         });
         return;
       }
@@ -647,10 +438,7 @@ export const useRisks = () => {
     new_data?: any;
   }) => {
     try {
-      if (!user) {
-        console.log('Audit log (mock):', logData);
-        return;
-      }
+      if (!user) return;
 
       const { error } = await supabase
         .from('audit_logs')

@@ -41,46 +41,9 @@ const AssignResponsibleModal = ({ entity, isOpen, onClose }: AssignResponsibleMo
   const [sendEmail, setSendEmail] = useState(true);
   const [notes, setNotes] = useState('');
 
-  const mockUsers = [
-    {
-      id: '1',
-      name: 'Ana Silva',
-      email: 'ana.silva@empresa.com',
-      role: 'CISO',
-      department: 'Segurança',
-      workload: 'baixa',
-      skills: ['ISO 27001', 'LGPD', 'Auditoria']
-    },
-    {
-      id: '2',
-      name: 'João Santos',
-      email: 'joao.santos@empresa.com',
-      role: 'Gerente TI',
-      department: 'TI',
-      workload: 'média',
-      skills: ['Infraestrutura', 'Redes', 'SOC 2']
-    },
-    {
-      id: '3',
-      name: 'Maria Costa',
-      email: 'maria.costa@empresa.com',
-      role: 'Analista Segurança',
-      department: 'Segurança',
-      workload: 'alta',
-      skills: ['Análise de Risco', 'Incident Response', 'GDPR']
-    },
-    {
-      id: '4',
-      name: 'Pedro Lima',
-      email: 'pedro.lima@empresa.com',
-      role: 'Auditor Interno',
-      department: 'Auditoria',
-      workload: 'baixa',
-      skills: ['Auditoria', 'Compliance', 'Controles']
-    }
-  ];
+  const users: Array<{ id: string; name: string; email: string; role: string; department: string; workload: string; skills: string[] }> = [];
 
-  const filteredUsers = mockUsers.filter(user =>
+  const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.department.toLowerCase().includes(searchTerm.toLowerCase())
@@ -97,8 +60,8 @@ const AssignResponsibleModal = ({ entity, isOpen, onClose }: AssignResponsibleMo
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const assignedUser = mockUsers.find(u => u.id === selectedUser);
-      toast.success(`${entity?.name || 'Item'} atribuído para ${assignedUser?.name} com sucesso!`);
+      const assignedUser = users.find(u => u.id === selectedUser);
+      toast.success(`${entity?.name || 'Item'} atribuído para ${assignedUser?.name ?? 'responsável'} com sucesso!`);
       onClose();
     } catch (error) {
       toast.error('Erro ao atribuir responsável');
@@ -318,7 +281,7 @@ const AssignResponsibleModal = ({ entity, isOpen, onClose }: AssignResponsibleMo
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Responsável:</span>
                       <span className="font-medium">
-                        {mockUsers.find(u => u.id === selectedUser)?.name}
+                        {users.find(u => u.id === selectedUser)?.name}
                       </span>
                     </div>
                     <div className="flex justify-between">

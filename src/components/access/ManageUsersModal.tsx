@@ -42,50 +42,16 @@ const ManageUsersModal = ({ system, isOpen, onClose }: ManageUsersModalProps) =>
   const [loading, setLoading] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
-  const mockUsers = [
-    {
-      id: '1',
-      name: 'Ana Silva',
-      email: 'ana.silva@empresa.com',
-      role: 'administrator',
-      status: 'active',
-      lastAccess: '2024-11-15 14:30',
-      permissions: ['read', 'write', 'admin'],
-      department: 'TI'
-    },
-    {
-      id: '2',
-      name: 'João Santos',
-      email: 'joao.santos@empresa.com',
-      role: 'user',
-      status: 'active',
-      lastAccess: '2024-11-15 09:15',
-      permissions: ['read', 'write'],
-      department: 'Financeiro'
-    },
-    {
-      id: '3',
-      name: 'Maria Costa',
-      email: 'maria.costa@empresa.com',
-      role: 'auditor',
-      status: 'inactive',
-      lastAccess: '2024-11-14 16:45',
-      permissions: ['read'],
-      department: 'Auditoria'
-    },
-    {
-      id: '4',
-      name: 'Pedro Lima',
-      email: 'pedro.lima@empresa.com',
-      role: 'user',
-      status: 'pending',
-      lastAccess: null,
-      permissions: ['read'],
-      department: 'RH'
-    }
-  ];
-
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    status: string;
+    lastAccess: string | null;
+    permissions: string[];
+    department: string;
+  }>>([]);
   const [newUser, setNewUser] = useState({
     name: '',
     email: '',

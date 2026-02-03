@@ -34,35 +34,15 @@ const AddCommentModal = ({ entity, isOpen, onClose }: AddCommentModalProps) => {
   const [isInternal, setIsInternal] = useState(false);
   const [notifyUsers, setNotifyUsers] = useState(true);
 
-  const mockRecentComments = [
-    {
-      id: '1',
-      author: 'Ana Silva',
-      authorRole: 'CISO',
-      content: 'Necessário verificar logs de acesso antes de resolver',
-      timestamp: '2024-11-15 10:30',
-      type: 'note',
-      isInternal: false
-    },
-    {
-      id: '2',
-      author: 'João Santos',
-      authorRole: 'Auditor',
-      content: 'Investigação preliminar concluída. Sem evidências de comprometimento.',
-      timestamp: '2024-11-14 16:45',
-      type: 'update',
-      isInternal: true
-    },
-    {
-      id: '3',
-      author: 'Maria Costa',
-      authorRole: 'Analista',
-      content: 'Escalado para revisão adicional devido à criticidade',
-      timestamp: '2024-11-14 14:20',
-      type: 'escalation',
-      isInternal: false
-    }
-  ];
+  const recentComments: Array<{
+    id: string;
+    author: string;
+    authorRole: string;
+    content: string;
+    timestamp: string;
+    type: string;
+    isInternal: boolean;
+  }> = [];
 
   const handleSubmit = async () => {
     if (!comment.trim()) {
@@ -221,7 +201,7 @@ const AddCommentModal = ({ entity, isOpen, onClose }: AddCommentModalProps) => {
             <h3 className="font-medium text-sm">Comentários Recentes</h3>
             
             <div className="space-y-3 max-h-96 overflow-y-auto">
-              {mockRecentComments.map((recentComment) => (
+              {recentComments.map((recentComment) => (
                 <Card key={recentComment.id} className="bg-surface">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">

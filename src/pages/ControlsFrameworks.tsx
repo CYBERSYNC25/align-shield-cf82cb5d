@@ -6,6 +6,7 @@ import FrameworksOverview from '@/components/controls/FrameworksOverview';
 import ControlsMatrix from '@/components/controls/ControlsMatrix';
 import GapAssessment from '@/components/controls/GapAssessment';
 import CreateControlModal from '@/components/controls/CreateControlModal';
+import CreateFrameworkModal from '@/components/controls/CreateFrameworkModal';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Info } from 'lucide-react';
 import { useUserRoles } from '@/hooks/useUserRoles';
@@ -48,7 +49,12 @@ const ControlsFrameworks = () => {
                       Mapeamento de controles de segurança e avaliação de conformidade por framework
                     </p>
                   </div>
-                  {canEditResources() && <CreateControlModal />}
+                  {canEditResources() && (
+                  <div className="flex gap-2">
+                    <CreateFrameworkModal />
+                    <CreateControlModal />
+                  </div>
+                )}
                 </div>
               </div>
 

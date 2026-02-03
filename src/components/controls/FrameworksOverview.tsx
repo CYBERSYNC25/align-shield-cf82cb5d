@@ -1,73 +1,27 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { CheckCircle2, AlertTriangle, XCircle, Shield, Zap, Download } from 'lucide-react';
 import FrameworkDetailsSheet from './FrameworkDetailsSheet';
+import { useFrameworks } from '@/hooks/useFrameworks';
 
-const frameworksData = [
-  {
-    id: 'soc2',
-    name: 'SOC 2 Type II',
-    description: 'System and Organization Controls para Serviços',
-    version: '2017',
-    totalControls: 64,
-    implementedControls: 57,
-    partialControls: 5,
-    missingControls: 2,
-    compliance: 89,
-    status: 'good',
-    automatedControls: 23,
-    lastVerification: '2 minutos',
-    categories: ['Segurança', 'Disponibilidade', 'Integridade', 'Confidencialidade', 'Privacidade']
-  },
-  {
-    id: 'iso27001',
-    name: 'ISO 27001:2022',
-    description: 'Sistema de Gestão de Segurança da Informação',
-    version: '2022',
-    totalControls: 114,
-    implementedControls: 105,
-    partialControls: 7,
-    missingControls: 2,
-    compliance: 92,
-    status: 'excellent',
-    automatedControls: 38,
-    lastVerification: '5 minutos',
-    categories: ['Políticas', 'Organização', 'RH', 'Ativos', 'Controle de Acesso', 'Criptografia']
-  },
-  {
-    id: 'lgpd',
-    name: 'LGPD',
-    description: 'Lei Geral de Proteção de Dados Pessoais',
-    version: 'Lei 13.709/18',
-    totalControls: 42,
-    implementedControls: 32,
-    partialControls: 8,
-    missingControls: 2,
-    compliance: 76,
-    status: 'fair',
-    automatedControls: 12,
-    lastVerification: '8 minutos',
-    categories: ['Consentimento', 'Tratamento', 'Direitos do Titular', 'Segurança', 'Incidentes']
-  },
-  {
-    id: 'gdpr',
-    name: 'GDPR',
-    description: 'General Data Protection Regulation',
-    version: 'Regulamento UE 2016/679',
-    totalControls: 38,
-    implementedControls: 31,
-    partialControls: 5,
-    missingControls: 2,
-    compliance: 82,
-    status: 'good',
-    automatedControls: 15,
-    lastVerification: '3 minutos',
-    categories: ['Princípios', 'Direitos', 'Controlador', 'Operador', 'Autoridades', 'Transferências']
-  }
-];
+type FrameworkCard = {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  totalControls: number;
+  implementedControls: number;
+  partialControls: number;
+  missingControls: number;
+  compliance: number;
+  status: 'excellent' | 'good' | 'fair' | 'poor';
+  automatedControls: number;
+  lastVerification: string;
+  categories: string[];
+};
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -100,19 +54,69 @@ const getStatusIcon = (status: string) => {
 };
 
 const FrameworksOverview = () => {
-  const [selectedFramework, setSelectedFramework] = useState<typeof frameworksData[0] | null>(null);
+  const { frameworks, controls, getFrameworkStats, loading } = useFrameworks();
+  const [selectedFramework, setSelectedFramework] = useState<FrameworkCard | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const handleCardClick = (framework: typeof frameworksData[0]) => {
+  const frameworksData = useMemo((): FrameworkCard[] => {
+    return frameworks.map((f) => {
+      const stats = getFrameworkStats(f.id);
+      const progress = stats.progress ?? 0;
+      const status: FrameworkCard['status'] =
+        progress >= 90 ? 'excellent' : progress >= 75 ? 'good' : progress >= 50 ? 'fair' : 'poor';
+      const frameworkControls = controls.filter((c) => c.framework_id === f.id);
+      const categories = [...new Set(frameworkControls.map((c) => c.category).filter(Boolean))];
+      return {
+        id: f.id,
+        name: f.name,
+        description: f.description ?? '',
+        version: f.version ?? '1.0',
+        totalControls: stats.total,
+        implementedControls: stats.passed,
+        partialControls: stats.failed,
+        missingControls: stats.pending,
+        compliance: progress,
+        status,
+        automatedControls: 0,
+        lastVerification: '—',
+        categories
+      };
+    });
+  }, [frameworks, controls, getFrameworkStats]);
+
+  const handleCardClick = (framework: FrameworkCard) => {
     setSelectedFramework(framework);
     setSheetOpen(true);
   };
 
-  const handleExportReport = (e: React.MouseEvent, framework: typeof frameworksData[0]) => {
+  const handleExportReport = (e: React.MouseEvent, framework: FrameworkCard) => {
     e.stopPropagation();
-    // Export logic would go here
     console.log(`Exporting report for ${framework.name}`);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Frameworks de Conformidade</h2>
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  if (frameworksData.length === 0) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Frameworks de Conformidade</h2>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+            <Shield className="h-12 w-12 mb-4 opacity-50" />
+            <p className="font-medium">Nenhum framework cadastrado</p>
+            <p className="text-sm mt-1">Crie um framework usando o botão &quot;Novo Framework&quot; no topo da página para começar a mapear controles.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <>

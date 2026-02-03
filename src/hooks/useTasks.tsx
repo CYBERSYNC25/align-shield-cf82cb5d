@@ -20,39 +20,6 @@ export function useTasks() {
       setLoading(false);
       return;
     }
-
-    // Use dados mocados (removendo o check do env var)
-    setTasks([
-      {
-        id: '1',
-        title: 'Configurar MFA obrigatório no AWS',
-        description: 'Controle IAM.8 do SOC 2 detectou 15 usuários sem MFA ativado',
-        status: 'pending' as const,
-        priority: 'high' as const,
-        due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        assigned_to: 'Carlos Santos',
-        category: 'SOC 2',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: user.id,
-        org_id: null
-      },
-      {
-        id: '2',
-        title: 'Revisar acessos privilegiados Azure AD',
-        description: 'Revisão trimestral de acessos administrativos vence em 3 dias',
-        status: 'pending' as const,
-        priority: 'high' as const,
-        due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        assigned_to: 'Ana Silva',
-        category: 'ISO 27001',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: user.id,
-        org_id: null
-      }
-    ]);
-
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -61,9 +28,10 @@ export function useTasks() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTasks(data || []);
+      setTasks(data ?? []);
     } catch (error) {
       console.error('Erro ao buscar tarefas:', error);
+      setTasks([]);
       toast({
         title: "Erro ao carregar tarefas",
         description: "Não foi possível carregar as tarefas",

@@ -45,18 +45,8 @@ const SystemDetailsModal = ({ system, isOpen, onClose }: SystemDetailsModalProps
     }
   };
 
-  const mockUsers = [
-    { name: 'Ana Silva', role: 'Administrador', lastAccess: '2024-11-15 14:30', status: 'active' },
-    { name: 'João Santos', role: 'Usuário', lastAccess: '2024-11-15 09:15', status: 'active' },
-    { name: 'Maria Costa', role: 'Auditor', lastAccess: '2024-11-14 16:45', status: 'inactive' },
-    { name: 'Pedro Lima', role: 'Usuário', lastAccess: '2024-11-13 11:20', status: 'active' }
-  ];
-
-  const mockReviews = [
-    { date: '2024-11-01', reviewer: 'CISO', status: 'approved', notes: 'Sistema em conformidade' },
-    { date: '2024-08-15', reviewer: 'Auditor TI', status: 'approved', notes: 'Aprovado com recomendações' },
-    { date: '2024-05-20', reviewer: 'DPO', status: 'pending', notes: 'Aguardando implementação LGPD' }
-  ];
+  const users: Array<{ name: string; role: string; lastAccess: string; status: string }> = [];
+  const reviews: Array<{ date: string; reviewer: string; status: string; notes: string }> = [];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -71,7 +61,7 @@ const SystemDetailsModal = ({ system, isOpen, onClose }: SystemDetailsModalProps
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="users">Usuários ({mockUsers.length})</TabsTrigger>
+            <TabsTrigger value="users">Usuários ({users.length})</TabsTrigger>
             <TabsTrigger value="compliance">Conformidade</TabsTrigger>
             <TabsTrigger value="reviews">Revisões</TabsTrigger>
           </TabsList>
@@ -147,7 +137,7 @@ const SystemDetailsModal = ({ system, isOpen, onClose }: SystemDetailsModalProps
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {mockUsers.map((user, index) => (
+                  {users.map((user, index) => (
                     <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
@@ -241,7 +231,7 @@ const SystemDetailsModal = ({ system, isOpen, onClose }: SystemDetailsModalProps
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockReviews.map((review, index) => (
+                  {reviews.map((review, index) => (
                     <div key={index} className="border-l-2 border-muted pl-4 pb-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">

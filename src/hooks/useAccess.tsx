@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 import { useIntegratedSystems } from './useIntegratedSystems';
 
@@ -46,141 +47,12 @@ export interface AccessAnomaly {
   updated_at: string;
 }
 
-// Mock data for development (fallback when no real data exists)
-const mockCampaigns: AccessCampaign[] = [
-  {
-    id: '1',
-    name: 'Revisão Trimestral Q4 2024',
-    status: 'active',
-    start_date: '2024-10-01',
-    end_date: '2024-12-15',
-    systems: ['Salesforce', 'AWS', 'GitHub', 'Slack'],
-    reviewers: ['admin@company.com', 'security@company.com'],
-    progress: 67,
-    total_users: 247,
-    certified_users: 165,
-    created_at: '2024-09-15T00:00:00Z',
-    updated_at: '2024-11-08T00:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'Revisão de Privilégios Administrativos',
-    status: 'active',
-    start_date: '2024-11-01',
-    end_date: '2024-11-30',
-    systems: ['Active Directory', 'AWS', 'Database Servers'],
-    reviewers: ['it-admin@company.com'],
-    progress: 23,
-    total_users: 45,
-    certified_users: 10,
-    created_at: '2024-10-20T00:00:00Z',
-    updated_at: '2024-11-08T00:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'Revisão Anual de Compliance',
-    status: 'completed',
-    start_date: '2024-08-01',
-    end_date: '2024-09-30',
-    systems: ['All Systems'],
-    reviewers: ['compliance@company.com', 'audit@company.com'],
-    progress: 100,
-    total_users: 412,
-    certified_users: 408,
-    created_at: '2024-07-15T00:00:00Z',
-    updated_at: '2024-09-30T00:00:00Z'
-  }
-];
-
-const mockSystems: SystemInventory[] = [
-  {
-    id: '1',
-    name: 'Salesforce CRM',
-    type: 'saas',
-    users_count: 156,
-    last_review: '2024-10-15',
-    risk_level: 'medium',
-    compliance_status: 'compliant',
-    integration_status: 'disconnected',
-    created_at: '2024-01-15T00:00:00Z',
-    updated_at: '2024-10-15T00:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'AWS Cloud Infrastructure',
-    type: 'cloud',
-    users_count: 89,
-    last_review: '2024-11-01',
-    risk_level: 'high',
-    compliance_status: 'compliant',
-    integration_status: 'disconnected',
-    created_at: '2024-01-10T00:00:00Z',
-    updated_at: '2024-11-01T00:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'Legacy ERP System',
-    type: 'on-premise',
-    users_count: 234,
-    last_review: '2024-11-08',
-    risk_level: 'high',
-    compliance_status: 'compliant',
-    integration_status: 'disconnected',
-    created_at: '2024-01-05T00:00:00Z',
-    updated_at: '2024-11-08T00:00:00Z'
-  }
-];
-
-const mockAnomalies: AccessAnomaly[] = [
-  {
-    id: '1',
-    user_id: 'user_001',
-    user_name: 'João Silva',
-    system_name: 'AWS Cloud Infrastructure',
-    anomaly_type: 'excessive_privileges',
-    severity: 'high',
-    description: 'Usuário possui privilégios administrativos em múltiplos serviços AWS sem justificativa de negócio',
-    detected_at: '2024-11-07T14:30:00Z',
-    status: 'investigating',
-    assigned_to: 'security@company.com',
-    created_at: '2024-11-07T14:30:00Z',
-    updated_at: '2024-11-08T10:15:00Z'
-  },
-  {
-    id: '2',
-    user_id: 'user_002',
-    user_name: 'Maria Santos',
-    system_name: 'Legacy ERP System',
-    anomaly_type: 'unused_access',
-    severity: 'medium',
-    description: 'Acesso não utilizado há mais de 90 dias',
-    detected_at: '2024-11-06T09:15:00Z',
-    status: 'open',
-    created_at: '2024-11-06T09:15:00Z',
-    updated_at: '2024-11-06T09:15:00Z'
-  },
-  {
-    id: '3',
-    user_id: 'user_003',
-    user_name: 'Pedro Oliveira',
-    system_name: 'Salesforce CRM',
-    anomaly_type: 'policy_violation',
-    severity: 'critical',
-    description: 'Violação da política de segregação de funções - usuário tem acesso a módulos conflitantes',
-    detected_at: '2024-11-05T16:45:00Z',
-    status: 'investigating',
-    assigned_to: 'compliance@company.com',
-    created_at: '2024-11-05T16:45:00Z',
-    updated_at: '2024-11-07T11:20:00Z'
-  }
-];
-
 export const useAccess = () => {
   const [campaigns, setCampaigns] = useState<AccessCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  // Get real data from integrations
   const { 
     systems: integratedSystems, 
     anomalies: detectedAnomalies, 
@@ -188,82 +60,43 @@ export const useAccess = () => {
     hasRealData 
   } = useIntegratedSystems();
 
-  // Combine real integration data with mock data as fallback
-  const systems = useMemo(() => {
-    if (hasRealData && integratedSystems.length > 0) {
-      // Use real data from integrations
-      return integratedSystems;
-    }
-    // Fallback to mock data if no integrations connected
-    return mockSystems;
-  }, [integratedSystems, hasRealData]);
-
-  const anomalies = useMemo(() => {
-    if (hasRealData && detectedAnomalies.length > 0) {
-      // Use real anomalies detected from integration data
-      return detectedAnomalies;
-    }
-    // Fallback to mock anomalies
-    return mockAnomalies;
-  }, [detectedAnomalies, hasRealData]);
-
-  // Check if Supabase is properly configured
-  const isSupabaseConfigured = () => {
-    try {
-      return supabase && process.env.NODE_ENV === 'production';
-    } catch (error) {
-      return false;
-    }
-  };
+  const systems = useMemo(() => integratedSystems, [integratedSystems]);
+  const anomalies = useMemo(() => detectedAnomalies, [detectedAnomalies]);
 
   const fetchCampaigns = async () => {
-    if (!isSupabaseConfigured()) {
-      console.log('Using mock data for access campaigns');
-      setCampaigns(mockCampaigns);
+    if (!user) {
+      setCampaigns([]);
+      setLoading(false);
       return;
     }
-
     try {
       const { data, error } = await supabase
         .from('access_campaigns')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching campaigns:', error);
-        setCampaigns(mockCampaigns);
-        return;
-      }
-
-      setCampaigns(data || mockCampaigns);
+      if (error) throw error;
+      setCampaigns(data ?? []);
     } catch (err) {
-      console.error('Error:', err);
-      setCampaigns(mockCampaigns);
+      console.error('Error fetching campaigns:', err);
+      setCampaigns([]);
+      setError('Erro ao carregar campanhas');
+    } finally {
+      setLoading(false);
     }
   };
 
   const createCampaign = async (campaignData: Omit<AccessCampaign, 'id' | 'created_at' | 'updated_at'>) => {
-    if (!isSupabaseConfigured()) {
-      const newCampaign: AccessCampaign = {
-        ...campaignData,
-        id: Math.random().toString(36).substr(2, 9),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-      setCampaigns(prev => [newCampaign, ...prev]);
-      toast.success('Campanha criada com sucesso');
-      return newCampaign;
-    }
-
+    if (!user) return null;
     try {
       const { data, error } = await supabase
         .from('access_campaigns')
-        .insert([campaignData])
+        .insert([{ ...campaignData, user_id: user.id }])
         .select()
         .single();
 
       if (error) throw error;
-
       setCampaigns(prev => [data, ...prev]);
       toast.success('Campanha criada com sucesso');
       return data;
@@ -275,26 +108,17 @@ export const useAccess = () => {
   };
 
   const updateCampaign = async (id: string, updates: Partial<AccessCampaign>) => {
-    if (!isSupabaseConfigured()) {
-      setCampaigns(prev => prev.map(campaign => 
-        campaign.id === id 
-          ? { ...campaign, ...updates, updated_at: new Date().toISOString() }
-          : campaign
-      ));
-      toast.success('Campanha atualizada com sucesso');
-      return;
-    }
-
+    if (!user) return;
     try {
       const { data, error } = await supabase
         .from('access_campaigns')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('user_id', user.id)
         .select()
         .single();
 
       if (error) throw error;
-
       setCampaigns(prev => prev.map(campaign => 
         campaign.id === id ? data : campaign
       ));
@@ -325,20 +149,8 @@ export const useAccess = () => {
   };
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await fetchCampaigns();
-      } catch (err) {
-        setError('Erro ao carregar dados de acesso');
-        console.error('Error loading access data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, []);
+    fetchCampaigns();
+  }, [user?.id]);
 
   return {
     campaigns,

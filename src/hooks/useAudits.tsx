@@ -23,67 +23,6 @@ export function useAudits() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  // Mock data para desenvolvimento
-  const getMockAudits = (): Audit[] => [
-    {
-      id: '1',
-      name: 'Auditoria SOC 2 Type II - Q4 2024',
-      framework: 'SOC 2',
-      status: 'in_progress',
-      progress: 65,
-      start_date: '2024-01-15',
-      end_date: '2024-03-15',
-      auditor: 'Maria Auditora',
-      created_at: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id',
-      org_id: null
-    },
-    {
-      id: '2',
-      name: 'Auditoria ISO 27001:2013 - Renovação',
-      framework: 'ISO 27001',
-      status: 'planning',
-      progress: 15,
-      start_date: '2024-02-01',
-      end_date: '2024-04-30',
-      auditor: 'João Compliance',
-      created_at: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id',
-      org_id: null
-    }
-  ];
-
-  const getMockEvidence = (): Evidence[] => [
-    {
-      id: '1',
-      name: 'AWS CloudTrail - Dezembro 2024',
-      type: 'JSON',
-      status: 'verified',
-      file_url: '/evidence/aws/cloudtrail-dec-2024.json',
-      uploaded_by: 'Carlos Admin',
-      audit_id: '1',
-      created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id',
-      org_id: null
-    },
-    {
-      id: '2',
-      name: 'Política de Segurança v2.1',
-      type: 'PDF',
-      status: 'pending_review',
-      file_url: '/evidence/policies/security-policy-v2.1.pdf',
-      uploaded_by: 'Ana Segurança',
-      audit_id: '1',
-      created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      updated_at: new Date().toISOString(),
-      user_id: 'mock-user-id',
-      org_id: null
-    }
-  ];
-
   const fetchAudits = async () => {
     if (!user) {
       setLoading(false);
@@ -107,22 +46,17 @@ export function useAudits() {
       if (auditsResponse.error) throw auditsResponse.error;
       if (evidenceResponse.error) throw evidenceResponse.error;
 
-      // Se não há dados, use dados mock para desenvolvimento
-      const auditsData = auditsResponse.data && auditsResponse.data.length > 0 
-        ? auditsResponse.data 
-        : getMockAudits();
-      
-      const evidenceData = evidenceResponse.data && evidenceResponse.data.length > 0 
-        ? evidenceResponse.data 
-        : getMockEvidence();
-
-      setAudits(auditsData);
-      setEvidence(evidenceData);
+      setAudits(auditsResponse.data ?? []);
+      setEvidence(evidenceResponse.data ?? []);
     } catch (error) {
       logger.warn('Dados de auditoria não disponíveis', error);
-      // Use dados mocados se falhar
-      setAudits(getMockAudits());
-      setEvidence(getMockEvidence());
+      setAudits([]);
+      setEvidence([]);
+      toast({
+        title: 'Erro ao carregar auditorias',
+        description: 'Não foi possível carregar os dados. Tente novamente.',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -154,31 +88,12 @@ export function useAudits() {
       return data;
     } catch (error: any) {
       logger.error('Erro ao criar auditoria', error);
-      
-      // Fallback para dados mocados
-      const newAudit: Audit = {
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: user.id,
-        id: crypto.randomUUID(),
-        name: auditData.name,
-        framework: auditData.framework,
-        status: 'planning',
-        progress: 0,
-        start_date: auditData.start_date || null,
-        end_date: auditData.end_date || null,
-        auditor: auditData.auditor || null,
-        org_id: null
-      };
-
-      setAudits(prev => [newAudit, ...prev]);
-      
       toast({
-        title: "Auditoria criada (modo offline)",
-        description: `Auditoria "${newAudit.name}" criada com sucesso`
+        title: 'Erro ao criar auditoria',
+        description: 'Não foi possível criar a auditoria. Tente novamente.',
+        variant: 'destructive'
       });
-
-      return newAudit;
+      return null;
     }
   };
 
@@ -214,30 +129,12 @@ export function useAudits() {
       return data;
     } catch (error: any) {
       logger.error('Erro ao criar evidência', error);
-      
-      // Fallback para dados mocados
-      const newEvidence: Evidence = {
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        user_id: user.id,
-        id: crypto.randomUUID(),
-        name: evidenceData.name,
-        type: evidenceData.type,
-        status: 'pending',
-        audit_id: evidenceData.audit_id || null,
-        file_url: evidenceData.file_url || null,
-        uploaded_by: evidenceData.uploaded_by || null,
-        org_id: null
-      };
-
-      setEvidence(prev => [newEvidence, ...prev]);
-      
       toast({
-        title: "Evidência adicionada (modo offline)",
-        description: `Evidência "${newEvidence.name}" adicionada com sucesso`
+        title: 'Erro ao adicionar evidência',
+        description: 'Não foi possível adicionar a evidência. Tente novamente.',
+        variant: 'destructive'
       });
-
-      return newEvidence;
+      return null;
     }
   };
 
@@ -265,18 +162,12 @@ export function useAudits() {
       });
     } catch (error: any) {
       logger.error('Erro ao atualizar status', error);
-      
-      // Fallback para atualização local
-      setAudits(prev => prev.map(audit => 
-        audit.id === id 
-          ? { ...audit, status, updated_at: new Date().toISOString() }
-          : audit
-      ));
-      
       toast({
-        title: "Status atualizado (modo offline)",
-        description: "Status da auditoria atualizado localmente"
+        title: 'Erro ao atualizar status',
+        description: 'Não foi possível atualizar. Tente novamente.',
+        variant: 'destructive'
       });
+      throw error;
     }
   };
 
@@ -288,19 +179,7 @@ export function useAudits() {
    */
   const updateAudit = async (id: string, updates: AuditUpdate) => {
     try {
-      if (!user) {
-        // Mock update for development
-        setAudits(prev => prev.map(audit => 
-          audit.id === id 
-            ? { ...audit, ...updates, updated_at: new Date().toISOString() }
-            : audit
-        ));
-        toast({
-          title: "Auditoria atualizada",
-          description: "Auditoria atualizada com sucesso (mock)"
-        });
-        return;
-      }
+      if (!user) return;
 
       const { error } = await supabase
         .from('audits')

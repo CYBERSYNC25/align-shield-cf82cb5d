@@ -5,97 +5,26 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, CheckCircle2, AlertTriangle, XCircle, Eye, Download, Grid3x3 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useFrameworks } from '@/hooks/useFrameworks';
 import AdvancedFiltersModal from './AdvancedFiltersModal';
 import ControlDetailsModal from './ControlDetailsModal';
 
-const controlsData = [
-  {
-    id: 'CC6.1',
-    title: 'Controle de Acesso Lógico',
-    category: 'Controle de Acesso',
-    description: 'A entidade implementa controles de acesso lógico para proteger informações e sistemas.',
-    frameworks: ['SOC 2', 'ISO 27001'],
-    status: 'partial',
-    coverage: 75,
-    evidences: 3,
-    owner: 'DevOps Team',
-    lastUpdated: '2024-01-08',
-    automationStatus: 'automated',
-    riskLevel: 'high'
-  },
-  {
-    id: 'CC6.2',
-    title: 'Autenticação Multifator',
-    category: 'Controle de Acesso',
-    description: 'A entidade implementa autenticação multifator para acesso a sistemas críticos.',
-    frameworks: ['SOC 2', 'ISO 27001', 'GDPR'],
-    status: 'implemented',
-    coverage: 95,
-    evidences: 5,
-    owner: 'Security Team',
-    lastUpdated: '2024-01-10',
-    automationStatus: 'automated',
-    riskLevel: 'high'
-  },
-  {
-    id: 'A.5.8',
-    title: 'Classificação da Informação',
-    category: 'Gestão de Ativos',
-    description: 'Informações devem ser classificadas em termos de requisitos legais, valor, criticidade e sensibilidade.',
-    frameworks: ['ISO 27001', 'LGPD'],
-    status: 'missing',
-    coverage: 0,
-    evidences: 0,
-    owner: 'Data Team',
-    lastUpdated: '2024-01-05',
-    automationStatus: 'manual',
-    riskLevel: 'medium'
-  },
-  {
-    id: 'A.8.2',
-    title: 'Privilégios de Acesso',
-    category: 'Controle de Acesso',
-    description: 'A concessão e uso de privilégios de acesso devem ser restringidos e controlados.',
-    frameworks: ['ISO 27001', 'SOC 2'],
-    status: 'implemented',
-    coverage: 88,
-    evidences: 4,
-    owner: 'DevOps Team',
-    lastUpdated: '2024-01-09',
-    automationStatus: 'semi-automated',
-    riskLevel: 'high'
-  },
-  {
-    id: 'LGPD.Art.46',
-    title: 'Relatório de Impacto',
-    category: 'Privacidade',
-    description: 'O controlador deverá realizar avaliação de impacto à proteção de dados pessoais.',
-    frameworks: ['LGPD', 'GDPR'],
-    status: 'missing',
-    coverage: 0,
-    evidences: 0,
-    owner: 'Legal Team',
-    lastUpdated: '2024-01-03',
-    automationStatus: 'manual',
-    riskLevel: 'high'
-  },
-  {
-    id: 'GDPR.Art.32',
-    title: 'Segurança do Tratamento',
-    category: 'Segurança Técnica',
-    description: 'Implementar medidas técnicas e organizacionais adequadas para assegurar nível de segurança.',
-    frameworks: ['GDPR', 'LGPD', 'ISO 27001'],
-    status: 'partial',
-    coverage: 65,
-    evidences: 2,
-    owner: 'Security Team',
-    lastUpdated: '2024-01-07',
-    automationStatus: 'automated',
-    riskLevel: 'high'
-  }
-];
+type ControlRow = {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  frameworks: string[];
+  status: 'implemented' | 'partial' | 'missing';
+  coverage: number;
+  evidences: number;
+  owner: string;
+  lastUpdated: string;
+  automationStatus: string;
+  riskLevel: string;
+};
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -151,13 +80,43 @@ const getAutomationColor = (automation: string) => {
 
 const ControlsMatrix = () => {
   const { toast } = useToast();
+  const { frameworks, controls, loading } = useFrameworks();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFramework, setSelectedFramework] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedControl, setSelectedControl] = useState<any>(null);
+  const [selectedControl, setSelectedControl] = useState<ControlRow | null>(null);
 
-  const frameworks = ['SOC 2', 'ISO 27001', 'LGPD', 'GDPR', 'PCI DSS'];
+  const frameworkNames = useMemo(() => frameworks.map((f) => f.name), [frameworks]);
+  const frameworkById = useMemo(() => new Map(frameworks.map((f) => [f.id, f.name])), [frameworks]);
+
+  const controlsData = useMemo((): ControlRow[] => {
+    return controls.map((c) => {
+      const statusMap: Record<string, ControlRow['status']> = {
+        passed: 'implemented',
+        failed: 'partial',
+        pending: 'missing',
+        na: 'missing'
+      };
+      const status = statusMap[c.status] ?? 'missing';
+      const coverage = c.status === 'passed' ? 100 : c.status === 'failed' ? 50 : 0;
+      const frameworkName = c.framework_id ? frameworkById.get(c.framework_id) : null;
+      return {
+        id: c.code,
+        title: c.title,
+        category: c.category,
+        description: c.description ?? '',
+        frameworks: frameworkName ? [frameworkName] : [],
+        status,
+        coverage,
+        evidences: c.evidence_count ?? 0,
+        owner: c.owner ?? '',
+        lastUpdated: c.last_verified || c.next_review || '—',
+        automationStatus: 'manual',
+        riskLevel: 'medium'
+      };
+    });
+  }, [controls, frameworkById]);
 
   // Filter controls based on selections
   const filteredControls = controlsData.filter(control => {
@@ -185,7 +144,7 @@ Hora: ${new Date().toLocaleTimeString('pt-BR')}
 ESTATÍSTICAS DA MATRIZ
 ----------------------
 Total de Controles: ${controlsData.length}
-Total de Frameworks: ${frameworks.length}
+Total de Frameworks: ${frameworkNames.length}
 Controles Implementados: ${controlsData.filter(c => c.status === 'implemented').length}
 Controles Parciais: ${controlsData.filter(c => c.status === 'partial').length}
 Controles Pendentes: ${controlsData.filter(c => c.status === 'missing').length}
@@ -193,7 +152,7 @@ Controles Pendentes: ${controlsData.filter(c => c.status === 'missing').length}
 MAPEAMENTO DETALHADO
 --------------------
 
-${frameworks.map(framework => `
+${frameworkNames.map(framework => `
 === ${framework} ===
 Controles Mapeados: ${controlsData.filter(c => c.frameworks.includes(framework)).length}
 
@@ -238,6 +197,15 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
     }, 1000);
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Matriz de Controles</h2>
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -273,11 +241,9 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="SOC 2">SOC 2</SelectItem>
-                <SelectItem value="ISO 27001">ISO 27001</SelectItem>
-                <SelectItem value="LGPD">LGPD</SelectItem>
-                <SelectItem value="GDPR">GDPR</SelectItem>
-                <SelectItem value="PCI DSS">PCI DSS</SelectItem>
+                {frameworkNames.map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             <Select value={selectedStatus} onValueChange={setSelectedStatus}>
@@ -490,7 +456,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                 </Card>
                 <Card className="bg-info/10 border-info/20">
                   <CardContent className="p-4 text-center">
-                    <div className="text-2xl font-bold text-info">{frameworks.length}</div>
+                    <div className="text-2xl font-bold text-info">{frameworkNames.length}</div>
                     <div className="text-xs text-muted-foreground">Frameworks</div>
                   </CardContent>
                 </Card>
@@ -504,7 +470,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                       <th className="text-left p-3 font-semibold text-foreground bg-muted/30 sticky left-0 z-10">
                         Controle
                       </th>
-                      {frameworks.map(framework => (
+                      {frameworkNames.map(framework => (
                         <th key={framework} className="text-center p-3 font-semibold text-foreground bg-muted/30 min-w-[100px]">
                           {framework}
                         </th>
@@ -533,7 +499,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                             </div>
                           </div>
                         </td>
-                        {frameworks.map(framework => (
+                        {frameworkNames.map(framework => (
                           <td key={framework} className="p-3 text-center">
                             {control.frameworks.includes(framework) ? (
                               <div className="flex items-center justify-center">
@@ -565,7 +531,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
 
               {/* Coverage by Framework */}
               <div className="mt-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {frameworks.map(framework => {
+                {frameworkNames.map(framework => {
                   const frameworkControls = filteredControls.filter(c => c.frameworks.includes(framework));
                   const implemented = frameworkControls.filter(c => c.status === 'implemented').length;
                   const coverage = frameworkControls.length > 0 

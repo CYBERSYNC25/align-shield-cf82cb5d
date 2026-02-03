@@ -30,60 +30,18 @@ const ViewHistoryModal = ({ entity, isOpen, onClose }: ViewHistoryModalProps) =>
   const [actionFilter, setActionFilter] = useState('all');
   const [userFilter, setUserFilter] = useState('all');
 
-  const mockHistory = [
-    {
-      id: '1',
-      timestamp: '2024-11-15 14:30:00',
-      action: 'resolved',
-      user: 'Ana Silva',
-      userRole: 'CISO',
-      details: 'Anomalia marcada como resolvida após verificação',
-      changes: { status: { from: 'open', to: 'resolved' } },
-      ip: '192.168.1.100'
-    },
-    {
-      id: '2',
-      timestamp: '2024-11-15 10:15:00',
-      action: 'assigned',
-      user: 'João Santos',
-      userRole: 'Gerente TI',
-      details: 'Anomalia atribuída para investigação',
-      changes: { assigned_to: { from: null, to: 'Ana Silva' } },
-      ip: '192.168.1.105'
-    },
-    {
-      id: '3',
-      timestamp: '2024-11-15 09:45:00',
-      action: 'comment_added',
-      user: 'Maria Costa',
-      userRole: 'Analista',
-      details: 'Comentário adicionado: "Necessário verificar logs de acesso"',
-      changes: {},
-      ip: '192.168.1.110'
-    },
-    {
-      id: '4',
-      timestamp: '2024-11-14 16:20:00',
-      action: 'severity_changed',
-      user: 'Pedro Lima',
-      userRole: 'Auditor',
-      details: 'Severidade alterada de Média para Alta',
-      changes: { severity: { from: 'medium', to: 'high' } },
-      ip: '192.168.1.115'
-    },
-    {
-      id: '5',
-      timestamp: '2024-11-14 14:00:00',
-      action: 'created',
-      user: 'Sistema',
-      userRole: 'Automatizado',
-      details: 'Anomalia detectada automaticamente pelo sistema',
-      changes: {},
-      ip: 'system'
-    }
-  ];
+  const history: Array<{
+    id: string;
+    timestamp: string;
+    action: string;
+    user: string;
+    userRole: string;
+    details: string;
+    changes: Record<string, unknown>;
+    ip: string;
+  }> = [];
 
-  const filteredHistory = mockHistory.filter(entry => {
+  const filteredHistory = history.filter(entry => {
     const matchesSearch = entry.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          entry.user.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesAction = actionFilter === 'all' || entry.action === actionFilter;
@@ -92,7 +50,7 @@ const ViewHistoryModal = ({ entity, isOpen, onClose }: ViewHistoryModalProps) =>
     return matchesSearch && matchesAction && matchesUser;
   });
 
-  const uniqueUsers = [...new Set(mockHistory.map(entry => entry.user))];
+  const uniqueUsers = [...new Set(history.map(entry => entry.user))];
 
   const getActionIcon = (action: string) => {
     switch (action) {
