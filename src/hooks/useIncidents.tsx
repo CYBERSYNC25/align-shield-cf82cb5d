@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Incident {
@@ -70,8 +71,18 @@ export interface IncidentStats {
   scheduledTests: number;
 }
 
+export interface ReportIncidentInput {
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  impactLevel?: 'low' | 'medium' | 'high';
+  affectedSystems: string;
+  assignedTo: string;
+}
+
 export const useIncidents = () => {
   console.log('useIncidents hook initialized');
+  const { user } = useAuth();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [playbooks, setPlaybooks] = useState<IncidentPlaybook[]>([]);
   const [bcpPlans, setBcpPlans] = useState<BCPPlan[]>([]);
@@ -273,7 +284,26 @@ export const useIncidents = () => {
         console.warn('Dados de incidentes não disponíveis:', incidentsError);
         setIncidents(mockIncidents);
       } else {
-        setIncidents(incidentsData || []);
+        const rows = incidentsData || [];
+        const mapped: Incident[] = rows.map((row: Record<string, unknown>) => ({
+          id: row.id as string,
+          title: row.title as string,
+          description: (row.description as string) ?? '',
+          severity: (row.severity as Incident['severity']) ?? 'medium',
+          status: (row.status as Incident['status']) ?? 'investigating',
+          reportedAt: (row.reported_by as string) ?? (row.created_at as string) ?? '',
+          assignedTo: (row.assigned_to as string) ?? '',
+          assignedRole: '',
+          affectedSystems: Array.isArray(row.affected_systems) ? (row.affected_systems as string[]) : [],
+          impactLevel: 'medium',
+          estimatedResolution: '',
+          updates: 0,
+          watchers: 0,
+          playbook: '',
+          created_at: (row.created_at as string) ?? '',
+          updated_at: (row.updated_at as string) ?? '',
+        }));
+        setIncidents(mapped);
       }
 
       // Buscar playbooks
@@ -556,6 +586,75 @@ export const useIncidents = () => {
     }
   };
 
+  const createIncident = async (input: ReportIncidentInput) => {
+    try {
+      const affectedSystemsArray = input.affectedSystems
+        ? input.affectedSystems.split(/[,;]/).map((s) => s.trim()).filter(Boolean)
+        : [];
+
+      if (!supabase) {
+        const newIncident: Incident = {
+          id: `INC-${Date.now()}`,
+          title: input.title,
+          description: input.description,
+          severity: input.severity,
+          status: 'investigating',
+          reportedAt: new Date().toISOString(),
+          assignedTo: input.assignedTo,
+          assignedRole: '',
+          affectedSystems: affectedSystemsArray,
+          impactLevel: input.impactLevel || 'medium',
+          estimatedResolution: '',
+          updates: 0,
+          watchers: 0,
+          playbook: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setIncidents((prev) => [newIncident, ...prev]);
+        toast({
+          title: 'Incidente reportado',
+          description: `"${input.title}" foi registrado com sucesso.`,
+        });
+        return { data: newIncident, error: null };
+      }
+
+      const insertPayload = {
+        title: input.title,
+        description: input.description || null,
+        severity: input.severity,
+        status: 'investigating',
+        affected_systems: affectedSystemsArray.length > 0 ? affectedSystemsArray : null,
+        assigned_to: input.assignedTo || null,
+        user_id: user?.id || null,
+        reported_by: user?.email || user?.user_metadata?.display_name || null,
+      };
+
+      const { data, error } = await supabase
+        .from('incidents')
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Incidente reportado',
+        description: `"${input.title}" foi registrado com sucesso.`,
+      });
+      fetchIncidents();
+      return { data, error: null };
+    } catch (err: unknown) {
+      console.error('Erro ao reportar incidente:', err);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível registrar o incidente. Tente novamente.',
+        variant: 'destructive',
+      });
+      return { data: null, error: err };
+    }
+  };
+
   useEffect(() => {
     console.log('useIncidents useEffect called');
     fetchIncidents();
@@ -567,6 +666,7 @@ export const useIncidents = () => {
     bcpPlans: bcpPlans || [],
     stats,
     loading,
+    createIncident,
     updateIncidentStatus,
     escalateIncident,
     executePlaybook,

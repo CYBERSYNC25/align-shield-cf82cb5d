@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
+import { useReports } from '@/hooks/useReports';
 import { useState } from 'react';
 import { 
   FileText, 
@@ -31,6 +32,7 @@ const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
   const [recipients, setRecipients] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { createReport } = useReports();
 
   const reportTypes = [
     { value: 'dashboard', label: 'Dashboard', description: 'Visualizações e KPIs executivos' },
@@ -82,18 +84,25 @@ const CreateReportModal = ({ isOpen, onClose }: CreateReportModalProps) => {
 
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
-      toast({
-        title: "Relatório Criado",
-        description: `"${reportName}" foi criado com sucesso!`,
+      const { error } = await createReport({
+        name: reportName,
+        description: description || undefined,
+        type,
+        format,
+        frameworks: frameworks.length > 0 ? frameworks : undefined,
+        metrics: selectedMetrics,
+        recipients: recipients || undefined,
       });
-      onClose();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Falha ao criar o relatório. Tente novamente.",
-        variant: "destructive"
-      });
+      if (!error) {
+        setReportName('');
+        setDescription('');
+        setType('');
+        setFormat('');
+        setFrameworks([]);
+        setSelectedMetrics([]);
+        setRecipients('');
+        onClose();
+      }
     } finally {
       setLoading(false);
     }

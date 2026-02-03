@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Report {
@@ -276,6 +276,87 @@ export const useReports = () => {
     }
   };
 
+  const createReport = async (payload: {
+    name: string;
+    description?: string;
+    type: string;
+    format: string;
+    framework?: string;
+    frameworks?: string[];
+    metrics?: string[];
+    recipients?: string;
+  }) => {
+    try {
+      const framework = payload.framework || (payload.frameworks && payload.frameworks[0]) || '';
+      const recipientsArray = payload.recipients
+        ? payload.recipients.split(/[\n,;]/).map((s) => s.trim()).filter(Boolean)
+        : [];
+
+      const insertRow = {
+        name: payload.name,
+        description: payload.description || null,
+        type: payload.type,
+        format: payload.format,
+        framework: framework || null,
+        readiness: 0,
+        status: 'ready',
+        last_generated: null,
+        size: null,
+        pages: 0,
+        sections: [],
+        audience: null,
+        metrics: payload.metrics || [],
+        filters: null,
+        recipients: recipientsArray,
+      };
+
+      const { data, error } = await supabase
+        .from('reports')
+        .insert(insertRow)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      toast({
+        title: 'Relatório criado',
+        description: `"${payload.name}" foi criado com sucesso.`,
+      });
+      setReports((prev) => {
+        const newReport: Report = {
+          id: data.id,
+          name: data.name,
+          description: data.description ?? '',
+          type: data.type as Report['type'],
+          format: data.format as Report['format'],
+          framework: data.framework ?? '',
+          readiness: data.readiness ?? 0,
+          status: (data.status as Report['status']) ?? 'ready',
+          lastGenerated: data.last_generated ?? '',
+          size: data.size ?? '',
+          pages: data.pages ?? 0,
+          sections: data.sections ?? [],
+          audience: data.audience ?? '',
+          metrics: data.metrics ?? [],
+          filters: data.filters,
+          recipients: data.recipients ?? [],
+          created_at: data.created_at ?? '',
+          updated_at: data.updated_at ?? '',
+        };
+        return [newReport, ...prev];
+      });
+      return { data, error: null };
+    } catch (err: unknown) {
+      console.error('Erro ao criar relatório:', err);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível criar o relatório. Verifique se a tabela de relatórios existe no banco.',
+        variant: 'destructive',
+      });
+      return { data: null, error: err };
+    }
+  };
+
   useEffect(() => {
     fetchReports();
   }, []);
@@ -285,6 +366,7 @@ export const useReports = () => {
     scheduledReports,
     stats,
     loading,
+    createReport,
     generateReport,
     toggleScheduledReport,
     refetch: fetchReports
