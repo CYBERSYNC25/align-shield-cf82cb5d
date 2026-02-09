@@ -1,216 +1,124 @@
 
-# Plano: Filtrar Integrações por Framework de Compliance
+# Plano: Corrigir Erros de Build + Criar Funcionalidade de Limpeza de Dados
 
-## Objetivo
+## Parte 1: Corrigir Erros de Build (Pre-existentes)
 
-Adicionar um novo filtro no Marketplace de Integrações que permita visualizar quais integrações atendem a cada framework de compliance (ISO 27001, SOC 2, LGPD), baseado no mapeamento existente em `EVIDENCE_CONTROL_MAP`.
+Existem varios erros de build que precisam ser corrigidos antes de implementar a funcionalidade de limpeza.
+
+### 1.1 Corrigir `security-middleware.ts` (Deno parse error)
+
+O tipo union na interface nao e suportado como `interface`. Trocar para `type`:
+
+```typescript
+// De:
+export interface SecurityValidationResult {
+  valid: true; ip: string;
+} | { valid: false; response: Response; reason: string; }
+
+// Para:
+export type SecurityValidationResult = {
+  valid: true; ip: string;
+} | { valid: false; response: Response; reason: string; }
+```
+
+### 1.2 Corrigir `useAccess.tsx` (tabela `access_campaigns` nao existe nos types)
+
+As chamadas `.from('access_campaigns')` nao compilam porque a tabela nao esta nos types gerados. Solucao: usar cast `as any` ou criar a tabela via migration.
+
+### 1.3 Corrigir `useAdvancedAnalytics.tsx` (tipo IntegrationHealthPoint)
+
+Linha 312 - corrigir casts de tipo no sort e retorno.
+
+### 1.4 Corrigir `useIncidents.tsx` (IncidentPlaybook e BCPPlan types)
+
+Linhas 159, 170, 174 - os tipos do banco nao batem com as interfaces frontend. Solucao: mapear campos snake_case para camelCase.
+
+### 1.5 Corrigir `useReports.tsx` (tabelas `reports` e `scheduled_reports`)
+
+Similar ao useAccess - tabelas nao existem nos types. Usar cast.
+
+### 1.6 Corrigir `useRisks.tsx` (Risk, Vendor, RiskAssessment types)
+
+Linhas 118, 130, 142 - campos snake_case do banco vs camelCase das interfaces. Adicionar mapeamento.
 
 ---
 
-## Arquitetura Existente
+## Parte 2: Criar Funcionalidade "Limpar Dados"
 
-O sistema já possui o mapeamento entre integrações e controles:
+### Dados atuais no banco:
+| Tabela | Registros |
+|--------|-----------|
+| frameworks | 3 |
+| controls | 62 |
+| policies | 16 |
+| notifications | 14 |
+| tasks | 7 |
+| bcp_plans | 4 |
+| incident_playbooks | 4 |
+| evidence | 1 |
 
-| Integração | Controles Atendidos | Frameworks |
-|------------|---------------------|------------|
-| AWS | A.8.3, A.8.24, CC6.1, LGPD-46 | ISO 27001, SOC 2, LGPD |
-| Google Workspace | A.5.1, A.8.5, CC6.1, CC6.2, LGPD-46 | ISO 27001, SOC 2, LGPD |
-| Azure AD | A.5.1, A.5.15, A.8.5, CC6.1, CC6.2, CC6.3, LGPD-46 | ISO 27001, SOC 2, LGPD |
-| Slack | A.8.5, CC6.1, LGPD-46 | ISO 27001, SOC 2, LGPD |
-| Intune | A.8.1, CC6.6 | ISO 27001, SOC 2 |
-| CrowdStrike | A.8.1, CC6.6 | ISO 27001, SOC 2 |
-| GitHub/GitLab | A.8.5, A.8.24, CC6.1, LGPD-46 | ISO 27001, SOC 2, LGPD |
-| Cloudflare | A.8.24, LGPD-46 | ISO 27001, LGPD |
-| Datadog | A.12.4, A.16.1, CC7.2, CC7.3, LGPD-46 | ISO 27001, SOC 2, LGPD |
-| BambooHR | A.5.15, CC6.1 | ISO 27001, SOC 2 |
-| Okta/Auth0 | A.8.5, CC6.1, LGPD-46 | ISO 27001, SOC 2, LGPD |
+### 2.1 Criar Edge Function `purge-user-data`
 
----
+Nova Edge Function que limpa dados do usuario autenticado, com opcoes seletivas:
 
-## Implementacao
+- **Modo "tudo"**: Limpa todas as tabelas de dados do usuario
+- **Modo seletivo**: Permite escolher categorias (riscos, incidentes, tarefas, frameworks, etc.)
 
-### 1. Estender o Catalogo de Integracoes
+Tabelas a limpar (respeitando ordem de dependencias/FKs):
+1. `compliance_alerts`
+2. `integration_collected_data`, `integration_evidence_mapping`
+3. `risk_assessments`, `risk_acceptances`
+4. `risks`, `vendors`
+5. `incidents`, `incident_playbooks`, `bcp_plans`
+6. `tasks`, `evidence`
+7. `control_assignments`, `control_tests`, `custom_compliance_tests`, `custom_test_results`
+8. `controls` (se solicitado)
+9. `frameworks` (se solicitado)
+10. `policies`
+11. `reports`, `scheduled_reports`
+12. `notifications`
+13. `audits`, `audit_logs`
+14. `system_audit_logs`, `system_logs`
+15. `compliance_check_history`
 
-Arquivo: `src/lib/integrations-catalog.ts`
+A funcao usara service role para garantir que todas as delecoes funcionem, mas validara que o usuario so apaga seus proprios dados (filtrando por `user_id` e `org_id`).
 
-Adicionar campo `frameworks` e `controlsAutomated` a cada integracao:
+### 2.2 Criar componente `PurgeDatabaseCard`
 
-```typescript
-export interface IntegrationDefinition {
-  id: string;
-  name: string;
-  description: string;
-  category: IntegrationCategory;
-  logo: string | null;
-  isNew?: boolean;
-  provider: string;
-  // NOVOS CAMPOS
-  frameworks: ('ISO 27001' | 'SOC 2' | 'LGPD')[];
-  controlsAutomated: number; // quantidade de controles que automatiza
-}
-```
+Novo card em Configuracoes (ao lado do SeedDatabaseCard) com:
+- Checkboxes para selecionar categorias de dados
+- Contagem de registros por categoria (preview)
+- Confirmacao com digitacao ("LIMPAR" para confirmar)
+- Botao destrutivo com loading state
+- Feedback de resultado (quantos registros removidos)
 
-Exemplo atualizado:
+### 2.3 Adicionar na pagina Settings
 
-```typescript
-{
-  id: 'aws',
-  name: 'Amazon Web Services',
-  description: 'Auditoria de IAM, S3, CloudTrail e conformidade AWS',
-  category: 'cloud',
-  logo: 'https://cdn.simpleicons.org/amazonaws/FF9900',
-  provider: 'aws',
-  frameworks: ['ISO 27001', 'SOC 2', 'LGPD'],
-  controlsAutomated: 4, // A.8.3, A.8.24, CC6.1, LGPD-46
-}
-```
-
-### 2. Criar Funcao de Mapeamento Automatico
-
-Arquivo: `src/lib/integrations-catalog.ts` (nova funcao)
-
-```typescript
-import { EVIDENCE_CONTROL_MAP, FRAMEWORK_CONTROL_CODES } from './evidence-control-map';
-
-export function getIntegrationFrameworks(integrationId: string): string[] {
-  const rules = EVIDENCE_CONTROL_MAP.filter(r => r.integrationId === integrationId);
-  const allControlCodes = [...new Set(rules.flatMap(r => r.controlCodes))];
-  
-  const frameworks: string[] = [];
-  
-  for (const [framework, codes] of Object.entries(FRAMEWORK_CONTROL_CODES)) {
-    if (allControlCodes.some(code => codes.some(fc => code.includes(fc)))) {
-      frameworks.push(framework);
-    }
-  }
-  
-  return frameworks;
-}
-```
-
-### 3. Adicionar Filtro por Framework nos Filtros
-
-Arquivo: `src/components/integrations/MarketplaceFilters.tsx`
-
-Novo Select para filtrar por framework:
-
-```typescript
-const FRAMEWORK_OPTIONS = [
-  { value: 'all', label: 'Todos Frameworks', icon: '📋' },
-  { value: 'ISO 27001', label: 'ISO 27001', icon: '🔒' },
-  { value: 'SOC 2', label: 'SOC 2', icon: '🛡️' },
-  { value: 'LGPD', label: 'LGPD', icon: '🇧🇷' },
-];
-
-// Novo prop e Select
-<Select value={framework} onValueChange={onFrameworkChange}>
-  <SelectTrigger className="w-[160px] bg-background/50">
-    <SelectValue placeholder="Framework" />
-  </SelectTrigger>
-  <SelectContent>
-    {FRAMEWORK_OPTIONS.map((opt) => (
-      <SelectItem key={opt.value} value={opt.value}>
-        <span className="flex items-center gap-2">
-          <span>{opt.icon}</span>
-          <span>{opt.label}</span>
-        </span>
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
-```
-
-### 4. Atualizar IntegrationsHub para Filtrar
-
-Arquivo: `src/pages/IntegrationsHub.tsx`
-
-```typescript
-const [frameworkFilter, setFrameworkFilter] = useState<string>('all');
-
-// No useMemo de filteredIntegrations:
-.filter(integration => {
-  // ... filtros existentes ...
-  
-  // Framework filter
-  if (frameworkFilter !== 'all') {
-    const integrationFrameworks = getIntegrationFrameworks(integration.id);
-    if (!integrationFrameworks.includes(frameworkFilter)) {
-      return false;
-    }
-  }
-  
-  return true;
-})
-```
-
-### 5. Exibir Badges de Framework nos Cards
-
-Arquivo: `src/components/integrations/MarketplaceIntegrationCard.tsx`
-
-Adicionar badges visuais mostrando quais frameworks a integracao atende:
-
-```typescript
-{/* Framework badges */}
-<div className="flex flex-wrap gap-1 mt-2">
-  {frameworks.map(fw => (
-    <Badge 
-      key={fw} 
-      variant="outline" 
-      className="text-[10px] px-1.5 py-0"
-    >
-      {fw}
-    </Badge>
-  ))}
-</div>
-```
+Inserir o novo card na tab de "Dados" junto com o SeedDatabaseCard existente.
 
 ---
 
-## Arquivos a Modificar
+## Arquivos a Criar/Modificar
 
 | Arquivo | Acao | Descricao |
 |---------|------|-----------|
-| `src/lib/integrations-catalog.ts` | Modificar | Adicionar campos `frameworks` e funcao de mapeamento |
-| `src/components/integrations/MarketplaceFilters.tsx` | Modificar | Adicionar Select de framework |
-| `src/pages/IntegrationsHub.tsx` | Modificar | Adicionar state e logica de filtro por framework |
-| `src/components/integrations/MarketplaceIntegrationCard.tsx` | Modificar | Exibir badges de frameworks |
+| `supabase/functions/_shared/security-middleware.ts` | Modificar | Fix tipo union (interface -> type) |
+| `src/hooks/useAccess.tsx` | Modificar | Fix tipo tabela com cast |
+| `src/hooks/useAdvancedAnalytics.tsx` | Modificar | Fix casts de tipo |
+| `src/hooks/useIncidents.tsx` | Modificar | Fix mapeamento snake_case |
+| `src/hooks/useReports.tsx` | Modificar | Fix tipo tabela com cast |
+| `src/hooks/useRisks.tsx` | Modificar | Fix mapeamento snake_case |
+| `supabase/functions/purge-user-data/index.ts` | Criar | Edge Function de limpeza |
+| `src/components/settings/PurgeDatabaseCard.tsx` | Criar | UI de limpeza seletiva |
+| `src/pages/Settings.tsx` | Modificar | Adicionar PurgeDatabaseCard |
 
 ---
 
-## Resultado Visual Esperado
+## Resultado Esperado
 
-1. **Novo filtro dropdown** "Framework" ao lado dos filtros existentes
-2. **Badges nos cards** mostrando "ISO 27001", "SOC 2", "LGPD"
-3. **Contagem de controles** automatizados por integracao
-4. Ao selecionar "LGPD", so aparecem integracoes que ajudam com LGPD (AWS, Google, Azure, Slack, GitHub, Cloudflare, Auth0, Okta, Datadog)
-
----
-
-## Secao Tecnica
-
-### Mapeamento Completo de Frameworks por Integracao
-
-Baseado no `EVIDENCE_CONTROL_MAP` existente:
-
-```
-aws          -> ISO 27001 (A.8.3, A.8.24), SOC 2 (CC6.1), LGPD (LGPD-46)
-azure-ad     -> ISO 27001 (A.5.1, A.5.15, A.8.5), SOC 2 (CC6.1-CC6.3), LGPD (LGPD-46)
-google       -> ISO 27001 (A.5.1, A.8.5), SOC 2 (CC6.1, CC6.2), LGPD (LGPD-46)
-github       -> ISO 27001 (A.8.5, A.8.24), SOC 2 (CC6.1), LGPD (LGPD-46)
-gitlab       -> ISO 27001 (A.8.24), SOC 2 (CC6.1)
-cloudflare   -> ISO 27001 (A.8.24), LGPD (LGPD-46)
-slack        -> ISO 27001 (A.8.5), SOC 2 (CC6.1), LGPD (LGPD-46)
-okta         -> ISO 27001 (A.8.5), SOC 2 (CC6.1), LGPD (LGPD-46)
-auth0        -> ISO 27001 (A.8.5), SOC 2 (CC6.1), LGPD (LGPD-46)
-intune       -> ISO 27001 (A.8.1), SOC 2 (CC6.6)
-crowdstrike  -> ISO 27001 (A.8.1), SOC 2 (CC6.6)
-bamboohr     -> ISO 27001 (A.5.15), SOC 2 (CC6.1)
-datadog      -> ISO 27001 (A.12.4, A.16.1), SOC 2 (CC7.2, CC7.3), LGPD (LGPD-46)
-jira         -> (sem mapeamento direto, adicionar se necessario)
-```
-
-### Exemplo de Uso
-
-Quando usuario selecionar "LGPD" no filtro:
-- Aparecem: AWS, Azure AD, Google, GitHub, Cloudflare, Slack, Okta, Auth0, Datadog
-- Nao aparecem: GitLab, Intune, CrowdStrike, BambooHR, Jira
+1. Build sem erros
+2. Novo card "Limpar Dados" em Configuracoes
+3. Usuario pode selecionar quais categorias limpar
+4. Confirmacao segura antes de deletar
+5. Feedback claro do que foi removido
+6. Frameworks e controles podem ser preservados ou removidos (escolha do usuario)
