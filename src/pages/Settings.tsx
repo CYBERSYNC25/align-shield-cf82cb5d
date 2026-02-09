@@ -20,6 +20,7 @@ import { DeleteAccountModal } from '@/components/settings/DeleteAccountModal';
 import { ExportDataModal } from '@/components/settings/ExportDataModal';
 import UserRolesManagement from '@/components/settings/UserRolesManagement';
 import { SeedDatabaseCard } from '@/components/settings/SeedDatabaseCard';
+import { PurgeDatabaseCard } from '@/components/settings/PurgeDatabaseCard';
 import AuditLogsViewer from '@/components/settings/AuditLogsViewer';
 import TrustCenterSettings from '@/components/settings/TrustCenterSettings';
 import SystemLogsViewer from '@/components/settings/SystemLogsViewer';
@@ -452,6 +453,7 @@ const Settings = () => {
                   {/* System Tab */}
                   <TabsContent value="system" className="space-y-6">
                     <SeedDatabaseCard />
+                    <PurgeDatabaseCard />
                   </TabsContent>
 
                   {/* System Logs Tab */}

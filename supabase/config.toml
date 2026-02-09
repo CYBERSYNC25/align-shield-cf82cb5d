@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.session-manager]
 verify_jwt = false
+
+[functions.purge-user-data]
+verify_jwt = false

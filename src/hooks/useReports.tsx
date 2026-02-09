@@ -109,7 +109,7 @@ export const useReports = () => {
     try {
       setLoading(true);
 
-      const { data: reportsData, error: reportsError } = await supabase
+      const { data: reportsData, error: reportsError } = await (supabase as any)
         .from('reports')
         .select('*')
         .order('created_at', { ascending: false });
@@ -121,7 +121,7 @@ export const useReports = () => {
         setReports((reportsData ?? []).map((row) => mapRowToReport(row as Record<string, unknown>)));
       }
 
-      const { data: scheduledData, error: scheduledError } = await supabase
+      const { data: scheduledData, error: scheduledError } = await (supabase as any)
         .from('scheduled_reports')
         .select('*')
         .order('created_at', { ascending: false });
@@ -218,7 +218,7 @@ export const useReports = () => {
 
   const toggleScheduledReport = async (reportId: string, newStatus: 'active' | 'paused') => {
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('scheduled_reports')
         .update({ status: newStatus, updated_at: new Date().toISOString() })
         .eq('id', reportId);
@@ -279,7 +279,7 @@ export const useReports = () => {
         recipients: recipientsArray,
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('reports')
         .insert(insertRow)
         .select()

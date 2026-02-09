@@ -2591,6 +2591,83 @@ export type Database = {
           },
         ]
       }
+      reports: {
+        Row: {
+          audience: string | null
+          created_at: string
+          description: string | null
+          filters: Json | null
+          format: string
+          framework: string | null
+          id: string
+          last_generated: string | null
+          metrics: string[] | null
+          name: string
+          org_id: string | null
+          pages: number
+          readiness: number
+          recipients: string[] | null
+          sections: string[] | null
+          size: string | null
+          status: string
+          type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          audience?: string | null
+          created_at?: string
+          description?: string | null
+          filters?: Json | null
+          format: string
+          framework?: string | null
+          id?: string
+          last_generated?: string | null
+          metrics?: string[] | null
+          name: string
+          org_id?: string | null
+          pages?: number
+          readiness?: number
+          recipients?: string[] | null
+          sections?: string[] | null
+          size?: string | null
+          status?: string
+          type: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          audience?: string | null
+          created_at?: string
+          description?: string | null
+          filters?: Json | null
+          format?: string
+          framework?: string | null
+          id?: string
+          last_generated?: string | null
+          metrics?: string[] | null
+          name?: string
+          org_id?: string | null
+          pages?: number
+          readiness?: number
+          recipients?: string[] | null
+          sections?: string[] | null
+          size?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_acceptances: {
         Row: {
           accepted_by: string
@@ -2848,6 +2925,71 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "risks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scheduled_reports: {
+        Row: {
+          created_at: string
+          delivery_method: string
+          description: string | null
+          format: string
+          id: string
+          last_run: string | null
+          last_status: string | null
+          name: string
+          next_run: string | null
+          org_id: string | null
+          recipients: Json | null
+          schedule: string
+          status: string
+          success_rate: number
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_method?: string
+          description?: string | null
+          format: string
+          id?: string
+          last_run?: string | null
+          last_status?: string | null
+          name: string
+          next_run?: string | null
+          org_id?: string | null
+          recipients?: Json | null
+          schedule: string
+          status?: string
+          success_rate?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_method?: string
+          description?: string | null
+          format?: string
+          id?: string
+          last_run?: string | null
+          last_status?: string | null
+          name?: string
+          next_run?: string | null
+          org_id?: string | null
+          recipients?: Json | null
+          schedule?: string
+          status?: string
+          success_rate?: number
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_reports_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
