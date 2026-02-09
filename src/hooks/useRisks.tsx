@@ -115,7 +115,13 @@ export const useRisks = () => {
         console.warn('Dados de riscos não disponíveis:', risksError);
         setRisks([]);
       } else {
-        setRisks(risksData ?? []);
+        setRisks((risksData ?? []).map((r: any) => ({
+          ...r,
+          riskScore: r.risk_score ?? 0,
+          ownerRole: r.owner_role ?? '',
+          lastReview: r.last_review ?? '',
+          nextReview: r.next_review ?? '',
+        })) as Risk[]);
       }
 
       const { data: vendorsData, error: vendorsError } = await supabase
@@ -127,7 +133,15 @@ export const useRisks = () => {
         console.error('Erro ao buscar fornecedores:', vendorsError);
         setVendors([]);
       } else {
-        setVendors(vendorsData ?? []);
+        setVendors((vendorsData ?? []).map((v: any) => ({
+          ...v,
+          riskLevel: v.risk_level ?? 'low',
+          contractValue: v.contract_value ?? '',
+          lastAssessment: v.last_assessment ?? '',
+          nextAssessment: v.next_assessment ?? '',
+          complianceScore: v.compliance_score ?? 0,
+          pendingActions: v.pending_actions ?? 0,
+        })) as Vendor[]);
       }
 
       const { data: assessmentsData, error: assessmentsError } = await supabase
@@ -139,7 +153,18 @@ export const useRisks = () => {
         console.error('Erro ao buscar avaliações:', assessmentsError);
         setAssessments([]);
       } else {
-        setAssessments(assessmentsData ?? []);
+        setAssessments((assessmentsData ?? []).map((a: any) => ({
+          ...a,
+          vendor: a.vendor_id ?? '',
+          template: a.template ?? '',
+          sentDate: a.sent_date ?? '',
+          dueDate: a.due_date ?? '',
+          completedQuestions: a.completed_questions ?? 0,
+          totalQuestions: a.total_questions ?? 0,
+          riskFlags: a.risk_flags ?? 0,
+          contactPerson: a.contact_person ?? '',
+          contactEmail: a.contact_email ?? '',
+        })) as RiskAssessment[]);
       }
 
       const allRisks = risksData ?? [];
@@ -147,8 +172,8 @@ export const useRisks = () => {
       const allAssessments = assessmentsData ?? [];
 
       const riskBreakdown = allRisks.reduce(
-        (acc, risk) => {
-          const level = (risk as Risk).level ?? 'low';
+        (acc, risk: any) => {
+          const level = risk.level ?? 'low';
           acc[level] = (acc[level] ?? 0) + 1;
           return acc;
         },
@@ -156,14 +181,14 @@ export const useRisks = () => {
       );
 
       setStats({
-        activeRisks: allRisks.filter((r: Risk) => r.status === 'active').length,
+        activeRisks: allRisks.filter((r: any) => r.status === 'active').length,
         riskBreakdown,
-        criticalVendors: allVendors.filter((v: Vendor) => v.criticality === 'critical').length,
+        criticalVendors: allVendors.filter((v: any) => v.criticality === 'critical').length,
         totalVendors: allVendors.length,
         implementedControls: 0,
         controlEffectiveness: 0,
-        pendingAssessments: allAssessments.filter((a: RiskAssessment) => ['sent', 'in_progress'].includes(a.status)).length,
-        assessmentsDue: allAssessments.filter((a: RiskAssessment) => a.status === 'overdue').length
+        pendingAssessments: allAssessments.filter((a: any) => ['sent', 'in_progress'].includes(a.status)).length,
+        assessmentsDue: allAssessments.filter((a: any) => a.status === 'overdue').length
       });
     } catch (error) {
       console.error('Erro ao buscar dados de risco:', error);
@@ -271,12 +296,23 @@ export const useRisks = () => {
   // Funções CRUD para gerenciar dados reais
   const createVendor = async (vendorData: Omit<Vendor, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      const insertData = {
+        name: vendorData.name,
+        category: vendorData.category,
+        criticality: vendorData.criticality,
+        risk_level: vendorData.riskLevel,
+        contract_value: vendorData.contractValue,
+        last_assessment: vendorData.lastAssessment,
+        next_assessment: vendorData.nextAssessment,
+        compliance_score: vendorData.complianceScore,
+        status: vendorData.status,
+        certifications: vendorData.certifications,
+        pending_actions: vendorData.pendingActions,
+        user_id: user?.id
+      };
       const { data, error } = await supabase
         .from('vendors')
-        .insert([{
-          ...vendorData,
-          user_id: user?.id
-        }])
+        .insert([insertData])
         .select();
       
       if (error) throw error;
@@ -287,7 +323,7 @@ export const useRisks = () => {
       });
       
       // Atualizar lista local
-      if (data) setVendors(prev => [data[0], ...prev]);
+      if (data) setVendors(prev => [data[0] as any, ...prev]);
       return { data, error: null };
     } catch (error) {
       toast({
@@ -301,12 +337,26 @@ export const useRisks = () => {
 
   const createRisk = async (riskData: Omit<Risk, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      const insertData = {
+        title: riskData.title,
+        description: riskData.description,
+        category: riskData.category,
+        probability: riskData.probability,
+        impact: riskData.impact,
+        risk_score: riskData.riskScore,
+        level: riskData.level,
+        owner: riskData.owner,
+        owner_role: riskData.ownerRole,
+        status: riskData.status,
+        trend: riskData.trend,
+        last_review: riskData.lastReview,
+        next_review: riskData.nextReview,
+        controls: riskData.controls,
+        user_id: user?.id
+      };
       const { data, error } = await supabase
         .from('risks')
-        .insert([{
-          ...riskData,
-          user_id: user?.id
-        }])
+        .insert([insertData])
         .select();
       
       if (error) throw error;
@@ -317,7 +367,7 @@ export const useRisks = () => {
       });
       
       // Atualizar lista local
-      if (data) setRisks(prev => [data[0], ...prev]);
+      if (data) setRisks(prev => [data[0] as any, ...prev]);
       return { data, error: null };
     } catch (error) {
       toast({
@@ -331,12 +381,23 @@ export const useRisks = () => {
 
   const createAssessment = async (assessmentData: Omit<RiskAssessment, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      const insertData = {
+        vendor_id: (assessmentData as any).vendor_id || assessmentData.vendor,
+        template: assessmentData.template,
+        status: assessmentData.status,
+        progress: assessmentData.progress,
+        sent_date: assessmentData.sentDate,
+        due_date: assessmentData.dueDate,
+        completed_questions: assessmentData.completedQuestions,
+        total_questions: assessmentData.totalQuestions,
+        risk_flags: assessmentData.riskFlags,
+        contact_person: assessmentData.contactPerson,
+        contact_email: assessmentData.contactEmail,
+        user_id: user?.id
+      };
       const { data, error } = await supabase
         .from('risk_assessments')
-        .insert([{
-          ...assessmentData,
-          user_id: user?.id
-        }])
+        .insert([insertData])
         .select('*, vendors(name)');
       
       if (error) throw error;
@@ -348,11 +409,11 @@ export const useRisks = () => {
       
       // Mapear e atualizar lista local
       if (data) {
-        const mappedData = data.map(assessment => ({
+        const mappedData = data.map((assessment: any) => ({
           ...assessment,
           vendor: assessment.vendors?.name || 'Fornecedor não encontrado'
         }));
-        setAssessments(prev => [...mappedData, ...prev]);
+        setAssessments(prev => [...mappedData as any[], ...prev]);
       }
       return { data, error: null };
     } catch (error) {

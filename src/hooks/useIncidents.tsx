@@ -156,7 +156,12 @@ export const useIncidents = () => {
       if (playbooksError) {
         setPlaybooks([]);
       } else {
-        setPlaybooks((playbooksData ?? []) as IncidentPlaybook[]);
+        setPlaybooks((playbooksData ?? []).map((row: any) => ({
+          ...row,
+          estimatedTime: row.estimated_time ?? '',
+          lastUsed: row.last_used ?? '',
+          usageCount: row.usage_count ?? 0,
+        })) as IncidentPlaybook[]);
       }
 
       const { data: bcpData, error: bcpError } = await supabase
@@ -167,11 +172,26 @@ export const useIncidents = () => {
       if (bcpError) {
         setBcpPlans([]);
       } else {
-        setBcpPlans((bcpData ?? []) as BCPPlan[]);
+        const mappedBcp = (bcpData ?? []).map((row: any) => ({
+          ...row,
+          type: row.description ?? 'BCP',
+          lastTested: row.last_tested ?? '',
+          nextTest: row.next_test ?? '',
+          criticalSystems: row.systems ?? [],
+          testResults: '',
+        })) as BCPPlan[];
+        setBcpPlans(mappedBcp);
       }
 
       const allIncidents = incidentsData ?? [];
-      const allBcpPlans = (bcpData ?? []) as BCPPlan[];
+      const allBcpPlans = (bcpData ?? []).map((row: any) => ({
+        ...row,
+        type: row.description ?? 'BCP',
+        lastTested: row.last_tested ?? '',
+        nextTest: row.next_test ?? '',
+        criticalSystems: row.systems ?? [],
+        testResults: '',
+      })) as BCPPlan[];
 
       const incidentBreakdown = allIncidents.reduce(
         (acc, incident) => {

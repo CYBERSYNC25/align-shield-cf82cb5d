@@ -300,16 +300,16 @@ export function useAdvancedAnalytics(dateRange: DateRange) {
   const integrationHealthHistory = useMemo((): IntegrationHealthPoint[] => {
     if (!integrationStatus?.length) return [];
 
-    const byDate = new Map<string, Record<string, number>>();
+    const byDate = new Map<string, Record<string, any>>();
     integrationStatus.forEach((row: Record<string, unknown>) => {
       const createdAt = row.created_at as string;
       const date = createdAt ? format(new Date(createdAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd');
-      if (!byDate.has(date)) byDate.set(date, { date });
+      if (!byDate.has(date)) byDate.set(date, { date } as any);
       const point = byDate.get(date)!;
       const name = (row.integration_name || row.name || 'default') as string;
       point[name] = Number(row.health_score ?? row.score ?? 0);
     });
-    return Array.from(byDate.values()).sort((a, b) => (a.date as string).localeCompare(b.date as string));
+    return Array.from(byDate.values()).sort((a, b) => String(a.date).localeCompare(String(b.date))) as unknown as IntegrationHealthPoint[];
   }, [integrationStatus]);
 
   // Period comparison metrics (current period only when no historical data)

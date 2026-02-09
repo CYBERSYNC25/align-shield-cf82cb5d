@@ -70,7 +70,7 @@ export const useAccess = () => {
       return;
     }
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('access_campaigns')
         .select('*')
         .eq('user_id', user.id)
@@ -90,7 +90,7 @@ export const useAccess = () => {
   const createCampaign = async (campaignData: Omit<AccessCampaign, 'id' | 'created_at' | 'updated_at'>) => {
     if (!user) return null;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('access_campaigns')
         .insert([{ ...campaignData, user_id: user.id }])
         .select()
@@ -110,7 +110,7 @@ export const useAccess = () => {
   const updateCampaign = async (id: string, updates: Partial<AccessCampaign>) => {
     if (!user) return;
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('access_campaigns')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)

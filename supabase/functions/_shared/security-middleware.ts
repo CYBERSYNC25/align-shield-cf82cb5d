@@ -83,7 +83,7 @@ const SUSPICIOUS_USER_AGENTS = [
   /nuclei/i,
 ];
 
-export interface SecurityValidationResult {
+export type SecurityValidationResult = {
   valid: true;
   ip: string;
 } | {
