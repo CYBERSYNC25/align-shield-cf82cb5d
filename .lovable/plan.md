@@ -1,68 +1,90 @@
 
-# Plano: Remover Dados Mockados da Aba Politicas e Treinamentos
+# Plano: Remover Dados Mockados da Aba Riscos e Fornecedores
 
-## Problemas Identificados
+## Análise Detalhada dos Mocks Identificados
 
-Todos os 4 componentes principais da aba usam dados 100% hardcoded, ignorando completamente o hook `usePolicies` que ja busca dados reais do banco.
+### Componentes com Dados Mockados (100% hardcoded):
 
-| Componente | Problema |
-|------------|----------|
-| `PoliciesLibrary.tsx` | Array `policiesData` com 6 politicas fictcias (linhas 38-123). O hook `usePolicies` e importado mas `realPolicies` nunca e usado |
-| `TrainingPrograms.tsx` | Array `trainingPrograms` com 4 programas ficticios. Nao existe tabela `trainings` no banco |
-| `AttestationTracking.tsx` | Array `attestationCampaigns` com 3 campanhas ficticias, usuarios pendentes inventados. Nao existe tabela `policy_attestations` |
-| `PoliciesStats.tsx` | 4 cards com numeros fixos (28 politicas, 94.2% assinatura, 12 treinamentos, 7 pendencias) |
+| Componente | Problema | Impacto |
+|---|---|---|
+| `RiskAssessments.tsx` | Array `activeAssessments` com 4 avaliações fictícias (CloudSecure, DataProtect, Analytics Corp, TechSupport Pro) - **linhas 122-175** | Tela inteira de avaliações ativas é fictícia |
+| `RiskAssessments.tsx` | Array `assessmentTemplates` duplicado (aparece 2x no código) - **linhas 87-120 e 332-364** | Templates são modelos padrão (legítimos, similar a UseTemplateModal), mas aparecem hardcoded |
+
+### Componentes com Dados Reais (já corrigidos):
+
+- ✅ `RiskStats.tsx` - Usa `stats` do hook `useRisks()` 
+- ✅ `RiskMatrix.tsx` - Constrói matriz a partir de `risks` reais do hook
+- ✅ `RiskRegistry.tsx` - Exibe `risks` do hook `useRisks()`
+- ✅ `CreateRiskModal.tsx` - Cria riscos via `createRisk()` do hook
+- ✅ `EditRiskModal.tsx` - Edita riscos via `updateRisk()` do hook
+- ✅ `VendorTable.tsx` - Exibe `vendors` do hook `useRisks()`
+- ✅ `CreateVendorModal.tsx` - Já corrigido na iteração anterior
+- ✅ `ViewAssessmentModal.tsx` - Já corrigido na iteração anterior
 
 ---
 
-## Implementacao
+## Implementação
 
-### 1. PoliciesLibrary.tsx
-**Antes:** Ignora `realPolicies` do hook e exibe 6 politicas hardcoded
-**Depois:** Usar `realPolicies` do hook `usePolicies()` que ja busca do banco. Mapear os campos do banco (`name`, `status`, `category`, `version`, `description`, `owner`, `updated_at`, `next_review`, `tags`) para a UI. Remover o array `policiesData` inteiro. Se nao houver politicas, exibir estado vazio: "Nenhuma politica cadastrada. Crie sua primeira politica."
+### 1. RiskAssessments.tsx - Remover `activeAssessments` Hardcoded
 
-Mapeamento de campos:
-- `title` vira `policy.name`
-- `lastUpdated` vira `format(policy.updated_at)`
-- `nextReview` vira `format(policy.next_review)`
-- `author` vira `policy.owner ?? '—'`
-- `frameworks` vira `policy.tags ?? []`
-- Campos de assinatura (`signatureRate`, `totalSignatures`) serao removidos (nao existe tabela de attestations)
+**Problema:** 
+- Linhas 122-175 contêm array `activeAssessments` com 4 avaliações fictícias totalmente inventadas
+- O componente exibe `assessments` do hook `useRisks()` mas ignora `activeAssessments` hardcoded
 
-### 2. TrainingPrograms.tsx
-**Antes:** 4 programas hardcoded
-**Depois:** Estado vazio com mensagem "Nenhum programa de treinamento cadastrado." e botao "Novo Treinamento" (que ja existe via CreateTrainingModal). Nao ha tabela de treinamentos no banco, entao o componente apenas mostra estado vazio ate que a funcionalidade seja implementada com persistencia.
+**Solução:**
+- Remover completamente o array `activeAssessments` (linhas 122-175)
+- Usar `assessments` do hook que já é fetched via `useRisks()`
+- Se nenhuma avaliação, mostrar estado vazio: "Nenhuma avaliação de risco enviada. Crie uma nova avaliação para começar."
 
-### 3. AttestationTracking.tsx
-**Antes:** 3 campanhas ficticias com usuarios pendentes inventados
-**Depois:** Estado vazio com mensagem "Nenhuma campanha de atesto em andamento." Nao ha tabela de attestations no banco. Manter o botao de lembretes mas desabilitado.
+**Mapeamento de Campos (se necessário):**
+Verificar se `assessments` do hook já possui os campos esperados (vendor, template, status, progress, etc.). Se não, o hook pode precisar de ajuste.
 
-### 4. PoliciesStats.tsx
-**Antes:** 4 cards com numeros fixos
-**Depois:** Importar `usePolicies` e usar `stats` do hook para:
-- "Politicas Ativas" = `stats.activePolicies` / `stats.totalPolicies`
-- "Em Revisao" = `stats.reviewPolicies`
-- "Rascunhos" = `stats.draftPolicies`
-- "Revisao Proxima" = `stats.policiesDueSoon`
+---
 
-Remover cards de treinamentos e assinaturas (dados nao existem no banco).
+### 2. RiskAssessments.tsx - Templates (Avaliar Legitimidade)
+
+**Análise:**
+- Os 4 templates (SOC 2, LGPD, Financial, General Onboarding) aparecem 2x no código:
+  - Uma vez como `assessmentTemplates` (linhas 87-120)
+  - Outra dentro do TabsContent (linhas 332-364)
+  
+**Decisão:**
+Estes templates são **modelos padrão da indústria** (como em `UseTemplateModal.tsx`), mas deveriam ser:
+1. **Definidos uma única vez** (remover duplicação)
+2. **Derivados do banco se houver tabela de templates**, OU
+3. **Mantidos como dados estáticos** de referência com badge clara ("Modelo padrão")
+
+**Implementação:**
+- Consolidar `assessmentTemplates` em uma única declaração
+- Mover para uma constant ou hook reutilizável
+- Manter em `TabsContent value="templates"` para exibição
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Mudanca |
+| Arquivo | Mudança |
 |---------|---------|
-| `src/components/policies/PoliciesLibrary.tsx` | Usar `realPolicies` do hook, remover array hardcoded |
-| `src/components/policies/TrainingPrograms.tsx` | Estado vazio (sem tabela no banco) |
-| `src/components/policies/AttestationTracking.tsx` | Estado vazio (sem tabela no banco) |
-| `src/components/policies/PoliciesStats.tsx` | Dados reais do hook `usePolicies` |
+| `src/components/risk/RiskAssessments.tsx` | Remover `activeAssessments` hardcoded (linhas 122-175). Usar `assessments` do hook. Consolidar `assessmentTemplates` (remover duplicação) |
 
 ---
 
 ## Resultado Esperado
 
-1. PoliciesLibrary exibe politicas reais do banco de dados
-2. Stats calculados dinamicamente a partir das politicas reais
-3. Treinamentos e Atestos mostram estado vazio honesto (sem tabelas no banco)
-4. Nenhum numero ficticio exibido na tela
-5. Usuario entende que precisa criar dados manualmente
+1. ✅ Avaliações ativas exibem dados reais do banco (via `useRisks().assessments`)
+2. ✅ Se nenhuma avaliação, mensagem clara "Nenhuma avaliação enviada"
+3. ✅ Templates consolidados e exibidos 1x (sem duplicação)
+4. ✅ Nenhum número fictício de avaliações exibido
+5. ✅ Aba de Riscos e Fornecedores 100% baseada em dados reais
+
+---
+
+## Nota Técnica
+
+O hook `useRisks()` retorna:
+- `risks` - lista de riscos
+- `vendors` - lista de fornecedores
+- `assessments` - lista de avaliações de risco (precisa validar se este campo existe)
+
+Se `assessments` não existir no hook, será necessário ajustá-lo para buscar avaliações do banco (potencialmente tabela `risk_assessments` ou similar).
+
