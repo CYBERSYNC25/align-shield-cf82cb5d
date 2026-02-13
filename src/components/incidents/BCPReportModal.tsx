@@ -6,14 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   FileText, 
   Download, 
   Calendar, 
-  BarChart3,
-  AlertTriangle,
-  CheckCircle,
-  Clock
+  BarChart3
 } from 'lucide-react';
 
 interface BCPReportModalProps {
@@ -23,8 +23,27 @@ interface BCPReportModalProps {
 
 const BCPReportModal = ({ open, onOpenChange }: BCPReportModalProps) => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [reportType, setReportType] = useState('');
   const [period, setPeriod] = useState('');
+
+  const { data: bcpPlans = [] } = useQuery({
+    queryKey: ['bcp-plans-stats', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bcp_plans')
+        .select('id, status')
+        .eq('user_id', user!.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id && open,
+  });
+
+  const stats = {
+    totalPlans: bcpPlans.length,
+    activePlans: bcpPlans.filter(p => p.status === 'active').length,
+  };
 
   const handleGenerateReport = () => {
     if (!reportType || !period) {
@@ -36,7 +55,6 @@ const BCPReportModal = ({ open, onOpenChange }: BCPReportModalProps) => {
       return;
     }
 
-    // Generate and download report
     const reportTypeName = reportTypes.find(r => r.value === reportType)?.label || reportType;
     const periodName = periods.find(p => p.value === period)?.label || period;
     
@@ -45,9 +63,7 @@ const BCPReportModal = ({ open, onOpenChange }: BCPReportModalProps) => {
       description: `Preparando ${reportTypeName} para ${periodName}...`,
     });
 
-    // Simulate report generation and download
     setTimeout(() => {
-      // Create a mock PDF content
       const reportContent = `
 RELATÓRIO BCP - ${reportTypeName.toUpperCase()}
 Período: ${periodName}
@@ -56,17 +72,8 @@ Data de Geração: ${new Date().toLocaleString('pt-BR')}
 ESTATÍSTICAS GERAIS:
 - Total de Planos BCP: ${stats.totalPlans}
 - Planos Ativos: ${stats.activePlans}
-- Testes Realizados no Mês: ${stats.testsThisMonth}
-- Taxa de Conformidade: ${stats.conformityRate}%
-
-RESUMO:
-Este relatório contém análises detalhadas sobre ${reportTypeName.toLowerCase()}.
-Todos os dados foram coletados durante o período especificado.
-
-Para mais informações, consulte o sistema APOC.
       `;
 
-      // Create blob and download
       const blob = new Blob([reportContent], { type: 'text/plain' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -98,16 +105,7 @@ Para mais informações, consulte o sistema APOC.
     { value: 'last-90', label: 'Últimos 90 dias' },
     { value: 'last-6months', label: 'Últimos 6 meses' },
     { value: 'last-year', label: 'Último ano' },
-    { value: 'custom', label: 'Período personalizado' }
   ];
-
-  // Mock statistics for preview
-  const stats = {
-    totalPlans: 12,
-    activePlans: 8,
-    testsThisMonth: 15,
-    conformityRate: 94
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,7 +118,6 @@ Para mais informações, consulte o sistema APOC.
         </DialogHeader>
         
         <div className="space-y-6">
-          {/* Quick Stats */}
           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/10 rounded-lg">
             <div className="text-center">
               <div className="text-2xl font-bold text-foreground">{stats.totalPlans}</div>
@@ -130,19 +127,10 @@ Para mais informações, consulte o sistema APOC.
               <div className="text-2xl font-bold text-success">{stats.activePlans}</div>
               <div className="text-xs text-muted-foreground">Ativos</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-info">{stats.testsThisMonth}</div>
-              <div className="text-xs text-muted-foreground">Testes/Mês</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">{stats.conformityRate}%</div>
-              <div className="text-xs text-muted-foreground">Conformidade</div>
-            </div>
           </div>
 
           <Separator />
 
-          {/* Report Type Selection */}
           <div className="space-y-3">
             <Label>Tipo de Relatório</Label>
             <Select value={reportType} onValueChange={setReportType}>
@@ -162,7 +150,6 @@ Para mais informações, consulte o sistema APOC.
             </Select>
           </div>
 
-          {/* Period Selection */}
           <div className="space-y-3">
             <Label>Período</Label>
             <Select value={period} onValueChange={setPeriod}>
@@ -179,26 +166,19 @@ Para mais informações, consulte o sistema APOC.
             </Select>
           </div>
 
-          {/* Preview Info */}
           {reportType && period && (
             <div className="p-3 bg-info/10 border border-info/20 rounded-lg">
               <div className="flex items-start gap-2">
                 <BarChart3 className="h-4 w-4 text-info mt-0.5" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-info">
-                    Prévia do Relatório
-                  </p>
+                  <p className="text-sm font-medium text-info">Prévia do Relatório</p>
                   <p className="text-xs text-muted-foreground">
-                    Será gerado um relatório detalhado em PDF contendo análises, gráficos e recomendações baseados nos dados selecionados.
+                    Será gerado um relatório baseado nos seus {stats.totalPlans} planos BCP cadastrados.
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline" className="text-xs">
                       <Calendar className="h-3 w-3 mr-1" />
                       {periods.find(p => p.value === period)?.label}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      <FileText className="h-3 w-3 mr-1" />
-                      PDF
                     </Badge>
                   </div>
                 </div>
@@ -207,11 +187,7 @@ Para mais informações, consulte o sistema APOC.
           )}
 
           <div className="flex gap-2 pt-4">
-            <Button 
-              onClick={handleGenerateReport} 
-              className="flex-1 gap-2"
-              disabled={!reportType || !period}
-            >
+            <Button onClick={handleGenerateReport} className="flex-1 gap-2" disabled={!reportType || !period}>
               <Download className="h-4 w-4" />
               Gerar Relatório
             </Button>

@@ -34,14 +34,12 @@ export function ComplianceScoreEvolution() {
     queryKey: ['compliance-check-history', user?.id],
     queryFn: async () => {
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
-      
       const { data, error } = await supabase
         .from('compliance_check_history')
         .select('id, created_at, score, passing_count, failing_count, total_rules_checked')
         .eq('user_id', user!.id)
         .gte('created_at', thirtyDaysAgo)
         .order('created_at', { ascending: true });
-
       if (error) throw error;
       return data as CheckHistory[];
     },
@@ -50,27 +48,11 @@ export function ComplianceScoreEvolution() {
   });
 
   const chartData = useMemo(() => {
-    if (!history || history.length === 0) {
-      // Generate sample data if no real data
-      const days = Array.from({ length: 7 }, (_, i) => {
-        const date = subDays(new Date(), 6 - i);
-        return {
-          date: format(date, 'dd/MM', { locale: ptBR }),
-          fullDate: format(date, 'dd MMM', { locale: ptBR }),
-          score: 85 + Math.floor(Math.random() * 10),
-          passing: 12 + Math.floor(Math.random() * 3),
-          failing: Math.floor(Math.random() * 3),
-        };
-      });
-      return days;
-    }
+    if (!history || history.length === 0) return [];
 
-    // Group by day and take average
     const groupedByDay = history.reduce((acc, item) => {
       const day = format(parseISO(item.created_at), 'yyyy-MM-dd');
-      if (!acc[day]) {
-        acc[day] = { scores: [], passing: [], failing: [] };
-      }
+      if (!acc[day]) acc[day] = { scores: [], passing: [], failing: [] };
       if (item.score !== null) acc[day].scores.push(item.score);
       if (item.passing_count !== null) acc[day].passing.push(item.passing_count);
       if (item.failing_count !== null) acc[day].failing.push(item.failing_count);
@@ -113,70 +95,59 @@ export function ComplianceScoreEvolution() {
           </CardTitle>
           <p className="text-sm text-muted-foreground">Últimos 30 dias</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className={trendColor}>
-            <TrendIcon className="h-3 w-3 mr-1" />
-            {trend === 'up' ? 'Subindo' : trend === 'down' ? 'Caindo' : 'Estável'}
-          </Badge>
-          <Badge className="text-lg">{averageScore}%</Badge>
-        </div>
+        {chartData.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={trendColor}>
+              <TrendIcon className="h-3 w-3 mr-1" />
+              {trend === 'up' ? 'Subindo' : trend === 'down' ? 'Caindo' : 'Estável'}
+            </Badge>
+            <Badge className="text-lg">{averageScore}%</Badge>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis 
-                domain={[0, 100]} 
-                tick={{ fontSize: 12 }}
-                tickLine={false}
-                axisLine={false}
-              />
-              <Tooltip
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    return (
-                      <div className="bg-popover border rounded-lg shadow-lg p-3">
-                        <p className="font-medium mb-1">{payload[0]?.payload?.fullDate}</p>
-                        <p className="text-sm text-primary">
-                          Score: <strong>{payload[0]?.value}%</strong>
-                        </p>
-                        <p className="text-sm text-green-600">
-                          Passando: {payload[0]?.payload?.passing}
-                        </p>
-                        <p className="text-sm text-red-500">
-                          Falhando: {payload[0]?.payload?.failing}
-                        </p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <ReferenceLine y={80} stroke="hsl(var(--success))" strokeDasharray="5 5" label={{ value: 'Meta 80%', fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
-              <Area
-                type="monotone"
-                dataKey="score"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorScore)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        {chartData.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center h-[300px]">
+            <Activity className="h-8 w-8 text-muted-foreground mb-3" />
+            <p className="text-sm font-medium text-foreground mb-1">Dados insuficientes</p>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              Execute verificações de compliance para gerar o histórico de evolução do score.
+            </p>
+          </div>
+        ) : (
+          <div className="h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      return (
+                        <div className="bg-popover border rounded-lg shadow-lg p-3">
+                          <p className="font-medium mb-1">{payload[0]?.payload?.fullDate}</p>
+                          <p className="text-sm text-primary">Score: <strong>{payload[0]?.value}%</strong></p>
+                          <p className="text-sm text-green-600">Passando: {payload[0]?.payload?.passing}</p>
+                          <p className="text-sm text-red-500">Falhando: {payload[0]?.payload?.failing}</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <ReferenceLine y={80} stroke="hsl(var(--success))" strokeDasharray="5 5" label={{ value: 'Meta 80%', fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} fillOpacity={1} fill="url(#colorScore)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -1,47 +1,3 @@
-/**
- * NotificationRulesManager Component
- * 
- * Advanced management interface for notification rules and automation triggers.
- * Allows configuration of complex notification workflows with conditions and actions.
- * 
- * @component
- * 
- * Features:
- * - Create custom notification rules with multiple conditions
- * - Configure notification channels (email, in-app, webhook)
- * - Set up escalation policies for unresolved alerts
- * - Test notification rules before activation
- * - View notification delivery logs and metrics
- * 
- * @example Usage
- * ```tsx
- * <NotificationRulesManager />
- * ```
- * 
- * Rule Structure:
- * ```json
- * {
- *   "id": "rule-1",
- *   "name": "Critical Risk Escalation",
- *   "conditions": [
- *     { "field": "risk_score", "operator": ">=", "value": 90 },
- *     { "field": "status", "operator": "==", "value": "active" }
- *   ],
- *   "actions": [
- *     { "type": "notification", "channel": "in-app", "priority": "high" },
- *     { "type": "email", "to": "security@company.com" },
- *     { "type": "escalate", "delay": 3600, "to": "ciso@company.com" }
- *   ]
- * }
- * ```
- * 
- * Edge Cases:
- * - Circular escalation: Detects and prevents escalation loops
- * - Invalid email addresses: Validates before saving
- * - Conflicting rules: Warns when rules may trigger simultaneously
- * - Rule execution failure: Implements retry with exponential backoff
- */
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -82,94 +38,10 @@ interface NotificationRule {
   successRate: number;
 }
 
-/**
- * Mock notification rules data
- * 
- * @example High Priority Rule
- * ```json
- * {
- *   "id": "1",
- *   "name": "Riscos Críticos → Email Imediato",
- *   "description": "Envia e-mail para CISO quando risco crítico é detectado",
- *   "enabled": true,
- *   "trigger": "risk_score >= 80",
- *   "channels": ["email", "notification"],
- *   "lastExecuted": "2024-01-10T14:30:00.000Z",
- *   "executionCount": 45,
- *   "successRate": 98.5
- * }
- * ```
- */
-const mockRules: NotificationRule[] = [
-  {
-    id: '1',
-    name: 'Riscos Críticos → Email Imediato',
-    description: 'Envia e-mail para CISO quando risco crítico é detectado',
-    enabled: true,
-    trigger: 'risk_score >= 80',
-    channels: ['email', 'notification'],
-    lastExecuted: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    executionCount: 45,
-    successRate: 98.5
-  },
-  {
-    id: '2',
-    name: 'Auditorias Atrasadas → Escalação',
-    description: 'Notifica auditor após 3 dias, escalona para gerente após 7 dias',
-    enabled: true,
-    trigger: 'days_overdue > 3',
-    channels: ['email', 'notification'],
-    lastExecuted: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    executionCount: 18,
-    successRate: 100
-  },
-  {
-    id: '3',
-    name: 'Controles Pendentes → Lembrete Semanal',
-    description: 'Envia resumo semanal de controles pendentes',
-    enabled: true,
-    trigger: 'schedule: weekly',
-    channels: ['email'],
-    lastExecuted: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    executionCount: 12,
-    successRate: 100
-  },
-  {
-    id: '4',
-    name: 'Anomalias de Acesso → Alerta Imediato',
-    description: 'Notificação em tempo real de anomalias de acesso',
-    enabled: true,
-    trigger: 'anomaly_detected',
-    channels: ['notification', 'email', 'webhook'],
-    lastExecuted: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-    executionCount: 8,
-    successRate: 87.5
-  },
-  {
-    id: '5',
-    name: 'Evidências Pendentes → Lembrete Diário',
-    description: 'Lembra responsáveis sobre evidências pendentes',
-    enabled: false,
-    trigger: 'schedule: daily',
-    channels: ['notification'],
-    executionCount: 0,
-    successRate: 0
-  }
-];
-
 const NotificationRulesManager = () => {
-  const [rules, setRules] = useState<NotificationRule[]>(mockRules);
+  const [rules, setRules] = useState<NotificationRule[]>([]);
   const { toast } = useToast();
 
-  /**
-   * Toggle rule enabled state
-   * 
-   * @param id - Rule ID
-   * 
-   * Edge Cases:
-   * - Last active rule: Warns user before disabling
-   * - Rule has pending executions: Asks for confirmation
-   */
   const handleToggleRule = (id: string) => {
     setRules(prev => prev.map(rule => 
       rule.id === id ? { ...rule, enabled: !rule.enabled } : rule
@@ -182,18 +54,6 @@ const NotificationRulesManager = () => {
     });
   };
 
-  /**
-   * Test rule execution
-   * 
-   * @param id - Rule ID
-   * 
-   * Tests the rule with sample data to verify configuration.
-   * Does not send actual notifications.
-   * 
-   * Edge Cases:
-   * - Invalid configuration: Returns validation errors
-   * - Channel unavailable: Simulates failure and shows error details
-   */
   const handleTestRule = (id: string) => {
     const rule = rules.find(r => r.id === id);
     toast({
@@ -202,15 +62,6 @@ const NotificationRulesManager = () => {
     });
   };
 
-  /**
-   * Delete rule
-   * 
-   * @param id - Rule ID
-   * 
-   * Edge Cases:
-   * - Rule is active: Requires confirmation
-   * - Rule has dependencies: Shows warning about dependent rules
-   */
   const handleDeleteRule = (id: string) => {
     const rule = rules.find(r => r.id === id);
     
@@ -268,122 +119,119 @@ const NotificationRulesManager = () => {
       </CardHeader>
 
       <CardContent>
-        <div className="mb-4 flex items-center space-x-2">
-          <Badge variant="outline" className="bg-primary/10 text-primary border-primary">
-            {activeRulesCount} Ativas
-          </Badge>
-          <Badge variant="outline">
-            {rules.length - activeRulesCount} Inativas
-          </Badge>
-        </div>
+        {rules.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="mb-4 rounded-full bg-muted p-4 text-muted-foreground">
+              <Bell className="h-8 w-8" />
+            </div>
+            <h3 className="mb-2 text-lg font-semibold text-foreground">
+              Nenhuma regra de notificação configurada
+            </h3>
+            <p className="mb-6 max-w-md text-sm text-muted-foreground">
+              Crie sua primeira regra para automatizar notificações de compliance, riscos e auditorias.
+            </p>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Primeira Regra
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 flex items-center space-x-2">
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary">
+                {activeRulesCount} Ativas
+              </Badge>
+              <Badge variant="outline">
+                {rules.length - activeRulesCount} Inativas
+              </Badge>
+            </div>
 
-        <div className="border border-card-border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50">
-                <TableHead>Regra</TableHead>
-                <TableHead>Gatilho</TableHead>
-                <TableHead>Canais</TableHead>
-                <TableHead className="text-right">Execuções</TableHead>
-                <TableHead className="text-right">Taxa Sucesso</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rules.map((rule) => (
-                <TableRow key={rule.id} className="hover:bg-muted/30">
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {rule.enabled ? (
-                        <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
-                      ) : (
-                        <AlertCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      )}
-                      <div>
-                        <div className="font-medium text-foreground">{rule.name}</div>
-                        <div className="text-xs text-muted-foreground">{rule.description}</div>
-                        {rule.lastExecuted && (
-                          <div className="text-xs text-muted-foreground mt-1 flex items-center space-x-1">
-                            <Clock className="h-3 w-3" />
-                            <span>
-                              Última execução: {new Date(rule.lastExecuted).toLocaleString('pt-BR')}
-                            </span>
+            <div className="border border-card-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Regra</TableHead>
+                    <TableHead>Gatilho</TableHead>
+                    <TableHead>Canais</TableHead>
+                    <TableHead className="text-right">Execuções</TableHead>
+                    <TableHead className="text-right">Taxa Sucesso</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rules.map((rule) => (
+                    <TableRow key={rule.id} className="hover:bg-muted/30">
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          {rule.enabled ? (
+                            <CheckCircle className="h-4 w-4 text-success flex-shrink-0" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          )}
+                          <div>
+                            <div className="font-medium text-foreground">{rule.name}</div>
+                            <div className="text-xs text-muted-foreground">{rule.description}</div>
+                            {rule.lastExecuted && (
+                              <div className="text-xs text-muted-foreground mt-1 flex items-center space-x-1">
+                                <Clock className="h-3 w-3" />
+                                <span>
+                                  Última execução: {new Date(rule.lastExecuted).toLocaleString('pt-BR')}
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">
-                      {rule.trigger}
-                    </code>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-1">
-                      {rule.channels.map((channel) => (
-                        <Badge key={channel} variant="secondary" className="text-xs">
-                          {getChannelIcon(channel)}
-                          <span className="ml-1 capitalize">{channel}</span>
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-mono text-sm">
-                    {rule.executionCount}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {rule.executionCount > 0 ? (
-                      <span className={`font-semibold ${getSuccessRateColor(rule.successRate)}`}>
-                        {rule.successRate}%
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleToggleRule(rule.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        {rule.enabled ? (
-                          <Pause className="h-4 w-4" />
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-xs bg-muted px-2 py-1 rounded">
+                          {rule.trigger}
+                        </code>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-1">
+                          {rule.channels.map((channel) => (
+                            <Badge key={channel} variant="secondary" className="text-xs">
+                              {getChannelIcon(channel)}
+                              <span className="ml-1 capitalize">{channel}</span>
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm">
+                        {rule.executionCount}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {rule.executionCount > 0 ? (
+                          <span className={`font-semibold ${getSuccessRateColor(rule.successRate)}`}>
+                            {rule.successRate}%
+                          </span>
                         ) : (
-                          <Play className="h-4 w-4" />
+                          <span className="text-muted-foreground">-</span>
                         )}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleTestRule(rule.id)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Zap className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteRule(rule.id)}
-                        className="h-8 w-8 p-0 text-danger hover:text-danger"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleToggleRule(rule.id)} className="h-8 w-8 p-0">
+                            {rule.enabled ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleTestRule(rule.id)} className="h-8 w-8 p-0">
+                            <Zap className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteRule(rule.id)} className="h-8 w-8 p-0 text-danger hover:text-danger">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
