@@ -5,8 +5,19 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const ROLE_HIERARCHY: Record<string, number> = {
+  master_admin: 5,
+  admin: 4,
+  editor: 3,
+  compliance_officer: 3,
+  master_ti: 3,
+  master_governance: 3,
+  view_only_admin: 2,
+  auditor: 2,
+  viewer: 1,
+}
+
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -14,7 +25,6 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      console.error('No authorization header provided')
       return new Response(JSON.stringify({ error: 'Não autorizado' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -25,28 +35,22 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
-    // Client with user token to verify if they are admin
     const supabaseUser = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } }
     })
-
-    // Admin client to create invite
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
 
     // Verify user is authenticated
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser()
     if (userError || !user) {
-      console.error('User authentication failed:', userError)
       return new Response(JSON.stringify({ error: 'Usuário não autenticado' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    console.log('User authenticated:', user.id)
-
-    // Verify if user is admin
-    const { data: roles, error: rolesError } = await supabaseAdmin
+    // Get caller's roles
+    const { data: callerRoles, error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', user.id)
@@ -59,10 +63,9 @@ Deno.serve(async (req) => {
       })
     }
 
-    const isAdmin = roles?.some(r => r.role === 'admin')
-    
-    if (!isAdmin) {
-      console.error('User is not admin:', user.id)
+    // Check if user can manage users (admin or master roles)
+    const canManage = callerRoles?.some(r => ['admin', 'master_admin'].includes(r.role))
+    if (!canManage) {
       return new Response(JSON.stringify({ error: 'Apenas administradores podem convidar usuários' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -70,7 +73,6 @@ Deno.serve(async (req) => {
     }
 
     const { email, role } = await req.json()
-    console.log('Invite request:', { email, role })
 
     if (!email || !role) {
       return new Response(JSON.stringify({ error: 'Email e role são obrigatórios' }), {
@@ -88,11 +90,24 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Validate role
-    const validRoles = ['admin', 'viewer', 'auditor', 'compliance_officer']
+    // Validate role exists in hierarchy
+    const validRoles = Object.keys(ROLE_HIERARCHY)
     if (!validRoles.includes(role)) {
       return new Response(JSON.stringify({ error: 'Role inválida' }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // HIERARCHY ENFORCEMENT: caller's highest level must be strictly greater than requested role
+    const callerHighestLevel = Math.max(...(callerRoles?.map(r => ROLE_HIERARCHY[r.role] ?? 0) || [0]))
+    const requestedLevel = ROLE_HIERARCHY[role] ?? 0
+
+    if (requestedLevel >= callerHighestLevel) {
+      return new Response(JSON.stringify({ 
+        error: 'Você não pode atribuir uma role igual ou superior à sua' 
+      }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -126,21 +141,17 @@ Deno.serve(async (req) => {
     // Create invite in database
     const { error: inviteDbError } = await supabaseAdmin
       .from('user_invites')
-      .insert({
-        email,
-        role,
-        invited_by: user.id
-      })
+      .insert({ email, role, invited_by: user.id })
 
     if (inviteDbError) {
-      console.error('Error creating invite in database:', inviteDbError)
+      console.error('Error creating invite:', inviteDbError)
       return new Response(JSON.stringify({ error: 'Erro ao criar convite' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Send invitation email via Supabase Auth
+    // Send invitation email
     const origin = req.headers.get('origin') || 'https://lovable.dev'
     const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       redirectTo: `${origin}/auth`
@@ -148,25 +159,16 @@ Deno.serve(async (req) => {
 
     if (inviteError) {
       console.error('Error sending invite email:', inviteError)
-      // Rollback invite in database
-      await supabaseAdmin
-        .from('user_invites')
-        .delete()
-        .eq('email', email)
-        .eq('status', 'pending')
-      
+      await supabaseAdmin.from('user_invites').delete().eq('email', email).eq('status', 'pending')
       return new Response(JSON.stringify({ error: inviteError.message }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    console.log('Invite sent successfully to:', email)
+    console.log('Invite sent successfully to:', email, 'with role:', role)
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      message: 'Convite enviado com sucesso' 
-    }), {
+    return new Response(JSON.stringify({ success: true, message: 'Convite enviado com sucesso' }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })

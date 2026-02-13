@@ -6,31 +6,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useUserRoles } from '@/hooks/useUserRoles';
+import { useUserRoles, ALL_ROLE_LABELS, type AppRole } from '@/hooks/useUserRoles';
 import { Shield, UserPlus, Trash2, UserX, ShieldAlert, Mail } from 'lucide-react';
 import { useAuditLogs } from '@/hooks/useAuditLogs';
 import MasterUserDeletionModal from './MasterUserDeletionModal';
 import { UserInviteModal } from './UserInviteModal';
+
 interface UserWithRoles {
   id: string;
   email: string;
   roles: string[];
 }
 
-const roleLabels = {
-  admin: 'Administrador',
-  auditor: 'Auditor',
-  compliance_officer: 'Oficial de Compliance',
-  viewer: 'Visualizador',
-  master_admin: 'Master Admin',
-  master_ti: 'Master TI',
-  master_governance: 'Master Governança',
-  // NEW Vanta-model roles
-  editor: 'Editor',
-  view_only_admin: 'Admin Somente Leitura'
-};
-
-const roleColors = {
+const roleColors: Record<string, string> = {
   admin: 'destructive',
   auditor: 'secondary',
   compliance_officer: 'default',
@@ -38,26 +26,13 @@ const roleColors = {
   master_admin: 'destructive',
   master_ti: 'destructive',
   master_governance: 'destructive',
-  // NEW roles colors
   editor: 'default',
   view_only_admin: 'secondary'
-} as const;
-
-const roleDescriptions: Record<string, string> = {
-  master_admin: 'Acesso total à plataforma, incluindo gestão de usuários e configurações avançadas',
-  admin: 'Pode gerenciar usuários e editar todos os recursos',
-  editor: 'Pode editar recursos, mas não gerenciar usuários',
-  view_only_admin: 'Visualiza tudo, mas não pode editar nada',
-  compliance_officer: 'Pode editar recursos relacionados a compliance',
-  auditor: 'Acesso de leitura para auditoria',
-  viewer: 'Visualizador básico com acesso restrito',
-  master_ti: 'Acesso especial para área de TI',
-  master_governance: 'Acesso especial para área de Governança'
 };
 
 export default function UserRolesManagement() {
   const { toast } = useToast();
-  const { isAdmin, isMasterAdmin, isMasterUser, loading: rolesLoading } = useUserRoles();
+  const { isAdmin, isMasterAdmin, isMasterUser, getAssignableRoles, canManageRole, loading: rolesLoading } = useUserRoles();
   const { logAction } = useAuditLogs();
   const [users, setUsers] = useState<UserWithRoles[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +42,8 @@ export default function UserRolesManagement() {
   const [selectedUserForDeletion, setSelectedUserForDeletion] = useState<{id: string, email: string} | null>(null);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
+  const assignableRoles = getAssignableRoles();
+
   useEffect(() => {
     if (isAdmin() || isMasterUser()) {
       loadUsers();
@@ -75,7 +52,6 @@ export default function UserRolesManagement() {
 
   const loadUsers = async () => {
     try {
-      // Load profiles with their roles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, display_name');
@@ -88,7 +64,6 @@ export default function UserRolesManagement() {
 
       if (rolesError) throw rolesError;
 
-      // Combine data
       const usersWithRoles = profiles.map(profile => {
         const userRoles = roles
           .filter(r => r.user_id === profile.user_id)
@@ -119,6 +94,15 @@ export default function UserRolesManagement() {
       toast({
         title: 'Seleção incompleta',
         description: 'Selecione um usuário e uma função',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!canManageRole(selectedRole as AppRole)) {
+      toast({
+        title: 'Sem permissão',
+        description: 'Você não pode atribuir uma função igual ou superior à sua',
         variant: 'destructive'
       });
       return;
@@ -155,6 +139,15 @@ export default function UserRolesManagement() {
   };
 
   const removeRole = async (userId: string, role: string) => {
+    if (!canManageRole(role as AppRole)) {
+      toast({
+        title: 'Sem permissão',
+        description: 'Você não pode remover uma função igual ou superior à sua',
+        variant: 'destructive'
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('user_roles')
@@ -184,7 +177,6 @@ export default function UserRolesManagement() {
 
   const deleteUser = async (userId: string, userEmail: string) => {
     try {
-      // Delete user's data from all tables
       const { error: profileError } = await supabase
         .from('profiles')
         .delete()
@@ -232,9 +224,7 @@ export default function UserRolesManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            Carregando permissões...
-          </p>
+          <p className="text-muted-foreground">Carregando permissões...</p>
         </CardContent>
       </Card>
     );
@@ -250,9 +240,7 @@ export default function UserRolesManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
-            Você não tem permissão para acessar esta área.
-          </p>
+          <p className="text-muted-foreground">Você não tem permissão para acessar esta área.</p>
         </CardContent>
       </Card>
     );
@@ -267,9 +255,7 @@ export default function UserRolesManagement() {
               <Shield className="w-5 h-5" />
               Gestão de Permissões
             </CardTitle>
-            <CardDescription>
-              Gerencie funções e permissões dos usuários
-            </CardDescription>
+            <CardDescription>Gerencie funções e permissões dos usuários</CardDescription>
           </div>
           <Button onClick={() => setInviteModalOpen(true)}>
             <Mail className="w-4 h-4 mr-2" />
@@ -300,15 +286,15 @@ export default function UserRolesManagement() {
                 <SelectValue placeholder="Selecionar função" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(roleLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
+                {assignableRoles.map((roleKey) => (
+                  <SelectItem key={roleKey} value={roleKey}>
+                    {ALL_ROLE_LABELS[roleKey]}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
 
-            <Button onClick={assignRole}>
+            <Button onClick={assignRole} disabled={assignableRoles.length === 0}>
               <UserPlus className="w-4 h-4 mr-2" />
               Atribuir
             </Button>
@@ -323,38 +309,36 @@ export default function UserRolesManagement() {
           ) : (
             <div className="space-y-2">
               {users.map(user => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between p-3 border rounded-lg"
-                >
+                <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium">{user.email}</p>
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2 mt-2 flex-wrap">
                       {user.roles.length === 0 ? (
                         <Badge variant="outline">Nenhuma função</Badge>
                       ) : (
                         user.roles.map(role => (
                           <Badge
                             key={role}
-                            variant={roleColors[role as keyof typeof roleColors]}
+                            variant={roleColors[role] as any}
                             className="flex items-center gap-1"
                           >
-                            {roleLabels[role as keyof typeof roleLabels]}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-4 w-4 p-0 ml-1"
-                              onClick={() => removeRole(user.id, role)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
+                            {ALL_ROLE_LABELS[role as AppRole] || role}
+                            {canManageRole(role as AppRole) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-4 w-4 p-0 ml-1"
+                                onClick={() => removeRole(user.id, role)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
                           </Badge>
                         ))
                       )}
                     </div>
                   </div>
                   <div className="flex gap-2 ml-4">
-                    {/* Master deletion with triple authentication */}
                     {isMasterAdmin() && (
                       <Button
                         variant="destructive"
@@ -366,14 +350,10 @@ export default function UserRolesManagement() {
                       </Button>
                     )}
                     
-                    {/* Regular deletion (admin only, non-master) */}
                     {isAdmin() && !isMasterAdmin() && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                          >
+                          <Button variant="destructive" size="sm">
                             <UserX className="w-4 h-4 mr-2" />
                             Excluir
                           </Button>
@@ -406,7 +386,6 @@ export default function UserRolesManagement() {
         </div>
       </CardContent>
 
-      {/* Master User Deletion Modal */}
       <MasterUserDeletionModal
         open={masterDeletionModalOpen}
         onOpenChange={setMasterDeletionModalOpen}
@@ -419,7 +398,6 @@ export default function UserRolesManagement() {
         }}
       />
 
-      {/* User Invite Modal */}
       <UserInviteModal
         open={inviteModalOpen}
         onOpenChange={setInviteModalOpen}

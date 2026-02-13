@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Mail, UserPlus } from 'lucide-react';
+import { useUserRoles, ALL_ROLE_LABELS, ALL_ROLE_DESCRIPTIONS } from '@/hooks/useUserRoles';
 
 interface UserInviteModalProps {
   open: boolean;
@@ -14,25 +15,14 @@ interface UserInviteModalProps {
   onInviteSent?: () => void;
 }
 
-const roleLabels: Record<string, string> = {
-  admin: 'Administrador',
-  viewer: 'Visualizador',
-  auditor: 'Auditor',
-  compliance_officer: 'Compliance Officer'
-};
-
-const roleDescriptions: Record<string, string> = {
-  admin: 'Acesso total ao sistema, pode gerenciar usuários e configurações',
-  viewer: 'Apenas visualização, sem permissões de edição',
-  auditor: 'Acesso a logs e relatórios de auditoria',
-  compliance_officer: 'Gerencia controles, políticas e frameworks'
-};
-
 export const UserInviteModal = ({ open, onOpenChange, onInviteSent }: UserInviteModalProps) => {
   const { toast } = useToast();
+  const { getAssignableRoles } = useUserRoles();
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<string>('viewer');
+  const [role, setRole] = useState<string>('');
   const [loading, setLoading] = useState(false);
+
+  const assignableRoles = getAssignableRoles();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,6 +31,15 @@ export const UserInviteModal = ({ open, onOpenChange, onInviteSent }: UserInvite
       toast({
         title: 'Email obrigatório',
         description: 'Por favor, insira o email do usuário a ser convidado',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!role) {
+      toast({
+        title: 'Permissão obrigatória',
+        description: 'Por favor, selecione uma permissão para o usuário',
         variant: 'destructive'
       });
       return;
@@ -84,11 +83,11 @@ export const UserInviteModal = ({ open, onOpenChange, onInviteSent }: UserInvite
 
       toast({
         title: 'Convite enviado',
-        description: `Um email de convite foi enviado para ${email} com a role ${roleLabels[role]}`,
+        description: `Um email de convite foi enviado para ${email} com a role ${ALL_ROLE_LABELS[role as keyof typeof ALL_ROLE_LABELS] || role}`,
       });
 
       setEmail('');
-      setRole('viewer');
+      setRole('');
       onOpenChange(false);
       onInviteSent?.();
 
@@ -136,24 +135,32 @@ export const UserInviteModal = ({ open, onOpenChange, onInviteSent }: UserInvite
 
           <div className="space-y-2">
             <Label htmlFor="role">Permissão</Label>
-            <Select value={role} onValueChange={setRole} disabled={loading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a permissão" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(roleLabels).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    <div className="flex flex-col items-start">
-                      <span>{label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {role && (
-              <p className="text-xs text-muted-foreground">
-                {roleDescriptions[role]}
+            {assignableRoles.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Você não tem permissão para atribuir funções.
               </p>
+            ) : (
+              <>
+                <Select value={role} onValueChange={setRole} disabled={loading}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a permissão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assignableRoles.map((roleKey) => (
+                      <SelectItem key={roleKey} value={roleKey}>
+                        <div className="flex flex-col items-start">
+                          <span>{ALL_ROLE_LABELS[roleKey]}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {role && (
+                  <p className="text-xs text-muted-foreground">
+                    {ALL_ROLE_DESCRIPTIONS[role as keyof typeof ALL_ROLE_DESCRIPTIONS]}
+                  </p>
+                )}
+              </>
             )}
           </div>
 
@@ -166,7 +173,7 @@ export const UserInviteModal = ({ open, onOpenChange, onInviteSent }: UserInvite
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || assignableRoles.length === 0}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
