@@ -119,61 +119,6 @@ const RiskAssessments = () => {
     }
   ];
 
-  const activeAssessments = [
-    {
-      vendor: 'CloudSecure Inc.',
-      template: 'SOC 2 Vendor Assessment',
-      status: 'in_progress',
-      progress: 65,
-      sentDate: '15/11/2024',
-      dueDate: '25/11/2024',
-      completedQuestions: 29,
-      totalQuestions: 45,
-      riskFlags: 2,
-      contactPerson: 'James Wilson',
-      contactEmail: 'james@cloudsecure.com'
-    },
-    {
-      vendor: 'DataProtect Solutions',
-      template: 'LGPD Data Processing',
-      status: 'completed',
-      progress: 100,
-      sentDate: '08/11/2024',
-      dueDate: '18/11/2024',
-      completedQuestions: 32,
-      totalQuestions: 32,
-      riskFlags: 0,
-      contactPerson: 'Sarah Chen',
-      contactEmail: 'sarah@dataprotect.com'
-    },
-    {
-      vendor: 'Analytics Corp',
-      template: 'SOC 2 Vendor Assessment',
-      status: 'overdue',
-      progress: 35,
-      sentDate: '05/11/2024',
-      dueDate: '15/11/2024',
-      completedQuestions: 16,
-      totalQuestions: 45,
-      riskFlags: 4,
-      contactPerson: 'Mike Rodriguez',
-      contactEmail: 'mike@analyticscorp.com'
-    },
-    {
-      vendor: 'TechSupport Pro',
-      template: 'General Vendor Onboarding',
-      status: 'sent',
-      progress: 0,
-      sentDate: '20/11/2024',
-      dueDate: '30/11/2024',
-      completedQuestions: 0,
-      totalQuestions: 18,
-      riskFlags: 0,
-      contactPerson: 'Lisa Zhang',
-      contactEmail: 'lisa@techsupportpro.com'
-    }
-  ];
-
   const getStatusBadge = (status: string) => {
     const config = {
       sent: { label: 'Enviado', icon: Send, className: 'bg-info/10 text-info border-info/20' },
@@ -214,11 +159,30 @@ const RiskAssessments = () => {
             Avaliações Ativas ({assessments.length})
           </TabsTrigger>
           <TabsTrigger value="templates">
-            Templates (4)
+            Templates ({assessmentTemplates.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="mt-6">
+          {assessments.length === 0 ? (
+            <Card className="bg-surface-elevated border-card-border">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="mb-4 rounded-full bg-muted p-4 text-muted-foreground">
+                  <FileText className="h-8 w-8" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold text-foreground">
+                  Nenhuma avaliação de risco enviada
+                </h3>
+                <p className="mb-6 max-w-md text-sm text-muted-foreground">
+                  Crie uma nova avaliação para começar a avaliar seus fornecedores.
+                </p>
+                <Button onClick={() => setNewAssessmentModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Avaliação
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             {assessments.map((assessment, index) => (
               <Card key={index} className="bg-surface-elevated border-card-border">
@@ -307,7 +271,6 @@ const RiskAssessments = () => {
                             title: "Download Iniciado",
                             description: `Baixando relatório de ${assessment.vendor}...`,
                           });
-                          // Simular download
                           setTimeout(() => {
                             toast({
                               title: "Download Concluído",
@@ -325,44 +288,12 @@ const RiskAssessments = () => {
               </Card>
             ))}
           </div>
+          )}
         </TabsContent>
 
         <TabsContent value="templates" className="mt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {[
-              {
-                name: 'SOC 2 Vendor Assessment',
-                category: 'Security',
-                questions: 45,
-                avgCompletionTime: '35 min',
-                frameworks: ['SOC 2', 'ISO 27001'],
-                description: 'Avaliação completa de controles de segurança para fornecedores críticos'
-              },
-              {
-                name: 'LGPD Data Processing',
-                category: 'Privacy',
-                questions: 32,
-                avgCompletionTime: '25 min',
-                frameworks: ['LGPD', 'GDPR'],
-                description: 'Questionário específico para processamento de dados pessoais'
-              },
-              {
-                name: 'Financial Services Risk',
-                category: 'Compliance',
-                questions: 28,
-                avgCompletionTime: '20 min',
-                frameworks: ['PCI DSS', 'SOX'],
-                description: 'Avaliação para fornecedores de serviços financeiros'
-              },
-              {
-                name: 'General Vendor Onboarding',
-                category: 'General',
-                questions: 18,
-                avgCompletionTime: '15 min',
-                frameworks: ['ISO 9001'],
-                description: 'Questionário padrão para onboarding de novos fornecedores'
-              }
-            ].map((template, index) => (
+            {assessmentTemplates.map((template, index) => (
               <Card key={index} className="bg-surface-elevated border-card-border">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
@@ -381,7 +312,6 @@ const RiskAssessments = () => {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  {/* Template Stats */}
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-muted-foreground">Questões:</span>
@@ -393,7 +323,6 @@ const RiskAssessments = () => {
                     </div>
                   </div>
 
-                  {/* Frameworks */}
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground font-medium">FRAMEWORKS</p>
                     <div className="flex flex-wrap gap-1">
@@ -405,7 +334,6 @@ const RiskAssessments = () => {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2">
                     <Button 
                       variant="outline" 
