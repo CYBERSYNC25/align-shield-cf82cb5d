@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, AlertTriangle, XCircle, Shield, Zap, Download } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, XCircle, Shield, Download } from 'lucide-react';
 import FrameworkDetailsSheet from './FrameworkDetailsSheet';
 import { useFrameworks } from '@/hooks/useFrameworks';
 
@@ -18,7 +18,7 @@ type FrameworkCard = {
   missingControls: number;
   compliance: number;
   status: 'excellent' | 'good' | 'fair' | 'poor';
-  automatedControls: number;
+  
   lastVerification: string;
   categories: string[];
 };
@@ -77,8 +77,13 @@ const FrameworksOverview = () => {
         missingControls: stats.pending,
         compliance: progress,
         status,
-        automatedControls: 0,
-        lastVerification: '—',
+        lastVerification: (() => {
+          const dates = frameworkControls
+            .map(c => c.last_verified)
+            .filter(Boolean)
+            .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+          return dates.length > 0 ? dates[0] : '';
+        })(),
         categories
       };
     });
@@ -177,11 +182,6 @@ const FrameworksOverview = () => {
                   </div>
                   <Progress value={framework.compliance} className="h-2" />
                   
-                  {/* Automation Badge */}
-                  <div className="flex items-center gap-1.5 text-xs text-info">
-                    <Zap className="h-3.5 w-3.5" />
-                    <span className="font-medium">{framework.automatedControls} controles automatizados via Agente/API</span>
-                  </div>
                 </div>
 
                 {/* Controls Breakdown */}
@@ -215,7 +215,11 @@ const FrameworksOverview = () => {
                 {/* Last Verification Metadata */}
                 <div className="pt-2 border-t border-border">
                   <div className="text-xs text-muted-foreground">
-                    Última verificação: <span className="text-foreground font-medium">Há {framework.lastVerification}</span>
+                    Última verificação: <span className="text-foreground font-medium">
+                      {framework.lastVerification 
+                        ? new Date(framework.lastVerification).toLocaleDateString('pt-BR')
+                        : 'Nunca verificado'}
+                    </span>
                   </div>
                 </div>
               </CardContent>

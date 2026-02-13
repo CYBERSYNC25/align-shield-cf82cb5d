@@ -18,7 +18,7 @@ interface Framework {
   missingControls: number;
   compliance: number;
   status: string;
-  automatedControls: number;
+  automatedControls?: number;
   lastVerification: string;
   categories: string[];
 }

@@ -5,16 +5,20 @@ import { useFrameworks } from '@/hooks/useFrameworks';
 import { useMemo } from 'react';
 
 const FrameworkDetails = () => {
-  const { frameworks } = useFrameworks();
+  const { frameworks, controls } = useFrameworks();
 
   const frameworkData = useMemo(() => {
-    return frameworks.map(framework => ({
-      name: framework.name,
-      compliance: framework.compliance_score || 0,
-      controls: Math.floor(Math.random() * 50) + 20,
-      completed: Math.floor(Math.random() * 30) + 15
-    }));
-  }, [frameworks]);
+    return frameworks.map(framework => {
+      const fControls = controls.filter(c => c.framework_id === framework.id);
+      const passed = fControls.filter(c => c.status === 'passed').length;
+      return {
+        name: framework.name,
+        compliance: framework.compliance_score || 0,
+        controls: fControls.length,
+        completed: passed
+      };
+    });
+  }, [frameworks, controls]);
 
   return (
     <Card>

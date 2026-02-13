@@ -1,62 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, TrendingUp, Clock, Users, FileText, Download } from 'lucide-react';
+import { AlertTriangle, TrendingUp, Clock, Users, Download, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-const gapData = [
-  {
-    id: 'gap-1',
-    control: 'CC6.1',
-    title: 'Controle de Acesso Lógico',
-    frameworks: ['SOC 2', 'ISO 27001'],
-    severity: 'high',
-    description: 'Implementação de controles de acesso baseado em funções (RBAC)',
-    currentStatus: 'partial',
-    requiredActions: [
-      'Configurar RBAC no sistema de IAM',
-      'Definir matriz de autorização por função',
-      'Implementar revisões periódicas de acesso'
-    ],
-    assignedTo: 'DevOps Team',
-    dueDate: '2024-01-15',
-    effort: 'medium'
-  },
-  {
-    id: 'gap-2',
-    control: 'A.5.8',
-    title: 'Classificação da Informação',
-    frameworks: ['ISO 27001', 'LGPD'],
-    severity: 'medium',
-    description: 'Estabelecer esquema de classificação de dados pessoais e sensíveis',
-    currentStatus: 'missing',
-    requiredActions: [
-      'Desenvolver política de classificação de dados',
-      'Implementar tags de classificação automática',
-      'Treinar equipe sobre categorização'
-    ],
-    assignedTo: 'Security Team',
-    dueDate: '2024-01-30',
-    effort: 'high'
-  },
-  {
-    id: 'gap-3',
-    control: 'LGPD.Art.46',
-    title: 'Relatório de Impacto à Proteção de Dados',
-    frameworks: ['LGPD', 'GDPR'],
-    severity: 'high',
-    description: 'Elaboração de RIPD para tratamentos de alto risco',
-    currentStatus: 'missing',
-    requiredActions: [
-      'Identificar tratamentos de alto risco',
-      'Desenvolver template de RIPD',
-      'Conduzir avaliações de impacto'
-    ],
-    assignedTo: 'Legal Team',
-    dueDate: '2024-02-15',
-    effort: 'high'
-  }
-];
+import { useFrameworks } from '@/hooks/useFrameworks';
+import { useMemo } from 'react';
 
 const getSeverityColor = (severity: string) => {
   switch (severity) {
@@ -73,85 +21,73 @@ const getSeverityColor = (severity: string) => {
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'missing':
+    case 'failed':
       return 'text-danger bg-danger/10';
-    case 'partial':
+    case 'pending':
       return 'text-warning bg-warning/10';
-    case 'implemented':
-      return 'text-success bg-success/10';
     default:
       return 'text-muted-foreground bg-muted/10';
   }
 };
 
-const getEffortIcon = (effort: string) => {
-  switch (effort) {
-    case 'high':
-      return <TrendingUp className="w-4 h-4 text-danger" />;
-    case 'medium':
-      return <Clock className="w-4 h-4 text-warning" />;
-    case 'low':
-      return <Clock className="w-4 h-4 text-success" />;
-    default:
-      return <Clock className="w-4 h-4 text-muted-foreground" />;
-  }
-};
-
 const GapAssessment = () => {
   const { toast } = useToast();
+  const { controls, frameworks, loading } = useFrameworks();
+
+  const gapData = useMemo(() => {
+    const gaps = controls.filter(c => c.status === 'failed' || c.status === 'pending');
+    return gaps.map(c => {
+      const framework = frameworks.find(f => f.id === c.framework_id);
+      const severity = c.status === 'failed' ? 'high' : 'medium';
+      return {
+        id: c.id,
+        control: c.code,
+        title: c.title,
+        frameworks: framework ? [framework.name] : [],
+        severity,
+        description: c.description || 'Sem descrição',
+        currentStatus: c.status,
+        owner: c.owner || 'Não atribuído',
+        category: c.category,
+      };
+    });
+  }, [controls, frameworks]);
+
+  const summary = useMemo(() => {
+    const critical = gapData.filter(g => g.severity === 'high').length;
+    const medium = gapData.filter(g => g.severity === 'medium').length;
+    const owners = new Set(gapData.map(g => g.owner).filter(o => o !== 'Não atribuído'));
+    return { critical, medium, total: gapData.length, teams: owners.size };
+  }, [gapData]);
 
   const handleExportReport = () => {
-    toast({
-      title: "Gerando Relatório",
-      description: "Preparando relatório de análise de gaps...",
-    });
+    if (gapData.length === 0) return;
+    toast({ title: "Gerando Relatório", description: "Preparando relatório de análise de gaps..." });
 
     setTimeout(() => {
-      const reportContent = `RELATÓRIO DE ANÁLISE DE GAPS CRÍTICOS
+      const reportContent = `RELATÓRIO DE ANÁLISE DE GAPS
 ========================================
 Data: ${new Date().toLocaleDateString('pt-BR')}
-Hora: ${new Date().toLocaleTimeString('pt-BR')}
 
-RESUMO EXECUTIVO
-----------------
-Total de Gaps Identificados: ${gapData.length}
-Gaps Críticos: 2
-Gaps Médios: 1
-Dias Médios para Resolução: 45
-Equipes Envolvidas: 3
+RESUMO
+------
+Total de Gaps: ${summary.total}
+Gaps Críticos (failed): ${summary.critical}
+Gaps Médios (pending): ${summary.medium}
+Equipes Envolvidas: ${summary.teams}
 
-DETALHAMENTO DOS GAPS
---------------------
-
-${gapData.map((gap, index) => `
-${index + 1}. ${gap.title} (${gap.control})
-   Severidade: ${gap.severity === 'high' ? 'Alta' : gap.severity === 'medium' ? 'Média' : 'Baixa'}
-   Status: ${gap.currentStatus === 'missing' ? 'Não Implementado' : gap.currentStatus === 'partial' ? 'Parcial' : 'Implementado'}
-   Esforço: ${gap.effort === 'high' ? 'Alto' : gap.effort === 'medium' ? 'Médio' : 'Baixo'}
-   
-   Descrição:
-   ${gap.description}
-   
-   Frameworks Relacionados:
-   ${gap.frameworks.join(', ')}
-   
-   Ações Necessárias:
-   ${gap.requiredActions.map((action, i) => `   ${i + 1}) ${action}`).join('\n   ')}
-   
-   Responsável: ${gap.assignedTo}
-   Prazo: ${new Date(gap.dueDate).toLocaleDateString('pt-BR')}
-   
+DETALHAMENTO
+------------
+${gapData.map((gap, i) => `
+${i + 1}. ${gap.title} (${gap.control})
+   Severidade: ${gap.severity === 'high' ? 'Alta' : 'Média'}
+   Status: ${gap.currentStatus === 'failed' ? 'Falhou' : 'Pendente'}
+   Frameworks: ${gap.frameworks.join(', ') || 'N/A'}
+   Responsável: ${gap.owner}
 `).join('\n')}
-
-OBSERVAÇÕES FINAIS
------------------
-Este relatório apresenta uma análise detalhada dos gaps críticos identificados
-na implementação dos frameworks de compliance. As ações necessárias devem ser
-priorizadas de acordo com a severidade e o prazo estabelecido.
 
 Gerado em: ${new Date().toLocaleString('pt-BR')}
 `;
-
       const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -161,13 +97,33 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-
-      toast({
-        title: "Relatório Exportado",
-        description: "O relatório foi baixado com sucesso.",
-      });
-    }, 1000);
+      toast({ title: "Relatório Exportado", description: "O relatório foi baixado com sucesso." });
+    }, 500);
   };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Análise de Gaps Críticos</h2>
+        <p className="text-muted-foreground">Carregando...</p>
+      </div>
+    );
+  }
+
+  if (gapData.length === 0) {
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-foreground">Análise de Gaps Críticos</h2>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+            <CheckCircle2 className="h-12 w-12 mb-4 text-success opacity-70" />
+            <p className="font-medium text-foreground">Nenhum gap identificado</p>
+            <p className="text-sm mt-1">Todos os controles estão em conformidade ou ainda não foram cadastrados.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -192,7 +148,7 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                       {gap.control}
                     </Badge>
                     <Badge className={`text-xs ${getSeverityColor(gap.severity)}`}>
-                      {gap.severity === 'high' ? 'Alto' : gap.severity === 'medium' ? 'Médio' : 'Baixo'}
+                      {gap.severity === 'high' ? 'Alto' : 'Médio'}
                     </Badge>
                   </div>
                   <CardTitle className="text-lg font-semibold text-foreground">
@@ -202,55 +158,36 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
                     {gap.description}
                   </p>
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                  <Badge className={`text-xs ${getStatusColor(gap.currentStatus)}`}>
-                    {gap.currentStatus === 'missing' ? 'Não Implementado' : 
-                     gap.currentStatus === 'partial' ? 'Parcial' : 'Implementado'}
-                  </Badge>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    {getEffortIcon(gap.effort)}
-                    <span>{gap.effort === 'high' ? 'Alto Esforço' : 
-                           gap.effort === 'medium' ? 'Médio Esforço' : 'Baixo Esforço'}</span>
-                  </div>
-                </div>
+                <Badge className={`text-xs ${getStatusColor(gap.currentStatus)}`}>
+                  {gap.currentStatus === 'failed' ? 'Falhou' : 'Pendente'}
+                </Badge>
               </div>
             </CardHeader>
 
             <CardContent className="space-y-4">
-              {/* Frameworks */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">Frameworks:</span>
-                <div className="flex gap-1">
-                  {gap.frameworks.map((framework) => (
-                    <Badge key={framework} variant="secondary" className="text-xs">
-                      {framework}
-                    </Badge>
-                  ))}
+              <div className="flex flex-wrap items-center gap-4">
+                {gap.frameworks.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground">Frameworks:</span>
+                    <div className="flex gap-1">
+                      {gap.frameworks.map((framework) => (
+                        <Badge key={framework} variant="secondary" className="text-xs">
+                          {framework}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-foreground">Categoria:</span>
+                  <Badge variant="outline" className="text-xs">{gap.category}</Badge>
                 </div>
               </div>
 
-              {/* Required Actions */}
-              <div className="space-y-2">
-                <span className="text-sm font-medium text-foreground">Ações Necessárias:</span>
-                <ul className="space-y-1 ml-4">
-                  {gap.requiredActions.map((action, index) => (
-                    <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      {action}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Assignment and Timeline */}
               <div className="flex items-center justify-between pt-2 border-t border-card-border">
                 <div className="flex items-center gap-2 text-sm">
                   <Users className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-foreground font-medium">{gap.assignedTo}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  <span>Prazo: {new Date(gap.dueDate).toLocaleDateString('pt-BR')}</span>
+                  <span className="text-foreground font-medium">{gap.owner}</span>
                 </div>
               </div>
             </CardContent>
@@ -267,21 +204,17 @@ Gerado em: ${new Date().toLocaleString('pt-BR')}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-danger">2</div>
-              <div className="text-sm text-muted-foreground">Gaps Críticos</div>
+              <div className="text-2xl font-bold text-danger">{summary.critical}</div>
+              <div className="text-sm text-muted-foreground">Gaps Críticos (failed)</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-warning">1</div>
-              <div className="text-sm text-muted-foreground">Gaps Médios</div>
+              <div className="text-2xl font-bold text-warning">{summary.medium}</div>
+              <div className="text-sm text-muted-foreground">Gaps Médios (pending)</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-info">45</div>
-              <div className="text-sm text-muted-foreground">Dias Médios p/ Resolução</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-primary">3</div>
+              <div className="text-2xl font-bold text-primary">{summary.teams}</div>
               <div className="text-sm text-muted-foreground">Equipes Envolvidas</div>
             </div>
           </div>
