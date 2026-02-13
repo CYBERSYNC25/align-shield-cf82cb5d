@@ -113,7 +113,7 @@ const ControlsMatrix = () => {
         owner: c.owner ?? '',
         lastUpdated: c.last_verified || c.next_review || '—',
         automationStatus: 'manual',
-        riskLevel: 'medium'
+        riskLevel: status === 'missing' ? 'high' : status === 'partial' ? 'medium' : 'low'
       };
     });
   }, [controls, frameworkById]);
