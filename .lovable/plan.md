@@ -1,124 +1,170 @@
 
-# Plano: Corrigir Erros de Build + Criar Funcionalidade de Limpeza de Dados
+# Plano: Remover Dados Mockados e Preparar para Uso Real
 
-## Parte 1: Corrigir Erros de Build (Pre-existentes)
+## Resumo da Analise
 
-Existem varios erros de build que precisam ser corrigidos antes de implementar a funcionalidade de limpeza.
+Foram encontrados **17 arquivos** com dados mockados ou gerados aleatoriamente (Math.random). Abaixo esta o inventario completo e o plano de correcao para cada um.
 
-### 1.1 Corrigir `security-middleware.ts` (Deno parse error)
+---
 
-O tipo union na interface nao e suportado como `interface`. Trocar para `type`:
+## Inventario de Mocks Encontrados
 
-```typescript
-// De:
-export interface SecurityValidationResult {
-  valid: true; ip: string;
-} | { valid: false; response: Response; reason: string; }
+### Categoria 1: Dados Hardcoded em Componentes (prioridade alta)
 
-// Para:
-export type SecurityValidationResult = {
-  valid: true; ip: string;
-} | { valid: false; response: Response; reason: string; }
+| Arquivo | Mock | Impacto |
+|---------|------|---------|
+| `NotificationRulesManager.tsx` | 5 regras mockadas hardcoded | Tela inteira de regras e ficticia |
+| `SendRemindersModal.tsx` | Campanhas e usuarios mockados | Modal de lembretes nao funcional |
+| `ViewAssessmentModal.tsx` | Assessment inteiro mockado | Visualizacao de avaliacao ficticia |
+| `UseTemplateModal.tsx` | Templates de questionario mockados | Dados de template ficticios |
+| `ViewPlaybookModal.tsx` | Steps de playbook mockados | Passos do playbook ficticios |
+| `TestDetailsModal.tsx` | Detalhes de teste BCP mockados | Resultados de teste ficticios |
+| `BCPReportModal.tsx` | Estatisticas mockadas (totalPlans=12, etc.) | Numeros falsos no relatorio |
+| `CustomReports.tsx` | Preview de relatorio mockado | Dados de preview ficticios |
+
+### Categoria 2: Graficos com Math.random (prioridade media)
+
+| Arquivo | Mock | Impacto |
+|---------|------|---------|
+| `RiskEvolution.tsx` | Evolucao de riscos com Math.random | Grafico com dados aleatorios |
+| `ComplianceChart.tsx` | Timeline de compliance com Math.random | Historico de score inventado |
+| `ComplianceScoreCard.tsx` | Score anterior com Math.random | Tendencia de score falsa |
+| `ComplianceScoreEvolution.tsx` | Fallback com Math.random quando sem dados | Dados sample aleatorios |
+| `MTTREvolutionChart.tsx` | Fallback com Math.random quando sem dados | MTTR sample aleatorio |
+| `PerformanceKPIs.tsx` | KPIs inteiros com Math.random | Todos os KPIs sao ficticios |
+| `RealTimeMetrics.tsx` | Atividades e tarefas com Math.random | Metricas em tempo real falsas |
+
+### Categoria 3: Logica de negocio com valores aleatorios (prioridade media)
+
+| Arquivo | Mock | Impacto |
+|---------|------|---------|
+| `CreateVendorModal.tsx` | complianceScore e pendingActions aleatorios | Vendor criado com score falso |
+| `FirstScanStep.tsx` | Resultado do primeiro scan simulado | Onboarding com resultados inventados |
+
+### Categoria 4: Usos legitimos de Math.random (NAO alterar)
+
+| Arquivo | Uso | Motivo para manter |
+|---------|-----|-------------------|
+| `password-security.ts` | Geracao de senhas | Funcionalidade real |
+| `custom-test-schemas.ts` | Geracao de IDs unicos | Funcionalidade real |
+| `EvidenceUploader.tsx` | ID unico para upload + barra de progresso | Funcionalidade real |
+| `sidebar.tsx` | Largura do skeleton loader | UI placeholder |
+| `AuditorAccess.tsx` | Contagem no log de download | Detalhe menor |
+
+---
+
+## Implementacao
+
+### 1. NotificationRulesManager.tsx
+**Antes:** 5 regras mockadas hardcoded no estado inicial
+**Depois:** Estado inicial vazio `[]` + mensagem "Nenhuma regra de notificacao configurada. Crie sua primeira regra."
+
+### 2. SendRemindersModal.tsx
+**Antes:** Campanhas e usuarios hardcoded
+**Depois:** Buscar politicas reais do banco (tabela `policies`) como campanhas, e usuarios da org como destinatarios. Se vazio, mostrar "Nenhuma politica pendente de atesto"
+
+### 3. ViewAssessmentModal.tsx
+**Antes:** Assessment inteiro hardcoded com perguntas/respostas
+**Depois:** Receber dados reais via props (do vendor/assessment selecionado no banco). Se nao houver assessment real, mostrar "Nenhuma avaliacao realizada para este fornecedor"
+
+### 4. UseTemplateModal.tsx
+**Antes:** Templates SOC 2, LGPD, Financial hardcoded
+**Depois:** Manter os templates como dados estaticos de referencia (sao modelos padrao da industria, nao dados do usuario). Adicionar badge "Modelo padrao" para clareza
+
+### 5. ViewPlaybookModal.tsx
+**Antes:** 5 steps genericos mockados
+**Depois:** Buscar steps reais do playbook (se houver campo `steps` no banco) ou exibir os steps do proprio playbook passado via props. Se vazio, "Este playbook ainda nao possui passos definidos"
+
+### 6. TestDetailsModal.tsx
+**Antes:** Detalhes de teste completamente mockados
+**Depois:** Receber dados reais via props do teste selecionado. Se nao houver detalhes, mostrar "Detalhes do teste nao disponiveis"
+
+### 7. BCPReportModal.tsx
+**Antes:** stats hardcoded (totalPlans=12, activePlans=8, etc.)
+**Depois:** Calcular stats reais a partir dos dados de `bcp_plans` passados ou buscados. Se vazio, mostrar zeros
+
+### 8. CustomReports.tsx
+**Antes:** mockReport com dados ficticios no handleViewReport
+**Depois:** Usar dados reais do relatorio selecionado. Preencher campos como pages/size com "N/A" se nao disponiveis
+
+### 9. RiskEvolution.tsx
+**Antes:** Historico inventado com Math.random
+**Depois:** Se nao houver dados historicos, mostrar apenas o ponto atual (contagem real de riscos por nivel) + mensagem "Dados historicos serao gerados conforme riscos forem registrados"
+
+### 10. ComplianceChart.tsx
+**Antes:** Timeline com Math.random baseada no score atual
+**Depois:** Buscar dados de `compliance_check_history` para montar timeline real. Se vazio, mostrar apenas o score atual como ponto unico
+
+### 11. ComplianceScoreCard.tsx
+**Antes:** previousScore com Math.random
+**Depois:** Buscar score anterior de `compliance_check_history` (ultimo registro antes do atual). Se nao houver, nao exibir tendencia
+
+### 12. ComplianceScoreEvolution.tsx e MTTREvolutionChart.tsx
+**Antes:** Fallback para dados aleatorios quando sem dados reais
+**Depois:** Quando sem dados, exibir estado vazio: "Dados insuficientes para gerar o grafico. Execute verificacoes de compliance para gerar historico"
+
+### 13. PerformanceKPIs.tsx
+**Antes:** Todos os KPIs gerados com Math.random
+**Depois:** Mostrar apenas dados derivados dos dados reais (compliance atual, taxa de tarefas atual). Sem historico ficticio - mostrar apenas o mes atual se nao houver historico
+
+### 14. RealTimeMetrics.tsx
+**Antes:** Fallback com atividades aleatorias
+**Depois:** Se nao houver dados reais (hasRealData=false), mostrar estado vazio: "Conecte integracoes para monitorar atividades em tempo real"
+
+### 15. CreateVendorModal.tsx
+**Antes:** complianceScore e pendingActions aleatorios
+**Depois:** complianceScore = 0 (a ser avaliado), pendingActions = 0
+
+### 16. FirstScanStep.tsx
+**Antes:** Resultados simulados do scan
+**Depois:** Chamar a edge function `check-compliance-drift` real para obter score verdadeiro. Se falhar, mostrar erro e opcao de retry
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Acao |
+|---------|------|
+| `src/components/notifications/NotificationRulesManager.tsx` | Remover mockRules, estado vazio |
+| `src/components/policies/SendRemindersModal.tsx` | Buscar dados reais ou estado vazio |
+| `src/components/risk/ViewAssessmentModal.tsx` | Usar props reais ou estado vazio |
+| `src/components/incidents/ViewPlaybookModal.tsx` | Usar dados do playbook real |
+| `src/components/incidents/TestDetailsModal.tsx` | Usar dados do teste real |
+| `src/components/incidents/BCPReportModal.tsx` | Calcular stats reais |
+| `src/components/reports/CustomReports.tsx` | Usar dados reais do relatorio |
+| `src/components/analytics/RiskEvolution.tsx` | Dados reais ou estado vazio |
+| `src/components/dashboard/ComplianceChart.tsx` | Dados de compliance_check_history |
+| `src/components/dashboard/ComplianceScoreCard.tsx` | Score anterior real |
+| `src/components/analytics/ComplianceScoreEvolution.tsx` | Estado vazio se sem dados |
+| `src/components/analytics/MTTREvolutionChart.tsx` | Estado vazio se sem dados |
+| `src/components/analytics/PerformanceKPIs.tsx` | Dados derivados reais |
+| `src/components/dashboard/RealTimeMetrics.tsx` | Estado vazio se sem integracao |
+| `src/components/risk/CreateVendorModal.tsx` | Score e actions = 0 |
+| `src/components/onboarding/steps/FirstScanStep.tsx` | Chamar scan real |
+
+---
+
+## Padrao de Estado Vazio
+
+Todos os componentes sem dados seguirao o mesmo padrao visual:
+
+```
++-------------------------------------------+
+|  [icone]                                  |
+|  Nenhum dado disponivel                   |
+|  Descricao contextual do que fazer        |
+|  [Botao de acao, se aplicavel]            |
++-------------------------------------------+
 ```
 
-### 1.2 Corrigir `useAccess.tsx` (tabela `access_campaigns` nao existe nos types)
-
-As chamadas `.from('access_campaigns')` nao compilam porque a tabela nao esta nos types gerados. Solucao: usar cast `as any` ou criar a tabela via migration.
-
-### 1.3 Corrigir `useAdvancedAnalytics.tsx` (tipo IntegrationHealthPoint)
-
-Linha 312 - corrigir casts de tipo no sort e retorno.
-
-### 1.4 Corrigir `useIncidents.tsx` (IncidentPlaybook e BCPPlan types)
-
-Linhas 159, 170, 174 - os tipos do banco nao batem com as interfaces frontend. Solucao: mapear campos snake_case para camelCase.
-
-### 1.5 Corrigir `useReports.tsx` (tabelas `reports` e `scheduled_reports`)
-
-Similar ao useAccess - tabelas nao existem nos types. Usar cast.
-
-### 1.6 Corrigir `useRisks.tsx` (Risk, Vendor, RiskAssessment types)
-
-Linhas 118, 130, 142 - campos snake_case do banco vs camelCase das interfaces. Adicionar mapeamento.
-
----
-
-## Parte 2: Criar Funcionalidade "Limpar Dados"
-
-### Dados atuais no banco:
-| Tabela | Registros |
-|--------|-----------|
-| frameworks | 3 |
-| controls | 62 |
-| policies | 16 |
-| notifications | 14 |
-| tasks | 7 |
-| bcp_plans | 4 |
-| incident_playbooks | 4 |
-| evidence | 1 |
-
-### 2.1 Criar Edge Function `purge-user-data`
-
-Nova Edge Function que limpa dados do usuario autenticado, com opcoes seletivas:
-
-- **Modo "tudo"**: Limpa todas as tabelas de dados do usuario
-- **Modo seletivo**: Permite escolher categorias (riscos, incidentes, tarefas, frameworks, etc.)
-
-Tabelas a limpar (respeitando ordem de dependencias/FKs):
-1. `compliance_alerts`
-2. `integration_collected_data`, `integration_evidence_mapping`
-3. `risk_assessments`, `risk_acceptances`
-4. `risks`, `vendors`
-5. `incidents`, `incident_playbooks`, `bcp_plans`
-6. `tasks`, `evidence`
-7. `control_assignments`, `control_tests`, `custom_compliance_tests`, `custom_test_results`
-8. `controls` (se solicitado)
-9. `frameworks` (se solicitado)
-10. `policies`
-11. `reports`, `scheduled_reports`
-12. `notifications`
-13. `audits`, `audit_logs`
-14. `system_audit_logs`, `system_logs`
-15. `compliance_check_history`
-
-A funcao usara service role para garantir que todas as delecoes funcionem, mas validara que o usuario so apaga seus proprios dados (filtrando por `user_id` e `org_id`).
-
-### 2.2 Criar componente `PurgeDatabaseCard`
-
-Novo card em Configuracoes (ao lado do SeedDatabaseCard) com:
-- Checkboxes para selecionar categorias de dados
-- Contagem de registros por categoria (preview)
-- Confirmacao com digitacao ("LIMPAR" para confirmar)
-- Botao destrutivo com loading state
-- Feedback de resultado (quantos registros removidos)
-
-### 2.3 Adicionar na pagina Settings
-
-Inserir o novo card na tab de "Dados" junto com o SeedDatabaseCard existente.
-
----
-
-## Arquivos a Criar/Modificar
-
-| Arquivo | Acao | Descricao |
-|---------|------|-----------|
-| `supabase/functions/_shared/security-middleware.ts` | Modificar | Fix tipo union (interface -> type) |
-| `src/hooks/useAccess.tsx` | Modificar | Fix tipo tabela com cast |
-| `src/hooks/useAdvancedAnalytics.tsx` | Modificar | Fix casts de tipo |
-| `src/hooks/useIncidents.tsx` | Modificar | Fix mapeamento snake_case |
-| `src/hooks/useReports.tsx` | Modificar | Fix tipo tabela com cast |
-| `src/hooks/useRisks.tsx` | Modificar | Fix mapeamento snake_case |
-| `supabase/functions/purge-user-data/index.ts` | Criar | Edge Function de limpeza |
-| `src/components/settings/PurgeDatabaseCard.tsx` | Criar | UI de limpeza seletiva |
-| `src/pages/Settings.tsx` | Modificar | Adicionar PurgeDatabaseCard |
+Exemplo para graficos: area cinza com texto centralizado e icone, sem eixos vazios.
 
 ---
 
 ## Resultado Esperado
 
-1. Build sem erros
-2. Novo card "Limpar Dados" em Configuracoes
-3. Usuario pode selecionar quais categorias limpar
-4. Confirmacao segura antes de deletar
-5. Feedback claro do que foi removido
-6. Frameworks e controles podem ser preservados ou removidos (escolha do usuario)
+1. Nenhum dado ficticio exibido em nenhuma tela
+2. Telas vazias com mensagens amigaveis e orientacao
+3. Graficos mostram apenas dados reais (ou estado vazio)
+4. Novos registros criados sem valores aleatorios
+5. Plataforma pronta para uso real com dados manuais ou de integracoes
