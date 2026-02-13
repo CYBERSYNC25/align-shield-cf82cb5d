@@ -37,6 +37,43 @@ export interface ObjectPermission {
   permissionLevel: PermissionLevel;
 }
 
+// Role hierarchy levels for permission enforcement
+export const ROLE_HIERARCHY: Record<AppRole, number> = {
+  master_admin: 5,
+  admin: 4,
+  editor: 3,
+  compliance_officer: 3,
+  master_ti: 3,
+  master_governance: 3,
+  view_only_admin: 2,
+  auditor: 2,
+  viewer: 1,
+};
+
+export const ALL_ROLE_LABELS: Record<AppRole, string> = {
+  master_admin: 'Master Admin',
+  admin: 'Administrador',
+  editor: 'Editor',
+  compliance_officer: 'Compliance Officer',
+  master_ti: 'Master TI',
+  master_governance: 'Master Governança',
+  view_only_admin: 'Admin Somente Leitura',
+  auditor: 'Auditor',
+  viewer: 'Visualizador',
+};
+
+export const ALL_ROLE_DESCRIPTIONS: Record<AppRole, string> = {
+  master_admin: 'Acesso total à plataforma, incluindo gestão de usuários e configurações avançadas',
+  admin: 'Pode gerenciar usuários e editar todos os recursos',
+  editor: 'Pode editar recursos, mas não gerenciar usuários',
+  compliance_officer: 'Gerencia controles, políticas e frameworks de compliance',
+  master_ti: 'Acesso especial para área de TI',
+  master_governance: 'Acesso especial para área de Governança',
+  view_only_admin: 'Visualiza tudo, mas não pode editar nada',
+  auditor: 'Acesso de leitura para auditoria e relatórios',
+  viewer: 'Acesso básico restrito de visualização',
+};
+
 // Role hierarchy and capabilities
 const ROLE_CAPABILITIES = {
   master_admin: { manageUsers: true, editResources: true, viewAll: true, managePlatform: true },
@@ -287,6 +324,30 @@ export const useUserRoles = () => {
     return permission?.permissionLevel ?? null;
   }, [isAdmin, isMasterAdmin, objectPermissions]);
 
+  // ==========================================
+  // HIERARCHY-BASED ASSIGNABLE ROLES
+  // ==========================================
+
+  const getUserHighestLevel = useCallback((): number => {
+    if (roles.length === 0) return 0;
+    return Math.max(...roles.map(r => ROLE_HIERARCHY[r] ?? 0));
+  }, [roles]);
+
+  const getAssignableRoles = useCallback((): AppRole[] => {
+    const highestLevel = getUserHighestLevel();
+    if (highestLevel <= 1) return []; // viewers can't assign anyone
+    
+    return (Object.entries(ROLE_HIERARCHY) as [AppRole, number][])
+      .filter(([_, level]) => level < highestLevel)
+      .sort((a, b) => b[1] - a[1])
+      .map(([role]) => role);
+  }, [getUserHighestLevel]);
+
+  const canManageRole = useCallback((targetRole: AppRole): boolean => {
+    const highestLevel = getUserHighestLevel();
+    return highestLevel > (ROLE_HIERARCHY[targetRole] ?? 0);
+  }, [getUserHighestLevel]);
+
   return {
     // State
     roles,
@@ -322,6 +383,11 @@ export const useUserRoles = () => {
     hasViewPermission,
     canManageObjectPermissions,
     getObjectPermissionLevel,
+    
+    // Hierarchy-based
+    getAssignableRoles,
+    canManageRole,
+    getUserHighestLevel,
     
     // Refresh functions
     refresh: loadUserRoles,
