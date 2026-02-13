@@ -29,7 +29,7 @@ const SendRemindersModal = ({ onSuccess }: SendRemindersModalProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('policies')
-        .select('id, title, status')
+        .select('id, name, status')
         .eq('user_id', user!.id)
         .in('status', ['draft', 'review', 'active']);
       if (error) throw error;
@@ -108,7 +108,7 @@ const SendRemindersModal = ({ onSuccess }: SendRemindersModalProps) => {
                   {policies.map((policy) => (
                     <SelectItem key={policy.id} value={policy.id}>
                       <div className="flex items-center gap-2">
-                        <span>{policy.title}</span>
+                        <span>{policy.name}</span>
                         <Badge variant="secondary" className="text-xs">
                           {policy.status}
                         </Badge>

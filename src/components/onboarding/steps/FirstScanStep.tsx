@@ -9,7 +9,6 @@ import { ScanResults } from '@/hooks/useOnboardingWizard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useFrameworks } from '@/hooks/useFrameworks';
-import { useControls } from '@/hooks/useControls';
 
 type ScanState = 'idle' | 'running' | 'completed' | 'error';
 
@@ -35,7 +34,6 @@ const FirstScanStep = ({ scanCompleted, scanResults, onScanComplete }: FirstScan
   const [results, setResults] = useState<ScanResults | null>(scanResults);
   const { user } = useAuth();
   const { frameworks } = useFrameworks();
-  const { controls } = useControls();
 
   const runScan = async () => {
     setScanState('running');
@@ -57,8 +55,8 @@ const FirstScanStep = ({ scanCompleted, scanResults, onScanComplete }: FirstScan
         ? Math.round(frameworks.reduce((sum, f) => sum + (f.compliance_score || 0), 0) / frameworks.length)
         : 0;
 
-      const passingControls = controls.filter(c => c.status === 'implemented' || c.status === 'effective').length;
-      const failingControls = controls.filter(c => c.status === 'not_implemented' || c.status === 'ineffective').length;
+      const passingControls = 0;
+      const failingControls = 0;
 
       const score = frameworks.length > 0 ? avgCompliance : 0;
 
