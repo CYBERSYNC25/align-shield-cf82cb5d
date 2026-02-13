@@ -40,17 +40,15 @@ import {
   Scale,
   FileJson,
   AlertTriangle,
-  Rocket,
-  Play,
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useOnboardingWizard } from '@/hooks/useOnboardingWizard';
+
 
 const Settings = () => {
   const { user } = useAuth();
   const { lastCompletedExport, deletionStatus } = useDataExport();
-  const { state: onboardingState, resetOnboarding, isUpdating: onboardingUpdating } = useOnboardingWizard();
+  
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showSetup2FAModal, setShowSetup2FAModal] = useState(false);
   const [showManageSessionsModal, setShowManageSessionsModal] = useState(false);
@@ -134,48 +132,6 @@ const Settings = () => {
                       </CardContent>
                     </Card>
 
-                    {/* Onboarding Section */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-foreground">
-                          <Rocket className="w-5 h-5 text-primary" />
-                          Tutorial e Onboarding
-                        </CardTitle>
-                        <CardDescription>
-                          Reveja o tutorial inicial ou refaça o onboarding
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between flex-wrap gap-4">
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium text-foreground">
-                              {onboardingState.hasCompleted 
-                                ? 'Onboarding Concluído' 
-                                : onboardingState.wasSkipped 
-                                  ? 'Onboarding Pulado' 
-                                  : 'Onboarding Pendente'}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {onboardingState.hasCompleted 
-                                ? 'Você completou o wizard de configuração inicial.' 
-                                : onboardingState.wasSkipped 
-                                  ? 'Você pulou o wizard. Pode refazê-lo a qualquer momento.' 
-                                  : 'Complete o wizard para configurar a plataforma.'}
-                            </p>
-                          </div>
-                          <Button 
-                            variant="outline" 
-                            onClick={resetOnboarding}
-                            disabled={onboardingUpdating}
-                          >
-                            <Play className="w-4 h-4 mr-2" />
-                            {onboardingState.hasCompleted || onboardingState.wasSkipped 
-                              ? 'Refazer Onboarding' 
-                              : 'Iniciar Onboarding'}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
                   </TabsContent>
 
                   {/* Security Tab */}
