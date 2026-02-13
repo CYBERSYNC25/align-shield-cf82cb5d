@@ -38,8 +38,8 @@ const CreateVendorModal = ({ onSuccess }: CreateVendorModalProps) => {
     try {
       const vendorData = {
         ...formData,
-        complianceScore: Math.floor(Math.random() * 40) + 60, // Score inicial entre 60-100
-        pendingActions: Math.floor(Math.random() * 5)
+        complianceScore: 0,
+        pendingActions: 0
       };
 
       const { error } = await createVendor(vendorData);

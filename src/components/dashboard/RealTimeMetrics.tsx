@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
-import { Activity, TrendingUp, Database } from 'lucide-react';
+import { Activity, TrendingUp, Database, Plug } from 'lucide-react';
 import { useRisks } from '@/hooks/useRisks';
 import { useTasks } from '@/hooks/useTasks';
 import { useIntegrationActivity, useIntegratedSystems } from '@/hooks/useIntegratedSystems';
@@ -13,57 +13,31 @@ const RealTimeMetrics = () => {
   const { activityByHour } = useIntegrationActivity();
   const { systems, totalUsers, totalResources, hasRealData } = useIntegratedSystems();
 
-  // Generate activity data - use real data if available, otherwise generate mock
   const activityData = useMemo(() => {
     if (hasRealData && activityByHour.length > 0) {
-      // Add risks to the real activity data
       return activityByHour.map(item => ({
         ...item,
-        risks: Math.floor(Math.random() * 3), // Could be enhanced to use real risk detection
+        risks: 0,
       }));
     }
-
-    // Fallback to generated data
-    const hours = [];
-    for (let i = 23; i >= 0; i--) {
-      const hour = new Date();
-      hour.setHours(hour.getHours() - i);
-      
-      hours.push({
-        time: hour.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        activities: Math.floor(Math.random() * 15) + 1,
-        risks: Math.floor(Math.random() * 3),
-        tasks: Math.floor(Math.random() * 8) + 1
-      });
-    }
-    return hours.slice(-12);
+    return [];
   }, [activityByHour, hasRealData]);
 
-  // Calculate task completion rate over time
-  const taskCompletionData = useMemo(() => {
-    const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-    
-    return days.map(day => ({
-      day,
-      completed: Math.floor(Math.random() * 20) + 5,
-      pending: Math.floor(Math.random() * 10) + 2
-    }));
-  }, []);
-
-  const totalActivities = hasRealData ? totalResources : activityData.reduce((sum, item) => sum + item.activities, 0);
   const criticalAlerts = risks.filter(risk => risk.level === 'high').length;
   const overdueTasks = tasks.filter(task => {
     if (!task.due_date) return false;
     return new Date(task.due_date) < new Date() && task.status !== 'completed';
   }).length;
 
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const pendingTasks = tasks.filter(t => t.status !== 'completed').length;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Real-time Activity */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Activity className="h-4 w-4 text-primary animate-pulse" />
+            <Activity className="h-4 w-4 text-primary" />
             Atividade em Tempo Real
           </CardTitle>
           <div className="flex items-center gap-2">
@@ -73,34 +47,36 @@ const RealTimeMetrics = () => {
                 Dados Reais
               </Badge>
             )}
-            <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
-            <Badge variant="secondary" className="text-xs">
-              Ativo
-            </Badge>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-              <div className="text-center">
-                <div className="text-lg font-bold text-primary">{totalActivities}</div>
-                <div className="text-xs text-muted-foreground">
-                  {hasRealData ? 'Recursos Coletados' : 'Atividades (12h)'}
+          {!hasRealData ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="mb-3 rounded-full bg-muted p-3 text-muted-foreground">
+                <Plug className="h-6 w-6" />
+              </div>
+              <p className="text-sm font-medium text-foreground mb-1">Sem integrações conectadas</p>
+              <p className="text-xs text-muted-foreground max-w-xs">
+                Conecte integrações para monitorar atividades em tempo real.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
+                <div className="text-center">
+                  <div className="text-lg font-bold text-primary">{totalResources}</div>
+                  <div className="text-xs text-muted-foreground">Recursos Coletados</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-danger">{criticalAlerts}</div>
+                  <div className="text-xs text-muted-foreground">Alertas críticos</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-lg font-bold text-warning">{overdueTasks}</div>
+                  <div className="text-xs text-muted-foreground">Tarefas em atraso</div>
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-danger">{criticalAlerts}</div>
-                <div className="text-xs text-muted-foreground">Alertas críticos</div>
-              </div>
-              <div className="text-center">
-                <div className="text-lg font-bold text-warning">{overdueTasks}</div>
-                <div className="text-xs text-muted-foreground">Tarefas em atraso</div>
-              </div>
-            </div>
 
-            {/* Integration Stats (only when real data) */}
-            {hasRealData && (
               <div className="grid grid-cols-2 gap-4 p-3 bg-primary/5 rounded-lg border border-primary/10">
                 <div className="text-center">
                   <div className="text-sm font-semibold text-primary">{systems.length}</div>
@@ -111,125 +87,77 @@ const RealTimeMetrics = () => {
                   <div className="text-xs text-muted-foreground">Usuários Monitorados</div>
                 </div>
               </div>
-            )}
 
-            {/* Activity Chart */}
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={activityData}>
-                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis 
-                  dataKey="time" 
-                  axisLine={false}
-                  tickLine={false}
-                  className="text-xs"
-                />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  className="text-xs"
-                />
-                <Tooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      return (
-                        <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-                          <p className="font-medium mb-2">{label}</p>
-                          {payload.map((item, index) => (
-                            <p key={index} style={{ color: item.color }}>
-                              {item.dataKey === 'activities' && (hasRealData ? 'Recursos: ' : 'Atividades: ')}
-                              {item.dataKey === 'risks' && 'Novos riscos: '}
-                              {item.dataKey === 'tasks' && 'Tarefas: '}
-                              {item.value}
-                            </p>
-                          ))}
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="activities" 
-                  stackId="1"
-                  stroke="hsl(var(--primary))" 
-                  fill="hsl(var(--primary))"
-                  fillOpacity={0.6}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="risks" 
-                  stackId="1"
-                  stroke="#ef4444" 
-                  fill="#ef4444"
-                  fillOpacity={0.6}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+              {activityData.length > 0 && (
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={activityData}>
+                    <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                    <XAxis dataKey="time" axisLine={false} tickLine={false} className="text-xs" />
+                    <YAxis axisLine={false} tickLine={false} className="text-xs" />
+                    <Tooltip
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+                              <p className="font-medium mb-2">{label}</p>
+                              {payload.map((item, index) => (
+                                <p key={index} style={{ color: item.color }}>
+                                  {item.dataKey === 'activities' ? 'Recursos: ' : 'Riscos: '}{item.value}
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area type="monotone" dataKey="activities" stackId="1" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.6} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Task Completion Trends */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-base font-medium flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-success" />
-            Tendências de Conclusão
+            Resumo de Tarefas
           </CardTitle>
           <Badge variant="secondary" className="text-xs">
-            Última semana
+            {tasks.length} total
           </Badge>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={taskCompletionData} barCategoryGap="20%">
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis 
-                dataKey="day" 
-                axisLine={false}
-                tickLine={false}
-                className="text-xs"
-              />
-              <YAxis 
-                axisLine={false}
-                tickLine={false}
-                className="text-xs"
-              />
-              <Tooltip 
-                content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
-                    const completed = payload.find(p => p.dataKey === 'completed')?.value || 0;
-                    const pending = payload.find(p => p.dataKey === 'pending')?.value || 0;
-                    const total = (completed as number) + (pending as number);
-                    const rate = total > 0 ? Math.round(((completed as number) / total) * 100) : 0;
-                    
-                    return (
-                      <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-                        <p className="font-medium mb-2">{label}</p>
-                        <p className="text-success">Concluídas: {completed}</p>
-                        <p className="text-warning">Pendentes: {pending}</p>
-                        <p className="text-primary font-medium">Taxa: {rate}%</p>
-                      </div>
-                    );
-                  }
-                  return null;
-                }}
-              />
-              <Bar 
-                dataKey="completed" 
-                fill="hsl(var(--success))" 
-                radius={[0, 0, 4, 4]}
-                name="Concluídas"
-              />
-              <Bar 
-                dataKey="pending" 
-                fill="hsl(var(--warning))" 
-                radius={[4, 4, 0, 0]}
-                name="Pendentes"
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          {tasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center h-[280px]">
+              <TrendingUp className="h-8 w-8 text-muted-foreground mb-3" />
+              <p className="text-sm text-muted-foreground">Nenhuma tarefa cadastrada.</p>
+            </div>
+          ) : (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-success/10 rounded-lg text-center border border-success/20">
+                  <div className="text-3xl font-bold text-success">{completedTasks}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Concluídas</div>
+                </div>
+                <div className="p-4 bg-warning/10 rounded-lg text-center border border-warning/20">
+                  <div className="text-3xl font-bold text-warning">{pendingTasks}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Pendentes</div>
+                </div>
+              </div>
+              {tasks.length > 0 && (
+                <div className="text-center">
+                  <div className="text-sm text-muted-foreground">Taxa de conclusão</div>
+                  <div className="text-2xl font-bold text-primary">
+                    {Math.round((completedTasks / tasks.length) * 100)}%
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
