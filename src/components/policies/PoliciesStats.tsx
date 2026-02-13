@@ -3,57 +3,55 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   FileText, 
-  Users, 
   CheckCircle, 
   Clock,
-  TrendingUp,
-  AlertTriangle
+  Edit3,
 } from 'lucide-react';
+import { usePolicies } from '@/hooks/usePolicies';
 
 const PoliciesStats = () => {
-  const stats = [
+  const { stats, loading } = usePolicies();
+
+  const cards = [
     {
       title: 'Políticas Ativas',
-      value: '28',
-      total: '32',
-      icon: FileText,
-      color: 'text-primary',
-      bgColor: 'bg-primary/10',
-      progress: 87.5,
-      subtitle: '4 em revisão'
-    },
-    {
-      title: 'Taxa de Assinatura',
-      value: '94.2%',
-      change: '+2.1%',
+      value: String(stats.activePolicies),
+      total: String(stats.totalPolicies),
       icon: CheckCircle,
       color: 'text-success',
       bgColor: 'bg-success/10',
-      subtitle: '267/284 colaboradores'
+      progress: stats.totalPolicies > 0 ? (stats.activePolicies / stats.totalPolicies) * 100 : 0,
+      subtitle: `${stats.totalPolicies} total cadastradas`
     },
     {
-      title: 'Treinamentos Ativos',
-      value: '12',
-      change: '+3',
-      icon: Users,
-      color: 'text-info',
-      bgColor: 'bg-info/10',
-      subtitle: '156 participantes'
-    },
-    {
-      title: 'Pendências Críticas',
-      value: '7',
-      status: 'warning',
-      icon: AlertTriangle,
+      title: 'Em Revisão',
+      value: String(stats.reviewPolicies),
+      icon: Clock,
       color: 'text-warning',
       bgColor: 'bg-warning/10',
-      subtitle: 'Requer atenção'
+      subtitle: 'Aguardando aprovação'
+    },
+    {
+      title: 'Rascunhos',
+      value: String(stats.draftPolicies),
+      icon: Edit3,
+      color: 'text-muted-foreground',
+      bgColor: 'bg-muted/10',
+      subtitle: 'Em elaboração'
+    },
+    {
+      title: 'Revisão Próxima',
+      value: String(stats.policiesDueSoon),
+      icon: FileText,
+      color: 'text-info',
+      bgColor: 'bg-info/10',
+      subtitle: 'Nos próximos 30 dias'
     }
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-      {stats.map((stat, index) => (
+      {cards.map((stat, index) => (
         <Card key={index} className="bg-surface-elevated border-card-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -65,31 +63,18 @@ const PoliciesStats = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <div className="text-2xl font-bold text-foreground">
-                  {stat.value}
-                </div>
-                {stat.change && (
-                  <Badge variant="secondary" className="text-xs">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    {stat.change}
-                  </Badge>
-                )}
-                {stat.status === 'warning' && (
-                  <Badge variant="destructive" className="text-xs">
-                    Ação Requerida
-                  </Badge>
-                )}
+              <div className="text-2xl font-bold text-foreground">
+                {stat.value}
               </div>
               
               <p className="text-xs text-muted-foreground">
                 {stat.subtitle}
               </p>
 
-              {stat.progress && (
+              {stat.progress !== undefined && stat.total && (
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Implementadas</span>
+                    <span>Ativas</span>
                     <span>{stat.value}/{stat.total}</span>
                   </div>
                   <Progress value={stat.progress} className="h-2" />
