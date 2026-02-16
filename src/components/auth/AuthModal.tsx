@@ -193,7 +193,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                   <div className="flex justify-center">
                     <Turnstile
                       ref={loginTurnstileRef}
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                       onSuccess={(token) => setLoginCaptchaToken(token)}
                       onError={() => setLoginCaptchaToken('')}
                       onExpire={() => setLoginCaptchaToken('')}
@@ -355,7 +355,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                   <div className="flex justify-center">
                     <Turnstile
                       ref={signupTurnstileRef}
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                       onSuccess={(token) => setSignupCaptchaToken(token)}
                       onError={() => setSignupCaptchaToken('')}
                       onExpire={() => setSignupCaptchaToken('')}
