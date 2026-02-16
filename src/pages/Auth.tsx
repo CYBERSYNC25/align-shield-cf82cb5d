@@ -277,7 +277,7 @@ const Auth = () => {
                 <div className="flex justify-center">
                   <Turnstile
                     ref={turnstileRef}
-                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'}
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
                     onSuccess={(token) => setCaptchaToken(token)}
                     onError={() => setCaptchaToken('')}
                     onExpire={() => setCaptchaToken('')}
