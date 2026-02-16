@@ -1,42 +1,58 @@
 
 
-# Corrigir Acesso do Usuário diazbrd@yahoo.com.br ao Dashboard
+## Integrar Cloudflare Turnstile com Supabase Auth
 
-## Problema Identificado
+O Turnstile ja esta no formulario de Login da pagina `Auth.tsx`, porem o token **nao esta sendo enviado ao Supabase** e o `AuthModal.tsx` (signup) nao tem Turnstile. Vamos corrigir ambos.
 
-O perfil do usuário no banco de dados tem `onboarding_completed = false` e `onboarding_skipped = false`. O componente `ProtectedRoute` verifica essas flags e, quando ambas são falsas, exibe o **OnboardingWizard** em vez do dashboard. O usuário fica travado no onboarding.
+---
 
-## Solução
+### Alteracoes
 
-Atualizar o perfil diretamente no banco de dados para marcar o onboarding como concluído:
+**1. `src/hooks/useAuth.tsx` - Aceitar `captchaToken` nas funcoes `signIn` e `signUp`**
 
-```sql
-UPDATE public.profiles 
-SET onboarding_completed = true, 
-    onboarding_completed_at = now()
-WHERE user_id = '9bcf7941-d5e7-4496-a416-f6a73f69a37d';
+- `signIn(email, password, captchaToken?)` - passar `options.captchaToken` ao `supabase.auth.signInWithPassword`
+- `signUp(email, password, metadata?, captchaToken?)` - passar `options.captchaToken` ao `supabase.auth.signUp`
+- Atualizar a interface `AuthContextType` para refletir os novos parametros
+
+**2. `src/pages/Auth.tsx` - Passar o token do Turnstile ao `signIn`**
+
+- Na chamada `signIn(loginData.email, loginData.password)`, adicionar o `captchaToken` como terceiro argumento
+- O widget Turnstile ja existe neste formulario, so falta conectar o token
+
+**3. `src/components/auth/AuthModal.tsx` - Adicionar Turnstile no Login e Signup**
+
+- Importar `Turnstile` de `@marsidev/react-turnstile`
+- Adicionar estados `captchaToken` e `turnstileRef` para cada aba (login e signup)
+- Inserir widget Turnstile antes do botao de submit em ambas as abas
+- Passar `captchaToken` nas chamadas `signIn()` e `signUp()`
+- Desabilitar botoes quando `captchaToken` estiver vazio
+- Reset do captcha em caso de erro
+
+---
+
+### Detalhes Tecnicos
+
+A integracao com Supabase usa a opcao `captchaToken` nativa:
+
+```typescript
+// signIn
+supabase.auth.signInWithPassword({
+  email,
+  password,
+  options: { captchaToken }
+})
+
+// signUp
+supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    captchaToken,
+    emailRedirectTo: redirectUrl,
+    data: metadata
+  }
+})
 ```
 
-Isso fará com que `onboardingState.hasCompleted` retorne `true`, e o `ProtectedRoute` renderizará o dashboard normalmente.
-
-## Detalhes Técnicos
-
-O fluxo no `ProtectedRoute.tsx` é:
-
-```text
-Usuario autenticado
-  -> Onboarding completo? NAO
-  -> Onboarding pulado? NAO
-  -> Mostra OnboardingWizard (TRAVADO AQUI)
-```
-
-Apos a correcao:
-
-```text
-Usuario autenticado
-  -> Onboarding completo? SIM
-  -> Prossegue para o dashboard
-```
-
-Nenhum arquivo de codigo precisa ser alterado -- apenas o registro no banco de dados.
+O site key sera lido de `import.meta.env.VITE_TURNSTILE_SITE_KEY` com fallback para a chave de teste `1x00000000000000000000AA`.
 
