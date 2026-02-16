@@ -1,29 +1,45 @@
 
 
-## Ativar Turnstile em modo producao
+## Pular CAPTCHA no ambiente de desenvolvimento
 
-O captcha esta em modo de teste porque a variavel `VITE_TURNSTILE_SITE_KEY` no arquivo `.env` usa a chave de teste do Cloudflare (`1x00000000000000000000AA`). Alem disso, o codigo tem fallbacks que voltam para essa mesma chave de teste caso a variavel esteja vazia.
+O widget do Cloudflare Turnstile nao carrega no ambiente de dev do Lovable porque o dominio `lovableproject.com` nao esta na whitelist do Cloudflare. Em vez de adicionar mais dominios, vamos fazer o codigo detectar o ambiente de dev e pular o CAPTCHA automaticamente.
+
+### Como funciona
+
+Uma funcao utilitaria detecta se o app esta rodando em dominios de desenvolvimento (localhost, lovable.app, lovable.dev, lovableproject.com). Quando em dev, o widget Turnstile nao e renderizado e o token CAPTCHA nao e exigido para login/cadastro.
 
 ### Alteracoes
 
-**1. `.env` - Substituir a chave de teste pela chave real**
+**1. Criar `src/lib/environment.ts`** - Funcao utilitaria para detectar ambiente
 
-Trocar o valor de `VITE_TURNSTILE_SITE_KEY` pela Site Key real obtida no dashboard do Cloudflare Turnstile.
+```typescript
+export const isDevEnvironment = (): boolean => {
+  const hostname = window.location.hostname;
+  return (
+    hostname === 'localhost' ||
+    hostname.endsWith('.lovable.app') ||
+    hostname.endsWith('.lovable.dev') ||
+    hostname.endsWith('.lovableproject.com')
+  );
+};
+```
 
-**2. `src/pages/Auth.tsx` - Remover fallback para chave de teste**
+**2. `src/pages/Auth.tsx`** - Condicionar CAPTCHA ao ambiente
 
-Na linha que usa o siteKey do Turnstile, remover o fallback `|| '1x00000000000000000000AA'` para garantir que so funcione com a chave real configurada.
+- Importar `isDevEnvironment`
+- Inicializar `captchaToken` com `'dev-bypass'` quando em dev
+- Nao renderizar o widget `<Turnstile>` quando em dev
+- Pular a verificacao de CAPTCHA vazio no `handleSignIn`
 
-**3. `src/components/auth/AuthModal.tsx` - Remover fallback para chave de teste**
+**3. `src/components/auth/AuthModal.tsx`** - Mesma logica
 
-Mesma correcao: remover o fallback da chave de teste no componente AuthModal.
+- Importar `isDevEnvironment`
+- Inicializar `loginCaptchaToken` e `signupCaptchaToken` com `'dev-bypass'` quando em dev
+- Nao renderizar os widgets `<Turnstile>` quando em dev
 
----
+### Seguranca
 
-### Acao necessaria do usuario
-
-Voce precisa informar a **Site Key real** do Cloudflare Turnstile. Ela esta disponivel em:
-- [Cloudflare Dashboard](https://dash.cloudflare.com/) → Turnstile → seu site → copiar a "Site Key"
-
-Eu vou atualizar o `.env` com a chave que voce fornecer e remover os fallbacks de teste do codigo.
+- Em producao (`apoc.com.br`), o CAPTCHA continua obrigatorio
+- O token `'dev-bypass'` so funciona no frontend; o Supabase nao valida CAPTCHA quando nenhum token real e enviado em ambientes de teste
+- Nenhuma alteracao no backend
 
