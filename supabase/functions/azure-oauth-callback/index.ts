@@ -45,6 +45,14 @@ function bytesToHex(bytes: Uint8Array): string {
     .join('');
 }
 
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes;
+}
+
 async function encryptToken(plainText: string, encryptionKey: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(plainText);
@@ -57,6 +65,25 @@ async function encryptToken(plainText: string, encryptionKey: string): Promise<s
   );
   const encryptedBytes = new Uint8Array(encrypted);
   return `${bytesToHex(iv)}:${bytesToHex(encryptedBytes)}`;
+}
+
+async function decryptSecret(cipherText: string, encryptionKey: string): Promise<string> {
+  // Handle v1:iv:ciphertext format
+  const parts = cipherText.startsWith('v1:') ? cipherText.substring(3).split(':') : cipherText.split(':');
+  if (parts.length !== 2) throw new Error('Invalid encrypted format');
+  const [ivHex, dataHex] = parts;
+  const iv = hexToBytes(ivHex);
+  const data = hexToBytes(dataHex);
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(encryptionKey), 'PBKDF2', false, ['deriveKey']
+  );
+  const key = await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: encoder.encode('apoc-token-encryption-salt-v1'), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['decrypt']
+  );
+  const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, data);
+  return new TextDecoder().decode(decrypted);
 }
 
 serve(async (req) => {
@@ -112,7 +139,17 @@ serve(async (req) => {
       throw new Error('OAuth request not found or expired');
     }
 
-    const { tenant_id, client_id, client_secret, scopes, redirect_uri, user_id } = pendingRequest.payload;
+    const payload = pendingRequest.payload;
+
+    // SECURITY: Decrypt credentials if they were encrypted
+    let client_id = payload.client_id;
+    let client_secret = payload.client_secret;
+    if (payload.credentials_encrypted && tokenEncryptionKey) {
+      console.log('Azure OAuth Callback: Decrypting stored credentials...');
+      client_id = await decryptSecret(payload.client_id, tokenEncryptionKey);
+      client_secret = await decryptSecret(payload.client_secret, tokenEncryptionKey);
+    }
+    const { tenant_id, scopes, redirect_uri, user_id } = payload;
 
     // Exchange code for tokens
     const tokenUrl = `https://login.microsoftonline.com/${tenant_id}/oauth2/v2.0/token`;
