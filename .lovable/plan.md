@@ -1,58 +1,29 @@
 
 
-## Integrar Cloudflare Turnstile com Supabase Auth
+## Ativar Turnstile em modo producao
 
-O Turnstile ja esta no formulario de Login da pagina `Auth.tsx`, porem o token **nao esta sendo enviado ao Supabase** e o `AuthModal.tsx` (signup) nao tem Turnstile. Vamos corrigir ambos.
-
----
+O captcha esta em modo de teste porque a variavel `VITE_TURNSTILE_SITE_KEY` no arquivo `.env` usa a chave de teste do Cloudflare (`1x00000000000000000000AA`). Alem disso, o codigo tem fallbacks que voltam para essa mesma chave de teste caso a variavel esteja vazia.
 
 ### Alteracoes
 
-**1. `src/hooks/useAuth.tsx` - Aceitar `captchaToken` nas funcoes `signIn` e `signUp`**
+**1. `.env` - Substituir a chave de teste pela chave real**
 
-- `signIn(email, password, captchaToken?)` - passar `options.captchaToken` ao `supabase.auth.signInWithPassword`
-- `signUp(email, password, metadata?, captchaToken?)` - passar `options.captchaToken` ao `supabase.auth.signUp`
-- Atualizar a interface `AuthContextType` para refletir os novos parametros
+Trocar o valor de `VITE_TURNSTILE_SITE_KEY` pela Site Key real obtida no dashboard do Cloudflare Turnstile.
 
-**2. `src/pages/Auth.tsx` - Passar o token do Turnstile ao `signIn`**
+**2. `src/pages/Auth.tsx` - Remover fallback para chave de teste**
 
-- Na chamada `signIn(loginData.email, loginData.password)`, adicionar o `captchaToken` como terceiro argumento
-- O widget Turnstile ja existe neste formulario, so falta conectar o token
+Na linha que usa o siteKey do Turnstile, remover o fallback `|| '1x00000000000000000000AA'` para garantir que so funcione com a chave real configurada.
 
-**3. `src/components/auth/AuthModal.tsx` - Adicionar Turnstile no Login e Signup**
+**3. `src/components/auth/AuthModal.tsx` - Remover fallback para chave de teste**
 
-- Importar `Turnstile` de `@marsidev/react-turnstile`
-- Adicionar estados `captchaToken` e `turnstileRef` para cada aba (login e signup)
-- Inserir widget Turnstile antes do botao de submit em ambas as abas
-- Passar `captchaToken` nas chamadas `signIn()` e `signUp()`
-- Desabilitar botoes quando `captchaToken` estiver vazio
-- Reset do captcha em caso de erro
+Mesma correcao: remover o fallback da chave de teste no componente AuthModal.
 
 ---
 
-### Detalhes Tecnicos
+### Acao necessaria do usuario
 
-A integracao com Supabase usa a opcao `captchaToken` nativa:
+Voce precisa informar a **Site Key real** do Cloudflare Turnstile. Ela esta disponivel em:
+- [Cloudflare Dashboard](https://dash.cloudflare.com/) → Turnstile → seu site → copiar a "Site Key"
 
-```typescript
-// signIn
-supabase.auth.signInWithPassword({
-  email,
-  password,
-  options: { captchaToken }
-})
-
-// signUp
-supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    captchaToken,
-    emailRedirectTo: redirectUrl,
-    data: metadata
-  }
-})
-```
-
-O site key sera lido de `import.meta.env.VITE_TURNSTILE_SITE_KEY` com fallback para a chave de teste `1x00000000000000000000AA`.
+Eu vou atualizar o `.env` com a chave que voce fornecer e remover os fallbacks de teste do codigo.
 
