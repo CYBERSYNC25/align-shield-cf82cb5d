@@ -50,8 +50,8 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: AuthError | null }>
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, metadata?: any, captchaToken?: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>
 }
@@ -137,8 +137,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * - Atualiza estados user e session
    * - Exibe toast de sucesso/erro
    */
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password, options: { captchaToken } })
     
     if (error) {
       toast({
@@ -174,13 +174,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * - Trigger handle_new_user() cria perfil automaticamente
    * - Primeiro usuário recebe role 'admin'
    */
-  const signUp = async (email: string, password: string, metadata?: any) => {
+  const signUp = async (email: string, password: string, metadata?: any, captchaToken?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
+        captchaToken,
         emailRedirectTo: redirectUrl,
         data: metadata
       }

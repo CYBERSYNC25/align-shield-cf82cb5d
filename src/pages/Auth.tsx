@@ -119,7 +119,7 @@ const Auth = () => {
     setIsLoading(true);
     
     // Tenta login
-    const { error } = await signIn(loginData.email, loginData.password);
+    const { error } = await signIn(loginData.email, loginData.password, captchaToken);
     
     if (error) {
       // SECURITY: Record failed attempt
