@@ -6,6 +6,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Encryption utilities for securing credentials in database
+async function deriveKey(secret: string): Promise<CryptoKey> {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(secret), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: encoder.encode('apoc-token-encryption-salt-v1'), iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, { name: 'AES-GCM', length: 256 }, false, ['encrypt']
+  );
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function encryptSecret(plainText: string, encryptionKey: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(encryptionKey);
+  const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, encoder.encode(plainText));
+  return `v1:${bytesToHex(iv)}:${bytesToHex(new Uint8Array(encrypted))}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -40,11 +64,23 @@ serve(async (req) => {
     const defaultScopes = ['User.Read.All', 'Directory.Read.All'];
     const requestedScopes = scopes || defaultScopes;
 
-    // Store credentials securely (encrypted in metadata)
     const state = crypto.randomUUID();
     const redirect_uri = `${Deno.env.get('SUPABASE_URL')}/functions/v1/azure-oauth-callback`;
 
+    // SECURITY: Encrypt client_secret before storing in database
+    const tokenEncryptionKey = Deno.env.get('TOKEN_ENCRYPTION_KEY');
+    let encryptedClientSecret = client_secret;
+    let encryptedClientId = client_id;
+    if (tokenEncryptionKey) {
+      encryptedClientSecret = await encryptSecret(client_secret, tokenEncryptionKey);
+      encryptedClientId = await encryptSecret(client_id, tokenEncryptionKey);
+      console.log('Azure OAuth: Credentials encrypted before database storage');
+    } else {
+      console.warn('Azure OAuth: TOKEN_ENCRYPTION_KEY not set - credentials stored without encryption (NOT RECOMMENDED)');
+    }
+
     // Store state and config temporarily in database for callback validation
+    // SECURITY: client_id and client_secret are encrypted before storage
     const { error: insertError } = await supabaseClient
       .from('integration_webhooks')
       .insert({
@@ -55,8 +91,9 @@ serve(async (req) => {
           state,
           user_id: user.id,
           tenant_id,
-          client_id,
-          client_secret,
+          client_id: encryptedClientId,
+          client_secret: encryptedClientSecret,
+          credentials_encrypted: !!tokenEncryptionKey,
           scopes: requestedScopes,
           redirect_uri
         }
