@@ -8,6 +8,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { isDevEnvironment } from '@/lib/environment';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
 import { loginSchema } from '@/lib/auth-schemas';
@@ -40,7 +41,8 @@ const Auth = () => {
   
   // Estados de loading e validação
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const isDev = isDevEnvironment();
+  const [captchaToken, setCaptchaToken] = useState<string>(isDev ? 'dev-bypass' : '');
   const turnstileRef = useRef<any>(null);
   
   // Estados de validação
@@ -106,8 +108,8 @@ const Auth = () => {
       return;
     }
     
-    // Verifica CAPTCHA
-    if (!captchaToken) {
+    // Verifica CAPTCHA (pula em dev)
+    if (!isDev && !captchaToken) {
       toast({
         title: "Verificação necessária",
         description: "Por favor, complete a verificação de segurança",
@@ -274,16 +276,18 @@ const Auth = () => {
                     </p>
                   )}
                 </div>
-                <div className="flex justify-center">
-                  <Turnstile
-                    ref={turnstileRef}
-                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                    onSuccess={(token) => setCaptchaToken(token)}
-                    onError={() => setCaptchaToken('')}
-                    onExpire={() => setCaptchaToken('')}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
+                {!isDev && (
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => setCaptchaToken(token)}
+                      onError={() => setCaptchaToken('')}
+                      onExpire={() => setCaptchaToken('')}
+                    />
+                  </div>
+                )}
+                <Button type="submit" className="w-full" disabled={isLoading || (!isDev && !captchaToken)}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>
