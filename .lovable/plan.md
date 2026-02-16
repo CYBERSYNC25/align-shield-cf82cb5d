@@ -1,45 +1,56 @@
 
+## Corrigir erro "captcha verification process failed" no ambiente de dev
 
-## Pular CAPTCHA no ambiente de desenvolvimento
+### Problema
+O token `'dev-bypass'` esta sendo enviado ao Supabase como `captchaToken`. O Supabase tem a validacao do Turnstile ativada no projeto, entao ele envia esse token falso ao Cloudflare, que o rejeita.
 
-O widget do Cloudflare Turnstile nao carrega no ambiente de dev do Lovable porque o dominio `lovableproject.com` nao esta na whitelist do Cloudflare. Em vez de adicionar mais dominios, vamos fazer o codigo detectar o ambiente de dev e pular o CAPTCHA automaticamente.
+### Causa raiz
+Na linha 141 de `src/hooks/useAuth.tsx`, o `captchaToken` e passado diretamente nas options do `signInWithPassword`. Quando o valor e `'dev-bypass'`, o Supabase tenta validar esse token e falha.
 
-### Como funciona
-
-Uma funcao utilitaria detecta se o app esta rodando em dominios de desenvolvimento (localhost, lovable.app, lovable.dev, lovableproject.com). Quando em dev, o widget Turnstile nao e renderizado e o token CAPTCHA nao e exigido para login/cadastro.
+### Solucao
+Alterar `src/hooks/useAuth.tsx` (e o `signUp` tambem) para so incluir `captchaToken` nas options quando ele for um token real, ou seja, quando **nao** for o valor `'dev-bypass'`.
 
 ### Alteracoes
 
-**1. Criar `src/lib/environment.ts`** - Funcao utilitaria para detectar ambiente
+**`src/hooks/useAuth.tsx`** - Funcao `signIn` (linha ~141)
 
+Antes:
 ```typescript
-export const isDevEnvironment = (): boolean => {
-  const hostname = window.location.hostname;
-  return (
-    hostname === 'localhost' ||
-    hostname.endsWith('.lovable.app') ||
-    hostname.endsWith('.lovable.dev') ||
-    hostname.endsWith('.lovableproject.com')
-  );
-};
+const { error } = await supabase.auth.signInWithPassword({ 
+  email, password, options: { captchaToken } 
+})
 ```
 
-**2. `src/pages/Auth.tsx`** - Condicionar CAPTCHA ao ambiente
+Depois:
+```typescript
+const { error } = await supabase.auth.signInWithPassword({ 
+  email, password, 
+  options: captchaToken && captchaToken !== 'dev-bypass' 
+    ? { captchaToken } 
+    : {} 
+})
+```
 
-- Importar `isDevEnvironment`
-- Inicializar `captchaToken` com `'dev-bypass'` quando em dev
-- Nao renderizar o widget `<Turnstile>` quando em dev
-- Pular a verificacao de CAPTCHA vazio no `handleSignIn`
+Aplicar a mesma logica na funcao `signUp` (linha ~178):
 
-**3. `src/components/auth/AuthModal.tsx`** - Mesma logica
+Antes:
+```typescript
+options: {
+  captchaToken,
+  emailRedirectTo: redirectUrl,
+  data: metadata
+}
+```
 
-- Importar `isDevEnvironment`
-- Inicializar `loginCaptchaToken` e `signupCaptchaToken` com `'dev-bypass'` quando em dev
-- Nao renderizar os widgets `<Turnstile>` quando em dev
+Depois:
+```typescript
+options: {
+  ...(captchaToken && captchaToken !== 'dev-bypass' ? { captchaToken } : {}),
+  emailRedirectTo: redirectUrl,
+  data: metadata
+}
+```
 
-### Seguranca
-
-- Em producao (`apoc.com.br`), o CAPTCHA continua obrigatorio
-- O token `'dev-bypass'` so funciona no frontend; o Supabase nao valida CAPTCHA quando nenhum token real e enviado em ambientes de teste
-- Nenhuma alteracao no backend
-
+### Resultado
+- Em dev: nenhum token CAPTCHA e enviado ao Supabase, login funciona normalmente
+- Em producao: token real do Turnstile continua sendo enviado e validado
