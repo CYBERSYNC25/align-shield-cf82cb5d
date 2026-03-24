@@ -138,9 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * - Exibe toast de sucesso/erro
    */
   const signIn = async (email: string, password: string, captchaToken?: string) => {
-    // In dev, use the Cloudflare test key token that always passes validation
-    const resolvedToken = captchaToken === 'dev-bypass' ? undefined : captchaToken;
-    const { error } = await supabase.auth.signInWithPassword({ email, password, options: resolvedToken ? { captchaToken: resolvedToken } : {} })
+    const { error } = await supabase.auth.signInWithPassword({ 
+      email, password, 
+      options: captchaToken ? { captchaToken } : {} 
+    })
     
     if (error) {
       toast({
