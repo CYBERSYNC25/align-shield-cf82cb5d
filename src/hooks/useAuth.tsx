@@ -137,8 +137,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * - Atualiza estados user e session
    * - Exibe toast de sucesso/erro
    */
-  const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+  const signIn = async (email: string, password: string, captchaToken?: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ 
+      email, password, 
+      options: captchaToken ? { captchaToken } : {} 
+    })
     
     if (error) {
       toast({
