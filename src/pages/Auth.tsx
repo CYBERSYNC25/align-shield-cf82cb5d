@@ -265,8 +265,6 @@ const Auth = () => {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
-                  {isLoading ? 'Entrando...' : 'Entrar'}
-                </Button>
               </form>
               
               {/* Nota de acesso restrito */}
