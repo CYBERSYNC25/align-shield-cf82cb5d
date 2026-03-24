@@ -177,13 +177,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * - Trigger handle_new_user() cria perfil automaticamente
    * - Primeiro usuário recebe role 'admin'
    */
-  const signUp = async (email: string, password: string, metadata?: any) => {
+  const signUp = async (email: string, password: string, metadata?: any, captchaToken?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
+        ...(captchaToken ? { captchaToken } : {}),
         emailRedirectTo: redirectUrl,
         data: metadata
       }
