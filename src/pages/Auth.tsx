@@ -42,7 +42,9 @@ const Auth = () => {
   // Estados de loading e validação
   const [isLoading, setIsLoading] = useState(false);
   const isDev = isDevEnvironment();
-  const [captchaToken, setCaptchaToken] = useState<string>(isDev ? 'dev-bypass' : '');
+  const TURNSTILE_TEST_KEY = '1x00000000000000000000AA';
+  const turnstileSiteKey = isDev ? TURNSTILE_TEST_KEY : import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  const [captchaToken, setCaptchaToken] = useState<string>('');
   const turnstileRef = useRef<any>(null);
   
   // Estados de validação
@@ -108,8 +110,8 @@ const Auth = () => {
       return;
     }
     
-    // Verifica CAPTCHA (pula em dev)
-    if (!isDev && !captchaToken) {
+    // Verifica CAPTCHA
+    if (!captchaToken) {
       toast({
         title: "Verificação necessária",
         description: "Por favor, complete a verificação de segurança",
@@ -276,18 +278,16 @@ const Auth = () => {
                     </p>
                   )}
                 </div>
-                {!isDev && (
-                  <div className="flex justify-center">
-                    <Turnstile
-                      ref={turnstileRef}
-                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => setCaptchaToken(token)}
-                      onError={() => setCaptchaToken('')}
-                      onExpire={() => setCaptchaToken('')}
-                    />
-                  </div>
-                )}
-                <Button type="submit" className="w-full" disabled={isLoading || (!isDev && !captchaToken)}>
+                <div className="flex justify-center">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={turnstileSiteKey}
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setCaptchaToken('')}
+                    onExpire={() => setCaptchaToken('')}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>

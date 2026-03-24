@@ -41,10 +41,12 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
 
-  // Turnstile CAPTCHA states
+  // Turnstile CAPTCHA states - use test key in dev that always passes
   const isDev = isDevEnvironment();
-  const [loginCaptchaToken, setLoginCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
-  const [signupCaptchaToken, setSignupCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
+  const TURNSTILE_TEST_KEY = '1x00000000000000000000AA';
+  const turnstileSiteKey = isDev ? TURNSTILE_TEST_KEY : import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
+  const [signupCaptchaToken, setSignupCaptchaToken] = useState('');
   const loginTurnstileRef = useRef<any>(null);
   const signupTurnstileRef = useRef<any>(null);
 
@@ -62,7 +64,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       return;
     }
     
-    if (!isDev && !loginCaptchaToken) {
+    if (!loginCaptchaToken) {
       toast({ title: "Verificação necessária", description: "Complete a verificação de segurança", variant: "destructive" });
       return;
     }
@@ -101,7 +103,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       return;
     }
     
-    if (!isDev && !signupCaptchaToken) {
+    if (!signupCaptchaToken) {
       toast({ title: "Verificação necessária", description: "Complete a verificação de segurança", variant: "destructive" });
       return;
     }
@@ -192,18 +194,16 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                       </p>
                     )}
                   </div>
-                  {!isDev && (
-                    <div className="flex justify-center">
-                      <Turnstile
-                        ref={loginTurnstileRef}
-                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                        onSuccess={(token) => setLoginCaptchaToken(token)}
-                        onError={() => setLoginCaptchaToken('')}
-                        onExpire={() => setLoginCaptchaToken('')}
-                      />
-                    </div>
-                  )}
-                  <Button type="submit" className="w-full" disabled={loading || (!isDev && !loginCaptchaToken)}>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={loginTurnstileRef}
+                      siteKey={turnstileSiteKey}
+                      onSuccess={(token) => setLoginCaptchaToken(token)}
+                      onError={() => setLoginCaptchaToken('')}
+                      onExpire={() => setLoginCaptchaToken('')}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading || !loginCaptchaToken}>
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
                 </form>
@@ -356,18 +356,16 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                     )}
                   </div>
                   
-                  {!isDev && (
-                    <div className="flex justify-center">
-                      <Turnstile
-                        ref={signupTurnstileRef}
-                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                        onSuccess={(token) => setSignupCaptchaToken(token)}
-                        onError={() => setSignupCaptchaToken('')}
-                        onExpire={() => setSignupCaptchaToken('')}
-                      />
-                    </div>
-                  )}
-                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted || (!isDev && !signupCaptchaToken)}>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={signupTurnstileRef}
+                      siteKey={turnstileSiteKey}
+                      onSuccess={(token) => setSignupCaptchaToken(token)}
+                      onError={() => setSignupCaptchaToken('')}
+                      onExpire={() => setSignupCaptchaToken('')}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted || !signupCaptchaToken}>
                     {loading ? "Criando..." : "Criar conta"}
                   </Button>
                 </form>

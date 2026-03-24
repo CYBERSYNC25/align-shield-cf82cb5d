@@ -138,8 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * - Exibe toast de sucesso/erro
    */
   const signIn = async (email: string, password: string, captchaToken?: string) => {
-    const captchaOptions = captchaToken && captchaToken !== 'dev-bypass' ? { captchaToken } : {};
-    const { error } = await supabase.auth.signInWithPassword({ email, password, options: captchaOptions })
+    const { error } = await supabase.auth.signInWithPassword({ 
+      email, password, 
+      options: captchaToken ? { captchaToken } : {} 
+    })
     
     if (error) {
       toast({
@@ -182,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email, 
       password,
       options: {
-        ...(captchaToken && captchaToken !== 'dev-bypass' ? { captchaToken } : {}),
+        ...(captchaToken ? { captchaToken } : {}),
         emailRedirectTo: redirectUrl,
         data: metadata
       }
