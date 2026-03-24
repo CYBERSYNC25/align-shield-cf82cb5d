@@ -57,7 +57,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
 
     setLoading(true);
     try {
-      const { error } = await signIn(loginData.email, loginData.password, loginCaptchaToken);
+      const { error } = await signIn(loginData.email, loginData.password);
       if (!error) {
         toast({ title: "Login realizado", description: "Bem-vindo ao APOC!" });
         setOpen(false);
