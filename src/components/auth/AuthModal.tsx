@@ -62,8 +62,6 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
         toast({ title: "Login realizado", description: "Bem-vindo ao APOC!" });
         setOpen(false);
       } else {
-        loginTurnstileRef.current?.reset();
-        setLoginCaptchaToken('');
       }
     } finally {
       setLoading(false);
