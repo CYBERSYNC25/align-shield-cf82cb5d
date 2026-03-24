@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
 import { loginSchema } from '@/lib/auth-schemas';
@@ -14,59 +15,29 @@ import { useLoginRateLimiter } from '@/hooks/useLoginRateLimiter';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Página de Autenticação
- * 
- * @component
- * @description
- * Gerencia login com validação Zod, rate limiting e CAPTCHA.
- * 
- * Features de Segurança:
- * - Rate limiting: 5 tentativas por 15 minutos
- * - Account lockout temporário
- * - CAPTCHA (Cloudflare Turnstile)
- * - Validação em tempo real com Zod
- * - Feedback visual de erros
- * 
- * @example
- * <Route path="/auth" element={<Auth />} />
- */
+const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
+
 const Auth = () => {
   const { user, signIn, loading } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const { status: rateLimitStatus, checkCanAttempt, recordAttempt, getTimeRemaining } = useLoginRateLimiter();
   
-  // Estados de loading e validação
   const [isLoading, setIsLoading] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const turnstileRef = useRef<any>(null);
   
-  // Estados de validação
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
-  
-  // Estado para mostrar alerta de lockout
   const [showLockoutAlert, setShowLockoutAlert] = useState(false);
 
   // MFA challenge state
   const [showMfaChallenge, setShowMfaChallenge] = useState(false);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
-  // Redirect if already authenticated
   if (user && !loading) {
     return <Navigate to="/" replace />;
   }
 
-  /**
-   * Handler de login com validação Zod, Rate Limiting e CAPTCHA
-   * 
-   * Fluxo de Segurança:
-   * 1. Verifica rate limiting (5 tentativas/15min)
-   * 2. Se bloqueado, exibe alerta de lockout
-   * 3. Valida campos com Zod (loginSchema)
-   * 4. Verifica token CAPTCHA
-   * 5. Chama Supabase signIn
-   * 6. Registra tentativa (sucesso/falha)
-   * 7. Trata erros e exibe feedback
-   */
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErrors({});
@@ -78,7 +49,6 @@ const Auth = () => {
       password: formData.get('password') as string
     };
     
-    // SECURITY: Check rate limiting before processing
     const canAttempt = await checkCanAttempt(loginData.email);
     if (!canAttempt) {
       setShowLockoutAlert(true);
@@ -90,7 +60,6 @@ const Auth = () => {
       return;
     }
     
-    // Validação Zod
     const validation = loginSchema.safeParse(loginData);
     if (!validation.success) {
       const errors: Record<string, string> = {};
@@ -103,17 +72,22 @@ const Auth = () => {
       return;
     }
     
+    if (!captchaToken) {
+      toast({
+        title: "Verificação necessária",
+        description: "Por favor, complete a verificação de segurança",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsLoading(true);
     
-    // Tenta login
-    const { error } = await signIn(loginData.email, loginData.password);
+    const { error } = await signIn(loginData.email, loginData.password, captchaToken);
     
     if (error) {
-      // SECURITY: Record failed attempt
       await recordAttempt(loginData.email, false, error.message);
       
-      // Mapeia erros do Supabase para mensagens amigáveis
       let errorMessage = error.message;
       if (error.message.includes('Invalid login credentials')) {
         errorMessage = "Email ou senha incorretos. Verifique suas credenciais e tente novamente.";
@@ -121,7 +95,6 @@ const Auth = () => {
         errorMessage = "Por favor, confirme seu email antes de fazer login. Verifique sua caixa de entrada.";
       }
       
-      // Show attempts remaining
       const remaining = rateLimitStatus.attemptsRemaining;
       if (remaining > 0 && remaining <= 3) {
         errorMessage += ` (${remaining} tentativa${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''})`;
@@ -133,16 +106,16 @@ const Auth = () => {
         variant: "destructive"
       });
       
+      // Reset CAPTCHA after failed attempt
+      turnstileRef.current?.reset();
+      setCaptchaToken('');
       setIsLoading(false);
     } else {
-      // SECURITY: Record successful attempt
       await recordAttempt(loginData.email, true);
       
-      // Get current session to check MFA
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user) {
-        // Check if MFA is enabled for this user
         const { data: mfaSettings } = await supabase
           .from('user_mfa_settings')
           .select('enabled_at')
@@ -150,12 +123,10 @@ const Auth = () => {
           .maybeSingle();
         
         if (mfaSettings?.enabled_at) {
-          // Show MFA challenge modal
           setPendingUserId(session.user.id);
           setShowMfaChallenge(true);
           setIsLoading(false);
         } else {
-          // No MFA - proceed with login
           navigate('/');
         }
       } else {
@@ -180,7 +151,6 @@ const Auth = () => {
 
   return (
     <div className="relative min-h-screen bg-background flex items-center justify-center p-4">
-      {/* Decorative Background Pattern */}
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] dark:opacity-[0.05]" />
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-success/5" />
       
@@ -200,7 +170,6 @@ const Auth = () => {
         
         <CardContent className="px-8 pb-8">
           <div className="w-full">
-              {/* Lockout Alert */}
               {showLockoutAlert && rateLimitStatus.lockedUntil && (
                 <Alert variant="destructive" className="mb-4">
                   <Lock className="h-4 w-4" />
@@ -211,7 +180,6 @@ const Auth = () => {
                 </Alert>
               )}
               
-              {/* Remaining attempts warning */}
               {!showLockoutAlert && rateLimitStatus.attemptsRemaining > 0 && rateLimitStatus.attemptsRemaining <= 2 && (
                 <Alert variant="default" className="mb-4 border-warning bg-warning/10">
                   <AlertCircle className="h-4 w-4 text-warning" />
@@ -259,12 +227,20 @@ const Auth = () => {
                     </p>
                   )}
                 </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <div className="flex justify-center">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={TURNSTILE_SITE_KEY}
+                    onSuccess={(token) => setCaptchaToken(token)}
+                    onError={() => setCaptchaToken('')}
+                    onExpire={() => setCaptchaToken('')}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>
               
-              {/* Nota de acesso restrito */}
               <p className="text-xs text-center text-muted-foreground mt-6 pt-4 border-t border-border">
                 Acesso restrito. Entre em contato com o administrador para solicitar acesso.
               </p>
@@ -272,7 +248,6 @@ const Auth = () => {
         </CardContent>
       </Card>
 
-      {/* MFA Challenge Modal */}
       <MFAChallengeModal
         open={showMfaChallenge}
         onOpenChange={setShowMfaChallenge}
