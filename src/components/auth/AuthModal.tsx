@@ -356,18 +356,16 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                     )}
                   </div>
                   
-                  {!isDev && (
-                    <div className="flex justify-center">
-                      <Turnstile
-                        ref={signupTurnstileRef}
-                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                        onSuccess={(token) => setSignupCaptchaToken(token)}
-                        onError={() => setSignupCaptchaToken('')}
-                        onExpire={() => setSignupCaptchaToken('')}
-                      />
-                    </div>
-                  )}
-                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted || (!isDev && !signupCaptchaToken)}>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={signupTurnstileRef}
+                      siteKey={turnstileSiteKey}
+                      onSuccess={(token) => setSignupCaptchaToken(token)}
+                      onError={() => setSignupCaptchaToken('')}
+                      onExpire={() => setSignupCaptchaToken('')}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted || !signupCaptchaToken}>
                     {loading ? "Criando..." : "Criar conta"}
                   </Button>
                 </form>
