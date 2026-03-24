@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Turnstile } from '@marsidev/react-turnstile';
-import { isDevEnvironment } from '@/lib/environment';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
 import { loginSchema } from '@/lib/auth-schemas';
@@ -41,11 +39,6 @@ const Auth = () => {
   
   // Estados de loading e validação
   const [isLoading, setIsLoading] = useState(false);
-  const isDev = isDevEnvironment();
-  const TURNSTILE_TEST_KEY = '1x00000000000000000000AA';
-  const turnstileSiteKey = isDev ? TURNSTILE_TEST_KEY : import.meta.env.VITE_TURNSTILE_SITE_KEY;
-  const [captchaToken, setCaptchaToken] = useState<string>('');
-  const turnstileRef = useRef<any>(null);
   
   // Estados de validação
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
@@ -110,20 +103,11 @@ const Auth = () => {
       return;
     }
     
-    // Verifica CAPTCHA
-    if (!captchaToken) {
-      toast({
-        title: "Verificação necessária",
-        description: "Por favor, complete a verificação de segurança",
-        variant: "destructive"
-      });
-      return;
-    }
     
     setIsLoading(true);
     
     // Tenta login
-    const { error } = await signIn(loginData.email, loginData.password, captchaToken);
+    const { error } = await signIn(loginData.email, loginData.password);
     
     if (error) {
       // SECURITY: Record failed attempt
@@ -149,9 +133,6 @@ const Auth = () => {
         variant: "destructive"
       });
       
-      // Reset CAPTCHA
-      turnstileRef.current?.reset();
-      setCaptchaToken('');
       setIsLoading(false);
     } else {
       // SECURITY: Record successful attempt
@@ -278,16 +259,7 @@ const Auth = () => {
                     </p>
                   )}
                 </div>
-                <div className="flex justify-center">
-                  <Turnstile
-                    ref={turnstileRef}
-                    siteKey={turnstileSiteKey}
-                    onSuccess={(token) => setCaptchaToken(token)}
-                    onError={() => setCaptchaToken('')}
-                    onExpire={() => setCaptchaToken('')}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
+                <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>
