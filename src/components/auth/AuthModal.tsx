@@ -13,8 +13,6 @@ import { LogIn, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { loginSchema, signUpSchema, type LoginInput, type SignUpInput } from '@/lib/auth-schemas';
 import { checkPasswordStrength } from '@/lib/password-security';
 import { Progress } from '@/components/ui/progress';
-import { Turnstile } from '@marsidev/react-turnstile';
-import { isDevEnvironment } from '@/lib/environment';
 
 interface AuthModalProps {
   trigger?: React.ReactNode;
