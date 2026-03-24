@@ -194,18 +194,16 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                       </p>
                     )}
                   </div>
-                  {!isDev && (
-                    <div className="flex justify-center">
-                      <Turnstile
-                        ref={loginTurnstileRef}
-                        siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
-                        onSuccess={(token) => setLoginCaptchaToken(token)}
-                        onError={() => setLoginCaptchaToken('')}
-                        onExpire={() => setLoginCaptchaToken('')}
-                      />
-                    </div>
-                  )}
-                  <Button type="submit" className="w-full" disabled={loading || (!isDev && !loginCaptchaToken)}>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={loginTurnstileRef}
+                      siteKey={turnstileSiteKey}
+                      onSuccess={(token) => setLoginCaptchaToken(token)}
+                      onError={() => setLoginCaptchaToken('')}
+                      onExpire={() => setLoginCaptchaToken('')}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading || !loginCaptchaToken}>
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
                 </form>
