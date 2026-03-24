@@ -41,10 +41,12 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
 
-  // Turnstile CAPTCHA states
+  // Turnstile CAPTCHA states - use test key in dev that always passes
   const isDev = isDevEnvironment();
-  const [loginCaptchaToken, setLoginCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
-  const [signupCaptchaToken, setSignupCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
+  const TURNSTILE_TEST_KEY = '1x00000000000000000000AA';
+  const turnstileSiteKey = isDev ? TURNSTILE_TEST_KEY : import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
+  const [signupCaptchaToken, setSignupCaptchaToken] = useState('');
   const loginTurnstileRef = useRef<any>(null);
   const signupTurnstileRef = useRef<any>(null);
 
