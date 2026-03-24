@@ -39,11 +39,6 @@ const Auth = () => {
   
   // Estados de loading e validação
   const [isLoading, setIsLoading] = useState(false);
-  const isDev = isDevEnvironment();
-  const TURNSTILE_TEST_KEY = '1x00000000000000000000AA';
-  const turnstileSiteKey = isDev ? TURNSTILE_TEST_KEY : import.meta.env.VITE_TURNSTILE_SITE_KEY;
-  const [captchaToken, setCaptchaToken] = useState<string>('');
-  const turnstileRef = useRef<any>(null);
   
   // Estados de validação
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
