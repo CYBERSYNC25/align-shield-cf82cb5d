@@ -325,16 +325,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                     )}
                   </div>
                   
-                  <div className="flex justify-center">
-                    <Turnstile
-                      ref={signupTurnstileRef}
-                      siteKey={turnstileSiteKey}
-                      onSuccess={(token) => setSignupCaptchaToken(token)}
-                      onError={() => setSignupCaptchaToken('')}
-                      onExpire={() => setSignupCaptchaToken('')}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted || !signupCaptchaToken}>
+                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted}>
                     {loading ? "Criando..." : "Criar conta"}
                   </Button>
                 </form>
