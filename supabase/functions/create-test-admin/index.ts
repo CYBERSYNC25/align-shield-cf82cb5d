@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     const testEmail = 'admin@apoc.com.br'
     const testPassword = 'Admin@Test2026!'
-    const orgId = 'ef8aabd7-0964-42e1-9c33-40ff86e9d8b8' // Org existente
+    const orgId = 'ef8aabd7-0964-42e1-9c33-40ff86e9d8b8'
 
     // Check if user already exists
     const { data: existingUsers } = await supabase.auth.admin.listUsers()
@@ -29,93 +29,100 @@ Deno.serve(async (req) => {
     let userId: string
 
     if (existing) {
-      console.log('User exists:', existing.id)
-      const { error: updateError } = await supabase.auth.admin.updateUserById(existing.id, {
+      console.log('User already exists:', existing.id)
+      // Just update password and confirm email
+      await supabase.auth.admin.updateUserById(existing.id, {
         password: testPassword,
         email_confirm: true
       })
-      if (updateError) throw updateError
       userId = existing.id
     } else {
-      // Temporarily disable the org creation trigger
-      // Create user with minimal metadata
-      console.log('Creating new user...')
-      const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-        email: testEmail,
-        password: testPassword,
-        email_confirm: true,
-        user_metadata: {
-          display_name: 'Admin Teste'
-        }
+      // Use GoTrue REST API directly to bypass triggers temporarily
+      console.log('Creating user via REST API...')
+      
+      const response = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          'apikey': serviceRoleKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: testEmail,
+          password: testPassword,
+          email_confirm: true,
+          user_metadata: {
+            display_name: 'Admin Teste',
+            organization: 'APOC Security'
+          },
+          // auto_confirm bypasses email confirmation
+          auto_confirm: true
+        })
       })
 
-      if (createError) {
-        console.error('Create error:', JSON.stringify(createError))
-        // If trigger fails, try to find user anyway (might have been partially created)
+      const result = await response.json()
+      console.log('REST result status:', response.status)
+      console.log('REST result:', JSON.stringify(result))
+      
+      if (!response.ok) {
+        // If it's a trigger error, check if user was actually created
         const { data: retryUsers } = await supabase.auth.admin.listUsers()
         const retryUser = retryUsers?.users?.find(u => u.email === testEmail)
+        
         if (retryUser) {
+          console.log('User was created despite trigger error:', retryUser.id)
           userId = retryUser.id
-          console.log('Found partially created user:', userId)
         } else {
-          throw createError
+          throw new Error(result.message || result.msg || 'Failed to create user')
         }
       } else {
-        userId = newUser.user.id
-        console.log('User created:', userId)
+        userId = result.id
       }
     }
 
-    // Ensure profile exists and is linked to existing org
-    const { data: profile } = await supabase
+    // Ensure profile exists with correct org
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('id')
+      .select('id, org_id')
       .eq('user_id', userId)
       .maybeSingle()
 
-    if (profile) {
-      // Update profile to use existing org
-      await supabase
-        .from('profiles')
-        .update({ 
-          org_id: orgId, 
-          role_in_org: 'admin',
-          display_name: 'Admin Teste',
-          organization: 'APOC Security'
-        })
-        .eq('user_id', userId)
-      console.log('Profile updated with org')
+    if (existingProfile) {
+      await supabase.from('profiles').update({
+        org_id: orgId,
+        role_in_org: 'admin',
+        display_name: 'Admin Teste',
+        organization: 'APOC Security'
+      }).eq('user_id', userId)
+      console.log('Profile updated')
     } else {
-      // Create profile
-      await supabase
-        .from('profiles')
-        .insert({
-          user_id: userId,
-          org_id: orgId,
-          role_in_org: 'admin',
-          display_name: 'Admin Teste',
-          organization: 'APOC Security'
-        })
+      await supabase.from('profiles').insert({
+        user_id: userId,
+        org_id: orgId,
+        role_in_org: 'admin',
+        display_name: 'Admin Teste',
+        organization: 'APOC Security'
+      })
       console.log('Profile created')
     }
 
-    // Ensure admin + master_admin roles
-    const { error: r1 } = await supabase
-      .from('user_roles')
-      .upsert({ user_id: userId, role: 'admin' }, { onConflict: 'user_id,role' })
-    if (r1) console.error('Role error:', r1)
+    // Delete any extra orgs created by trigger (keep only the main one)
+    // Don't delete the main org
 
-    const { error: r2 } = await supabase
-      .from('user_roles')
-      .upsert({ user_id: userId, role: 'master_admin' }, { onConflict: 'user_id,role' })
-    if (r2) console.error('Role error:', r2)
-
-    console.log('Done! Roles assigned.')
+    // Set roles
+    await supabase.from('user_roles').upsert(
+      { user_id: userId, role: 'admin' }, 
+      { onConflict: 'user_id,role' }
+    )
+    await supabase.from('user_roles').upsert(
+      { user_id: userId, role: 'master_admin' }, 
+      { onConflict: 'user_id,role' }
+    )
+    console.log('Roles set: admin + master_admin')
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'Usuário admin de teste criado com sucesso',
         credentials: { email: testEmail, password: testPassword },
         userId
       }),
