@@ -184,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email, 
       password,
       options: {
-        ...(captchaToken && captchaToken !== 'dev-bypass' ? { captchaToken } : {}),
+        ...(captchaToken ? { captchaToken } : {}),
         emailRedirectTo: redirectUrl,
         data: metadata
       }
