@@ -110,8 +110,8 @@ const Auth = () => {
       return;
     }
     
-    // Verifica CAPTCHA (pula em dev)
-    if (!isDev && !captchaToken) {
+    // Verifica CAPTCHA
+    if (!captchaToken) {
       toast({
         title: "Verificação necessária",
         description: "Por favor, complete a verificação de segurança",
