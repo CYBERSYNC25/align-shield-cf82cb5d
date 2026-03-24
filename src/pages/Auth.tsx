@@ -133,9 +133,6 @@ const Auth = () => {
         variant: "destructive"
       });
       
-      // Reset CAPTCHA
-      turnstileRef.current?.reset();
-      setCaptchaToken('');
       setIsLoading(false);
     } else {
       // SECURITY: Record successful attempt
