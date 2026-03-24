@@ -103,15 +103,6 @@ const Auth = () => {
       return;
     }
     
-    // Verifica CAPTCHA
-    if (!captchaToken) {
-      toast({
-        title: "Verificação necessária",
-        description: "Por favor, complete a verificação de segurança",
-        variant: "destructive"
-      });
-      return;
-    }
     
     setIsLoading(true);
     
