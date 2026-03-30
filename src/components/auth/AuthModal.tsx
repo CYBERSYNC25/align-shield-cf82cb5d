@@ -62,7 +62,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       return;
     }
     
-    if (!loginCaptchaToken) {
+    if (!loginCaptchaToken && !isDev) {
       toast({ title: "Verificação necessária", description: "Complete a verificação de segurança", variant: "destructive" });
       return;
     }
