@@ -45,8 +45,8 @@ import AdminClients from "./pages/admin/AdminClients";
 import AdminClientDetail from "./pages/admin/AdminClientDetail";
 import AdminUsers from "./pages/admin/AdminUsers";
 import AdminGroups from "./pages/admin/AdminGroups";
-import AdminPermissions from "./pages/admin/AdminPermissions";
 import AdminFinancial from "./pages/admin/AdminFinancial";
+import AdminLogs from "./pages/admin/AdminLogs";
 import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
 const queryClient = new QueryClient();
 
