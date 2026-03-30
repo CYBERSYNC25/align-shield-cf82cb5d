@@ -84,7 +84,8 @@ const Auth = () => {
     
     setIsLoading(true);
     
-    const { error } = await signIn(loginData.email, loginData.password, captchaToken);
+    const captchaToSend = captchaToken === 'dev-bypass' ? undefined : captchaToken;
+    const { error } = await signIn(loginData.email, loginData.password, captchaToSend);
     
     if (error) {
       await recordAttempt(loginData.email, false, error.message);
