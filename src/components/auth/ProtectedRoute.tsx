@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useOnboardingWizard } from '@/hooks/useOnboardingWizard';
@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 import { MFARequiredBanner } from '@/components/auth/MFARequiredBanner';
 import { SessionTimeoutModal } from '@/components/auth/SessionTimeoutModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: ReactNode;
