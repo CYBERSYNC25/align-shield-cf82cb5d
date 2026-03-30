@@ -92,9 +92,6 @@ const Auth = () => {
         variant: "destructive"
       });
       
-      // Reset CAPTCHA after failed attempt
-      turnstileRef.current?.reset();
-      setCaptchaToken('');
       setIsLoading(false);
     } else {
       await recordAttempt(loginData.email, true);
