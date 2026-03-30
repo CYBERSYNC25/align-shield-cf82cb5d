@@ -111,7 +111,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       const { error } = await signUp(signupData.email, signupData.password, {
         display_name: signupData.displayName,
         organization: signupData.organization
-      }, signupCaptchaToken);
+      }, signupCaptchaToken === 'dev-bypass' ? undefined : signupCaptchaToken);
       if (!error) {
         toast({ title: "Conta criada", description: "Verifique seu email." });
         setOpen(false);
