@@ -26,9 +26,11 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
+      const captchaToken = isDevEnvironment() ? 'dev-bypass' : undefined;
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: captchaToken ? { captchaToken } : {},
       });
 
       if (authError) throw authError;
