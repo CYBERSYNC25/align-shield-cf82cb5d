@@ -69,7 +69,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
 
     setLoading(true);
     try {
-      const { error } = await signIn(loginData.email, loginData.password, loginCaptchaToken);
+      const { error } = await signIn(loginData.email, loginData.password, loginCaptchaToken === 'dev-bypass' ? undefined : loginCaptchaToken);
       if (!error) {
         toast({ title: "Login realizado", description: "Bem-vindo ao Compliance Sync!" });
         setOpen(false);
