@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,17 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Turnstile } from '@marsidev/react-turnstile';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
 import { loginSchema } from '@/lib/auth-schemas';
 import { useLoginRateLimiter } from '@/hooks/useLoginRateLimiter';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
-import { isDevEnvironment } from '@/lib/environment';
 
-const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
-const isDev = isDevEnvironment();
 const Auth = () => {
   const { user, signIn, loading } = useAuth();
   const { toast } = useToast();
@@ -25,8 +21,6 @@ const Auth = () => {
   const { status: rateLimitStatus, checkCanAttempt, recordAttempt, getTimeRemaining } = useLoginRateLimiter();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>(isDev ? 'dev-bypass' : '');
-  const turnstileRef = useRef<any>(null);
   
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [showLockoutAlert, setShowLockoutAlert] = useState(false);
@@ -73,19 +67,9 @@ const Auth = () => {
       return;
     }
     
-    if (!captchaToken && !isDev) {
-      toast({
-        title: "Verificação necessária",
-        description: "Por favor, complete a verificação de segurança",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setIsLoading(true);
     
-    const captchaToSend = captchaToken === 'dev-bypass' ? undefined : captchaToken;
-    const { error } = await signIn(loginData.email, loginData.password, captchaToSend);
+    const { error } = await signIn(loginData.email, loginData.password);
     
     if (error) {
       await recordAttempt(loginData.email, false, error.message);
@@ -108,9 +92,6 @@ const Auth = () => {
         variant: "destructive"
       });
       
-      // Reset CAPTCHA after failed attempt
-      turnstileRef.current?.reset();
-      setCaptchaToken('');
       setIsLoading(false);
     } else {
       await recordAttempt(loginData.email, true);
@@ -229,18 +210,7 @@ const Auth = () => {
                     </p>
                   )}
                 </div>
-                {!isDev && (
-                  <div className="flex justify-center">
-                    <Turnstile
-                      ref={turnstileRef}
-                      siteKey={TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => setCaptchaToken(token)}
-                      onError={() => setCaptchaToken('')}
-                      onExpire={() => setCaptchaToken('')}
-                    />
-                  </div>
-                )}
-                <Button type="submit" className="w-full" disabled={isLoading || (!isDev && !captchaToken)}>
+                <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>
