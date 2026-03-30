@@ -2057,30 +2057,48 @@ export type Database = {
       }
       organizations: {
         Row: {
+          address: string | null
+          cnpj: string | null
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
           id: string
+          monthly_value: number | null
           name: string
           plan: string
           settings: Json
           slug: string
+          status: string | null
           updated_at: string
         }
         Insert: {
+          address?: string | null
+          cnpj?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           id?: string
+          monthly_value?: number | null
           name: string
           plan?: string
           settings?: Json
           slug: string
+          status?: string | null
           updated_at?: string
         }
         Update: {
+          address?: string | null
+          cnpj?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           id?: string
+          monthly_value?: number | null
           name?: string
           plan?: string
           settings?: Json
           slug?: string
+          status?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2246,6 +2264,99 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_admin_group_members: {
+        Row: {
+          admin_id: string
+          created_at: string | null
+          group_id: string
+          id: string
+        }
+        Insert: {
+          admin_id: string
+          created_at?: string | null
+          group_id: string
+          id?: string
+        }
+        Update: {
+          admin_id?: string
+          created_at?: string | null
+          group_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_admin_group_members_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "platform_admins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_admin_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "platform_admin_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_admin_groups: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          permissions: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          permissions?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          permissions?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      platform_admins: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       policies: {
         Row: {
@@ -4149,6 +4260,7 @@ export type Database = {
         Args: { _object_id: string; _object_type: string; _user_id: string }
         Returns: boolean
       }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       is_session_active: { Args: { p_session_id: string }; Returns: boolean }
       log_pii_access: {
         Args: {
