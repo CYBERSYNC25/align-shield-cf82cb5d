@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
+import { isDevEnvironment } from '@/lib/environment';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
