@@ -78,6 +78,15 @@ const AdminLogin = () => {
         setShowMfaChallenge(true);
         setLoading(false);
       } else {
+        // Log the login action
+        await supabase.from('platform_admin_logs' as any).insert({
+          admin_id: (adminData as any).id,
+          admin_email: email,
+          action: 'login',
+          resource_type: 'system',
+          details: {},
+          user_agent: navigator.userAgent,
+        } as any);
         navigate('/admin/dashboard');
       }
     } catch (error: any) {
