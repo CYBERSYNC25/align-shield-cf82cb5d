@@ -14,9 +14,10 @@ import { loginSchema } from '@/lib/auth-schemas';
 import { useLoginRateLimiter } from '@/hooks/useLoginRateLimiter';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+import { isDevEnvironment } from '@/lib/environment';
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
-
+const isDev = isDevEnvironment();
 const Auth = () => {
   const { user, signIn, loading } = useAuth();
   const { toast } = useToast();
