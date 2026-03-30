@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,9 @@ import { LogIn, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { loginSchema, signUpSchema, type LoginInput, type SignUpInput } from '@/lib/auth-schemas';
 import { checkPasswordStrength } from '@/lib/password-security';
 import { Progress } from '@/components/ui/progress';
+import { Turnstile } from '@marsidev/react-turnstile';
+
+const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
 
 interface AuthModalProps {
   trigger?: React.ReactNode;
@@ -38,6 +41,12 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
 
+  // CAPTCHA states
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
+  const [signupCaptchaToken, setSignupCaptchaToken] = useState('');
+  const loginTurnstileRef = useRef<any>(null);
+  const signupTurnstileRef = useRef<any>(null);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErrors({});
@@ -52,14 +61,20 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       return;
     }
     
+    if (!loginCaptchaToken) {
+      toast({ title: "Verificação necessária", description: "Complete a verificação de segurança", variant: "destructive" });
+      return;
+    }
 
     setLoading(true);
     try {
-      const { error } = await signIn(loginData.email, loginData.password);
+      const { error } = await signIn(loginData.email, loginData.password, loginCaptchaToken);
       if (!error) {
         toast({ title: "Login realizado", description: "Bem-vindo ao Compliance Sync!" });
         setOpen(false);
       } else {
+        loginTurnstileRef.current?.reset();
+        setLoginCaptchaToken('');
       }
     } finally {
       setLoading(false);
@@ -85,17 +100,23 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       return;
     }
     
+    if (!signupCaptchaToken) {
+      toast({ title: "Verificação necessária", description: "Complete a verificação de segurança", variant: "destructive" });
+      return;
+    }
 
     setLoading(true);
     try {
       const { error } = await signUp(signupData.email, signupData.password, {
         display_name: signupData.displayName,
         organization: signupData.organization
-      });
+      }, signupCaptchaToken);
       if (!error) {
         toast({ title: "Conta criada", description: "Verifique seu email." });
         setOpen(false);
       } else {
+        signupTurnstileRef.current?.reset();
+        setSignupCaptchaToken('');
       }
     } finally {
       setLoading(false);
@@ -170,7 +191,16 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                       </p>
                     )}
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={loginTurnstileRef}
+                      siteKey={TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => setLoginCaptchaToken(token)}
+                      onError={() => setLoginCaptchaToken('')}
+                      onExpire={() => setLoginCaptchaToken('')}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading || !loginCaptchaToken}>
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
                 </form>
@@ -322,7 +352,16 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                     )}
                   </div>
                   
-                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted}>
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={signupTurnstileRef}
+                      siteKey={TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => setSignupCaptchaToken(token)}
+                      onError={() => setSignupCaptchaToken('')}
+                      onExpire={() => setSignupCaptchaToken('')}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted || !signupCaptchaToken}>
                     {loading ? "Criando..." : "Criar conta"}
                   </Button>
                 </form>
