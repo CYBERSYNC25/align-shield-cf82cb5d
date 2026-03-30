@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,11 +13,7 @@ import { LogIn, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { loginSchema, signUpSchema, type LoginInput, type SignUpInput } from '@/lib/auth-schemas';
 import { checkPasswordStrength } from '@/lib/password-security';
 import { Progress } from '@/components/ui/progress';
-import { Turnstile } from '@marsidev/react-turnstile';
-import { isDevEnvironment } from '@/lib/environment';
 
-const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
-const isDev = isDevEnvironment();
 interface AuthModalProps {
   trigger?: React.ReactNode;
 }
@@ -41,12 +37,6 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
-
-  // CAPTCHA states
-  const [loginCaptchaToken, setLoginCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
-  const [signupCaptchaToken, setSignupCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
-  const loginTurnstileRef = useRef<any>(null);
-  const signupTurnstileRef = useRef<any>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
