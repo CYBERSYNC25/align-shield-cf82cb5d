@@ -33,7 +33,7 @@ const Welcome = () => {
               <ShieldCheck className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              <span className="text-primary">APOC</span>
+              <span className="text-primary">Compliance Sync</span>
             </h1>
           </div>
 
@@ -89,7 +89,7 @@ const Welcome = () => {
       <footer className="border-t border-border/50 py-8 px-4">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © 2025 APOC. Todos os direitos reservados.
+            © 2025 Compliance Sync. Todos os direitos reservados.
           </p>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <span className="hover:text-foreground cursor-pointer transition-colors">LGPD</span>

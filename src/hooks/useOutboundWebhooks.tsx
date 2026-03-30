@@ -220,7 +220,7 @@ export function useOutboundWebhooks() {
         timestamp: new Date().toISOString(),
         org_id: webhook.org_id,
         data: {
-          message: 'This is a test webhook from APOC',
+          message: 'This is a test webhook from Compliance Sync',
           webhook_name: webhook.name,
         },
       };

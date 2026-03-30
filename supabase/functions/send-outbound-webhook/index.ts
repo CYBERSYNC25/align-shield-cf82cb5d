@@ -122,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Build headers
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'User-Agent': 'APOC-Webhook/1.0',
+      'User-Agent': 'ComplianceSync-Webhook/1.0',
       ...(webhook.custom_headers || {}),
     };
 

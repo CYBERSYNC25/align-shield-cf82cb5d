@@ -28,7 +28,7 @@ const AuditReportExportButton = () => {
       const reportContent = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                                                                              ║
-║                    APOC - RELATÓRIO DE AUDITORIA                             ║
+║                    Compliance Sync - RELATÓRIO DE AUDITORIA                             ║
 ║                    Automated Platform for Online Compliance                  ║
 ║                                                                              ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -120,10 +120,10 @@ ${controls.length > 20 ? `\n  ... e mais ${controls.length - 20} controles\n` : 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Relatório gerado automaticamente pela plataforma APOC.
+  Relatório gerado automaticamente pela plataforma Compliance Sync.
   Este documento é uma visão somente-leitura do estado de compliance.
 
-  © ${now.getFullYear()} APOC - Automated Platform for Online Compliance
+  © ${now.getFullYear()} Compliance Sync - Plataforma de Compliance
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
@@ -133,7 +133,7 @@ ${controls.length > 20 ? `\n  ... e mais ${controls.length - 20} controles\n` : 
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `APOC-Relatorio-Auditoria-${dateStr.replace(/\//g, '-')}.txt`;
+      a.download = `ComplianceSync-Relatorio-Auditoria-${dateStr.replace(/\//g, '-')}.txt`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

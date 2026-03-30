@@ -161,7 +161,7 @@ export const useOnboardingWizard = () => {
     await updateProgressMutation.mutateAsync({ completed: true });
     toast({
       title: '🎉 Onboarding concluído!',
-      description: 'Você está pronto para usar o APOC.',
+      description: 'Você está pronto para usar o Compliance Sync.',
     });
   }, [updateProgressMutation, toast]);
 

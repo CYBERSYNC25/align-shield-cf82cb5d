@@ -62,7 +62,7 @@ const WelcomeStep = () => {
         transition={{ delay: 0.2 }}
         className="text-4xl font-bold mb-4"
       >
-        Bem-vindo ao <span className="text-primary">APOC</span>
+        Bem-vindo ao <span className="text-primary">Compliance Sync</span>
       </motion.h1>
 
       <motion.p

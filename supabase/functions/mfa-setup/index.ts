@@ -60,7 +60,7 @@ serve(async (req: Request): Promise<Response> => {
     // Generate new TOTP secret and backup codes
     const secret = generateTotpSecret();
     const backupCodes = generateBackupCodes(10);
-    const otpauthUrl = generateOtpAuthUrl(secret, email || 'user', 'APOC');
+    const otpauthUrl = generateOtpAuthUrl(secret, email || 'user', 'Compliance Sync');
     const qrCodeUrl = generateQrCodeUrl(otpauthUrl);
 
     // Encrypt sensitive data before storing

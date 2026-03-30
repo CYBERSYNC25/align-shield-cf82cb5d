@@ -21,12 +21,12 @@ export function generateTotpSecret(): string {
  * Generate OTPAuth URL for authenticator apps
  * @param secret Base32-encoded secret
  * @param account User's email or identifier
- * @param issuer App name (default: 'APOC')
+ * @param issuer App name (default: 'Compliance Sync')
  */
 export function generateOtpAuthUrl(
   secret: string, 
   account: string, 
-  issuer: string = 'APOC'
+  issuer: string = 'Compliance Sync'
 ): string {
   const encodedIssuer = encodeURIComponent(issuer);
   const encodedAccount = encodeURIComponent(account);

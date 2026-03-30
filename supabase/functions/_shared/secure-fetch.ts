@@ -157,7 +157,7 @@ export async function secureFetch(options: SecureFetchOptions): Promise<SecureFe
     const response = await fetch(url, {
       method,
       headers: {
-        'User-Agent': 'APOC-SecureFetch/1.0',
+        'User-Agent': 'ComplianceSync-SecureFetch/1.0',
         ...headers,
       },
       body: body || undefined,

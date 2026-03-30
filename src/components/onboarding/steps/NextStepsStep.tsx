@@ -100,7 +100,7 @@ const NextStepsStep = ({ completedSteps, onToggleStep }: NextStepsStepProps) => 
         </motion.div>
         <h2 className="text-3xl font-bold mb-2">Você está quase lá! 🎉</h2>
         <p className="text-muted-foreground">
-          Complete estas tarefas para aproveitar ao máximo o APOC
+          Complete estas tarefas para aproveitar ao máximo o Compliance Sync
         </p>
       </motion.div>
 

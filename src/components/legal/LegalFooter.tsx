@@ -21,7 +21,7 @@ const LegalFooter = ({ lastUpdated }: LegalFooterProps) => {
         <div className="text-sm text-muted-foreground">
           <p>Última atualização: {lastUpdated}</p>
           <p className="mt-1">
-            © {new Date().getFullYear()} APOC Systems. Todos os direitos reservados.
+            © {new Date().getFullYear()} Compliance Sync Systems. Todos os direitos reservados.
           </p>
         </div>
 

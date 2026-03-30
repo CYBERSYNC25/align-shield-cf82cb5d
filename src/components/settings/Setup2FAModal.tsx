@@ -95,7 +95,7 @@ export const Setup2FAModal = ({ open, onOpenChange }: Setup2FAModalProps) => {
   const downloadBackupCodes = () => {
     if (!setupData) return;
     
-    const content = `APOC - Códigos de Backup MFA
+    const content = `Compliance Sync - Códigos de Backup MFA
 ================================
 Gerado em: ${new Date().toLocaleString('pt-BR')}
 
@@ -114,7 +114,7 @@ use um destes códigos para entrar na sua conta.
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'apoc-backup-codes.txt';
+    a.download = 'compliance-sync-backup-codes.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

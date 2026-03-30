@@ -247,7 +247,7 @@ export function useNotificationSettings() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            text: "🔔 Teste de webhook do APOC - Conexão bem-sucedida!",
+            text: "🔔 Teste de webhook do Compliance Sync - Conexão bem-sucedida!",
           }),
           signal: controller.signal,
           redirect: 'manual', // Don't follow redirects

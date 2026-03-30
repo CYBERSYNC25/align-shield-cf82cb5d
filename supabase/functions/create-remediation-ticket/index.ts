@@ -58,7 +58,7 @@ async function createJiraTicket(
     body: JSON.stringify({
       fields: {
         project: { key: config.projectKey },
-        summary: `[APOC] ${request.ruleTitle}`,
+        summary: `[ComplianceSync] ${request.ruleTitle}`,
         description: {
           type: 'doc',
           version: 1,
@@ -68,7 +68,7 @@ async function createJiraTicket(
               content: [
                 {
                   type: 'text',
-                  text: request.description || `Alerta de compliance detectado pelo APOC.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
+                  text: request.description || `Alerta de compliance detectado pelo Compliance Sync.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
                 },
               ],
             },
@@ -76,7 +76,7 @@ async function createJiraTicket(
         },
         issuetype: { name: 'Task' },
         priority: { name: SEVERITY_TO_JIRA_PRIORITY[request.severity] || 'Medium' },
-        labels: ['apoc', 'compliance', 'security'],
+        labels: ['compliance-sync', 'compliance', 'security'],
       },
     }),
   });
@@ -126,8 +126,8 @@ async function createLinearTicket(
     body: JSON.stringify({
       query,
       variables: {
-        title: `[APOC] ${request.ruleTitle}`,
-        description: request.description || `Alerta de compliance detectado pelo APOC.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
+        title: `[ComplianceSync] ${request.ruleTitle}`,
+        description: request.description || `Alerta de compliance detectado pelo Compliance Sync.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
         teamId: config.teamId,
         priority: SEVERITY_TO_LINEAR_PRIORITY[request.severity] || 3,
       },
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
             domain: config.domain,
             email: config.email,
             apiToken: config.apiToken,
-            projectKey: config.projectKey || 'APOC',
+            projectKey: config.projectKey || 'Compliance Sync',
           },
           { alertId, ruleId, ruleTitle, severity: severity || 'medium', description, externalSystem, assignee }
         );
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
         assigned_to: assignee || null,
         metadata: {
           severity,
-          created_via: 'apoc',
+          created_via: 'compliance-sync',
           is_simulated: !ticketUrl,
         },
       });

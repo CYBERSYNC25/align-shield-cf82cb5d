@@ -154,7 +154,7 @@ export default function Inventory() {
                 <h3 className="text-lg font-semibold mb-2">Nenhum ativo encontrado</h3>
                 <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                   Conecte suas integrações para visualizar o inventário completo de ativos
-                  monitorados pelo APOC.
+                  monitorados pelo Compliance Sync.
                 </p>
                 <Button onClick={() => navigate('/integrations')}>
                   <Database className="h-4 w-4 mr-2" />

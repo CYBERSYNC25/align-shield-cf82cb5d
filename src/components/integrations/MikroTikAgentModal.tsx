@@ -28,7 +28,7 @@ ip = 192.168.88.1
 user = admin
 password = sua_senha
 
-[APOC]
+[ComplianceSync]
 api_url = ${SUPABASE_URL}/functions/v1/ingest-metrics
 token = ${agentToken}
 anon_key = ${ANON_KEY}
@@ -54,7 +54,7 @@ intervalo_segundos = 5`;
         <DialogHeader>
           <DialogTitle>Configuração do Agente Local</DialogTitle>
           <DialogDescription>
-            Siga os passos abaixo para instalar e configurar o APOC Agent no seu ambiente
+            Siga os passos abaixo para instalar e configurar o Compliance Sync Agent no seu ambiente
           </DialogDescription>
         </DialogHeader>
 
@@ -69,7 +69,7 @@ intervalo_segundos = 5`;
                 <div>
                   <h3 className="font-semibold">Baixar o Agente</h3>
                   <p className="text-sm text-muted-foreground">
-                    Faça o download do executável do APOC Agent
+                    Faça o download do executável do Compliance Sync Agent
                   </p>
                 </div>
                 <Button className="w-full sm:w-auto" variant="outline">
@@ -167,7 +167,7 @@ intervalo_segundos = 5`;
             <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
               <li>Extraia o arquivo .zip baixado</li>
               <li>Edite o config.ini com suas credenciais</li>
-              <li>Execute o APOC_Agent.exe</li>
+              <li>Execute o Compliance Sync_Agent.exe</li>
               <li>Os dados começarão a aparecer no dashboard em tempo real</li>
             </ul>
           </Card>

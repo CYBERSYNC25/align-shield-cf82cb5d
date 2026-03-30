@@ -48,7 +48,7 @@ const LegalPageLayout = ({
                 <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
                   <ShieldCheck className="h-5 w-5 text-primary" />
                 </div>
-                <span className="font-bold text-lg hidden sm:inline">APOC</span>
+                <span className="font-bold text-lg hidden sm:inline">Compliance Sync</span>
               </Link>
               <span className="text-muted-foreground hidden sm:inline">/</span>
               <span className="font-medium text-sm sm:text-base truncate max-w-[200px] sm:max-w-none">

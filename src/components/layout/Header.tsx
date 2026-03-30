@@ -50,7 +50,7 @@ const Header = () => {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-wide text-foreground">
-              APOC
+              Compliance Sync
             </h1>
             <p className="text-[10px] text-muted-foreground uppercase tracking-tight font-medium">
               Security & Compliance Platform

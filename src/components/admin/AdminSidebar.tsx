@@ -22,7 +22,7 @@ const AdminSidebar = () => {
           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
             <Shield className="h-4 w-4 text-primary-foreground" />
           </div>
-          <span className="text-lg font-bold text-foreground">APOC Admin</span>
+          <span className="text-lg font-bold text-foreground">Compliance Sync Admin</span>
         </div>
       </div>
 

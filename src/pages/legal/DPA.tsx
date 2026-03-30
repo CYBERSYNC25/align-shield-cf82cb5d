@@ -32,9 +32,9 @@ const DPA = () => {
       <LegalSection id="objeto" title="1. Objeto do Acordo">
         <p>
           Este Acordo de Processamento de Dados ("DPA") é celebrado entre o Cliente 
-          ("Controlador") e a APOC Systems Ltda. ("Operador") e estabelece as obrigações 
+          ("Controlador") e a Compliance Sync Systems Ltda. ("Operador") e estabelece as obrigações 
           das partes em relação ao tratamento de dados pessoais no âmbito da prestação 
-          dos Serviços da Plataforma APOC.
+          dos Serviços da Plataforma Compliance Sync.
         </p>
 
         <p className="mt-4">
@@ -77,7 +77,7 @@ const DPA = () => {
             e meios do tratamento de dados pessoais.
           </li>
           <li>
-            <strong>"Operador":</strong> A APOC, que trata dados pessoais em nome 
+            <strong>"Operador":</strong> A Compliance Sync, que trata dados pessoais em nome 
             do Controlador, conforme suas instruções.
           </li>
           <li>
@@ -138,7 +138,7 @@ const DPA = () => {
       </LegalSection>
 
       <LegalSection id="obrigacoes-operador" title="4. Obrigações do Operador">
-        <p>O Operador (APOC) compromete-se a:</p>
+        <p>O Operador (Compliance Sync) compromete-se a:</p>
 
         <ul className="list-disc pl-6 space-y-2">
           <li>
@@ -409,8 +409,8 @@ const DPA = () => {
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
           <p><strong>Contato para Questões sobre este DPA:</strong></p>
           <ul className="mt-2 space-y-1">
-            <li>E-mail: <a href="mailto:legal@apoc.systems" className="text-primary hover:underline">legal@apoc.systems</a></li>
-            <li>DPO: <a href="mailto:dpo@apoc.systems" className="text-primary hover:underline">dpo@apoc.systems</a></li>
+            <li>E-mail: <a href="mailto:legal@compliancesync.systems" className="text-primary hover:underline">legal@compliancesync.systems</a></li>
+            <li>DPO: <a href="mailto:dpo@compliancesync.systems" className="text-primary hover:underline">dpo@compliancesync.systems</a></li>
           </ul>
         </div>
       </LegalSection>

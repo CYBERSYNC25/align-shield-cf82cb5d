@@ -37,7 +37,7 @@ const Index = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Print Header - Only visible when printing */}
       <div className="print-header hidden print:block">
-        <h1>Relatório de Status APOC</h1>
+        <h1>Relatório de Status Compliance Sync</h1>
         <p>{currentDate}</p>
       </div>
 
@@ -113,7 +113,7 @@ const Index = () => {
 
       {/* Print Footer - Only visible when printing */}
       <div className="print-footer hidden print:block">
-        <p>Gerado automaticamente pela plataforma APOC Compliance</p>
+        <p>Gerado automaticamente pela plataforma Compliance Sync Compliance</p>
       </div>
     </div>
   );
