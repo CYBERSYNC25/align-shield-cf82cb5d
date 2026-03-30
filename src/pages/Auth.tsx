@@ -67,19 +67,9 @@ const Auth = () => {
       return;
     }
     
-    if (!captchaToken && !isDev) {
-      toast({
-        title: "Verificação necessária",
-        description: "Por favor, complete a verificação de segurança",
-        variant: "destructive"
-      });
-      return;
-    }
-    
     setIsLoading(true);
     
-    const captchaToSend = captchaToken === 'dev-bypass' ? undefined : captchaToken;
-    const { error } = await signIn(loginData.email, loginData.password, captchaToSend);
+    const { error } = await signIn(loginData.email, loginData.password);
     
     if (error) {
       await recordAttempt(loginData.email, false, error.message);
