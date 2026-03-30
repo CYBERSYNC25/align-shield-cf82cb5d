@@ -327,7 +327,7 @@ const TrustCenterContent = () => {
               className="font-medium hover:underline"
               style={{ color: primaryColor }}
             >
-              APOC
+              Compliance Sync
             </a>
           </p>
         </footer>

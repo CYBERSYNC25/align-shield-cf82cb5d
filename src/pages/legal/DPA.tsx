@@ -138,7 +138,7 @@ const DPA = () => {
       </LegalSection>
 
       <LegalSection id="obrigacoes-operador" title="4. Obrigações do Operador">
-        <p>O Operador (APOC) compromete-se a:</p>
+        <p>O Operador (Compliance Sync) compromete-se a:</p>
 
         <ul className="list-disc pl-6 space-y-2">
           <li>
