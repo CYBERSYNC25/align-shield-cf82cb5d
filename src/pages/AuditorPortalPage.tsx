@@ -121,7 +121,7 @@ const AuditorPortalPage = () => {
                       </>
                     ) : (
                       <>
-                        Bem-vindo ao portal de auditoria da APOC. Aqui você pode validar todas as evidências 
+                        Bem-vindo ao portal de auditoria da Compliance Sync. Aqui você pode validar todas as evidências 
                         de compliance em tempo real. Este é um ambiente de <strong>somente leitura</strong>.
                       </>
                     )}
@@ -243,7 +243,7 @@ const AuditorPortalPage = () => {
               Este portal é uma visão somente-leitura do estado de compliance da organização.
             </p>
             <p className="mt-1">
-              © {new Date().getFullYear()} APOC - Automated Platform for Online Compliance
+              © {new Date().getFullYear()} Compliance Sync - Plataforma de Compliance
             </p>
           </div>
         </div>

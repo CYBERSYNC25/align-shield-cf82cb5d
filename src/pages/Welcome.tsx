@@ -33,7 +33,7 @@ const Welcome = () => {
               <ShieldCheck className="w-8 h-8 text-primary" />
             </div>
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              <span className="text-primary">APOC</span>
+              <span className="text-primary">Compliance Sync</span>
             </h1>
           </div>
 

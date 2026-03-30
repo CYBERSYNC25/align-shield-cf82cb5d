@@ -70,7 +70,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
     try {
       const { error } = await signIn(loginData.email, loginData.password, loginCaptchaToken);
       if (!error) {
-        toast({ title: "Login realizado", description: "Bem-vindo ao APOC!" });
+        toast({ title: "Login realizado", description: "Bem-vindo ao Compliance Sync!" });
         setOpen(false);
       } else {
         loginTurnstileRef.current?.reset();
@@ -147,7 +147,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
         <Card className="border-0 shadow-none">
           <CardHeader className="text-center">
             <Shield className="h-8 w-8 text-primary mx-auto mb-2" />
-            <CardTitle>APOC</CardTitle>
+            <CardTitle>Compliance Sync</CardTitle>
           </CardHeader>
           
           <CardContent>

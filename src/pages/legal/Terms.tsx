@@ -5,7 +5,7 @@ const sections = [
   { id: 'definicoes', title: 'Definições' },
   { id: 'uso-permitido', title: 'Uso Permitido' },
   { id: 'responsabilidades-usuario', title: 'Responsabilidades do Usuário' },
-  { id: 'responsabilidades-apoc', title: 'Responsabilidades da APOC' },
+  { id: 'responsabilidades-apoc', title: 'Responsabilidades da Compliance Sync' },
   { id: 'limitacao-responsabilidade', title: 'Limitação de Responsabilidade' },
   { id: 'rescisao', title: 'Rescisão' },
   { id: 'lei-aplicavel', title: 'Lei Aplicável' },
@@ -21,7 +21,7 @@ const Terms = () => {
   return (
     <LegalPageLayout
       title="Termos de Serviço"
-      subtitle="Condições gerais de uso da plataforma APOC"
+      subtitle="Condições gerais de uso da plataforma Compliance Sync"
       lastUpdated="23 de Janeiro de 2026"
       sections={sections}
       otherDocs={otherDocs}
@@ -33,13 +33,13 @@ const Terms = () => {
         </p>
         <ul className="list-disc pl-6 space-y-2">
           <li>
-            <strong>"APOC"</strong> ou <strong>"Nós"</strong>: refere-se à APOC Systems Ltda., 
+            <strong>"Compliance Sync"</strong> ou <strong>"Nós"</strong>: refere-se à Compliance Sync Systems Ltda., 
             empresa brasileira responsável pela operação da Plataforma, inscrita no CNPJ sob 
             o nº [CNPJ], com sede em [Endereço].
           </li>
           <li>
             <strong>"Plataforma"</strong>: o sistema de gestão de compliance APOC (Automated 
-            Platform for Online Compliance), disponível através do domínio apoc.systems e 
+            Platform for Online Compliance), disponível através do domínio compliancesync.systems e 
             seus subdomínios.
           </li>
           <li>
@@ -76,7 +76,7 @@ const Terms = () => {
           <li>Manter a confidencialidade de suas credenciais de acesso.</li>
           <li>Não compartilhar sua Conta com terceiros não autorizados.</li>
           <li>Fornecer informações verdadeiras, precisas e atualizadas.</li>
-          <li>Respeitar os direitos de propriedade intelectual da APOC e de terceiros.</li>
+          <li>Respeitar os direitos de propriedade intelectual da Compliance Sync e de terceiros.</li>
         </ul>
 
         <p className="mt-4"><strong>É expressamente proibido:</strong></p>
@@ -96,7 +96,7 @@ const Terms = () => {
         <ul className="list-disc pl-6 space-y-2">
           <li>
             <strong>Segurança da Conta:</strong> Manter suas credenciais seguras e notificar 
-            imediatamente a APOC sobre qualquer uso não autorizado ou suspeita de violação.
+            imediatamente a Compliance Sync sobre qualquer uso não autorizado ou suspeita de violação.
           </li>
           <li>
             <strong>Precisão dos Dados:</strong> Garantir que os dados inseridos na Plataforma 
@@ -121,7 +121,7 @@ const Terms = () => {
         </ul>
       </LegalSection>
 
-      <LegalSection id="responsabilidades-apoc" title="4. Responsabilidades da APOC">
+      <LegalSection id="responsabilidades-apoc" title="4. Responsabilidades da Compliance Sync">
         <p>A APOC compromete-se a:</p>
         <ul className="list-disc pl-6 space-y-2">
           <li>
@@ -159,7 +159,7 @@ const Terms = () => {
         </p>
 
         <p className="mt-4">
-          <strong>Limitação de Danos:</strong> Em nenhuma circunstância a APOC será 
+          <strong>Limitação de Danos:</strong> Em nenhuma circunstância a Compliance Sync será 
           responsável por:
         </p>
         <ul className="list-disc pl-6 space-y-2">
@@ -171,7 +171,7 @@ const Terms = () => {
         </ul>
 
         <p className="mt-4">
-          <strong>Limite Máximo:</strong> A responsabilidade total da APOC, por qualquer 
+          <strong>Limite Máximo:</strong> A responsabilidade total da Compliance Sync, por qualquer 
           causa, será limitada ao valor pago pelo Usuário nos últimos 12 (doze) meses 
           anteriores ao evento que deu origem à reclamação.
         </p>
@@ -196,7 +196,7 @@ const Terms = () => {
         </ul>
 
         <p className="mt-4">
-          <strong>Pela APOC:</strong> Podemos suspender ou encerrar sua Conta, com ou sem 
+          <strong>Pela Compliance Sync:</strong> Podemos suspender ou encerrar sua Conta, com ou sem 
           aviso prévio, nas seguintes situações:
         </p>
         <ul className="list-disc pl-6 space-y-2">
@@ -247,7 +247,7 @@ const Terms = () => {
 
         <p className="mt-4">
           <strong>Contato:</strong> Para dúvidas sobre estes Termos, entre em contato pelo 
-          e-mail <a href="mailto:legal@apoc.systems" className="text-primary hover:underline">legal@apoc.systems</a>.
+          e-mail <a href="mailto:legal@compliancesync.systems" className="text-primary hover:underline">legal@compliancesync.systems</a>.
         </p>
       </LegalSection>
     </LegalPageLayout>

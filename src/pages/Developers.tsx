@@ -181,7 +181,7 @@ const endpoints: Endpoint[] = [
 const codeExamples = {
   curl: (endpoint: Endpoint) => `curl -X ${endpoint.method} \\
   "${API_BASE_URL}${endpoint.path}" \\
-  -H "x-api-key: apoc_your_api_key_here" \\
+  -H "x-api-key: csync_your_api_key_here" \\
   -H "Content-Type: application/json"`,
 
   javascript: (endpoint: Endpoint) => `const response = await fetch(
@@ -189,7 +189,7 @@ const codeExamples = {
   {
     method: "${endpoint.method}",
     headers: {
-      "x-api-key": "apoc_your_api_key_here",
+      "x-api-key": "csync_your_api_key_here",
       "Content-Type": "application/json"
     }
   }
@@ -203,7 +203,7 @@ console.log(data);`,
 response = requests.${endpoint.method.toLowerCase()}(
     "${API_BASE_URL}${endpoint.path}",
     headers={
-        "x-api-key": "apoc_your_api_key_here",
+        "x-api-key": "csync_your_api_key_here",
         "Content-Type": "application/json"
     }
 )
@@ -402,7 +402,7 @@ export default function Developers() {
                       <h4 className="font-medium">Faça sua primeira requisição</h4>
                       <CodeBlock
                         code={`curl "${API_BASE_URL}/v1/compliance/score" \\
-  -H "x-api-key: apoc_your_key_here"`}
+  -H "x-api-key: csync_your_key_here"`}
                         language="bash"
                       />
                     </div>
@@ -434,7 +434,7 @@ export default function Developers() {
                     Todas as requisições devem incluir o header <code className="bg-muted px-2 py-1 rounded">x-api-key</code> com sua API Key.
                   </p>
                   <CodeBlock
-                    code={`curl -H "x-api-key: apoc_your_api_key_here" ${API_BASE_URL}/v1/...`}
+                    code={`curl -H "x-api-key: csync_your_api_key_here" ${API_BASE_URL}/v1/...`}
                     language="bash"
                   />
 

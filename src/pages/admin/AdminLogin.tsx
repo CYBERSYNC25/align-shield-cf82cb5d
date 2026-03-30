@@ -65,7 +65,7 @@ const AdminLogin = () => {
           <div className="mx-auto w-12 h-12 rounded-xl bg-primary flex items-center justify-center mb-4">
             <Shield className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl">APOC Admin</CardTitle>
+          <CardTitle className="text-2xl">Compliance Sync Admin</CardTitle>
           <CardDescription>Acesse o painel de administração multi-tenant</CardDescription>
         </CardHeader>
         <CardContent>

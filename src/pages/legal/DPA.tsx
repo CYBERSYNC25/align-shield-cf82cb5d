@@ -32,9 +32,9 @@ const DPA = () => {
       <LegalSection id="objeto" title="1. Objeto do Acordo">
         <p>
           Este Acordo de Processamento de Dados ("DPA") é celebrado entre o Cliente 
-          ("Controlador") e a APOC Systems Ltda. ("Operador") e estabelece as obrigações 
+          ("Controlador") e a Compliance Sync Systems Ltda. ("Operador") e estabelece as obrigações 
           das partes em relação ao tratamento de dados pessoais no âmbito da prestação 
-          dos Serviços da Plataforma APOC.
+          dos Serviços da Plataforma Compliance Sync.
         </p>
 
         <p className="mt-4">
@@ -409,8 +409,8 @@ const DPA = () => {
         <div className="mt-6 p-4 bg-muted/50 rounded-lg">
           <p><strong>Contato para Questões sobre este DPA:</strong></p>
           <ul className="mt-2 space-y-1">
-            <li>E-mail: <a href="mailto:legal@apoc.systems" className="text-primary hover:underline">legal@apoc.systems</a></li>
-            <li>DPO: <a href="mailto:dpo@apoc.systems" className="text-primary hover:underline">dpo@apoc.systems</a></li>
+            <li>E-mail: <a href="mailto:legal@compliancesync.systems" className="text-primary hover:underline">legal@compliancesync.systems</a></li>
+            <li>DPO: <a href="mailto:dpo@compliancesync.systems" className="text-primary hover:underline">dpo@compliancesync.systems</a></li>
           </ul>
         </div>
       </LegalSection>

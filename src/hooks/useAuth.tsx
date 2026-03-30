@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       toast({
         title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao APOC"
+        description: "Bem-vindo ao Compliance Sync"
       })
     }
     

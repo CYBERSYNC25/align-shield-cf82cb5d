@@ -267,8 +267,8 @@ const Privacy = () => {
         </p>
         <ul className="list-disc pl-6 space-y-1">
           <li>Via configurações da conta na Plataforma</li>
-          <li>Através do e-mail: <a href="mailto:privacidade@apoc.systems" className="text-primary hover:underline">privacidade@apoc.systems</a></li>
-          <li>Portal de solicitações: <a href="https://apoc.systems/privacidade" className="text-primary hover:underline">apoc.systems/privacidade</a></li>
+          <li>Através do e-mail: <a href="mailto:privacidade@compliancesync.systems" className="text-primary hover:underline">privacidade@compliancesync.systems</a></li>
+          <li>Portal de solicitações: <a href="https://compliancesync.systems/privacidade" className="text-primary hover:underline">compliancesync.systems/privacidade</a></li>
         </ul>
 
         <p className="mt-4">
@@ -326,7 +326,7 @@ const Privacy = () => {
           <p><strong>Encarregado de Proteção de Dados (DPO)</strong></p>
           <ul className="mt-2 space-y-1">
             <li>Nome: [Nome do DPO]</li>
-            <li>E-mail: <a href="mailto:dpo@apoc.systems" className="text-primary hover:underline">dpo@apoc.systems</a></li>
+            <li>E-mail: <a href="mailto:dpo@compliancesync.systems" className="text-primary hover:underline">dpo@compliancesync.systems</a></li>
             <li>Telefone: +55 (11) XXXX-XXXX</li>
           </ul>
         </div>

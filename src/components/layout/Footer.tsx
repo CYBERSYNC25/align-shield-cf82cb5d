@@ -15,7 +15,7 @@ const Footer = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-foreground">
-                © {currentYear} <span className="font-bold">APOC Systems</span>
+                © {currentYear} <span className="font-bold">Compliance Sync Systems</span>
               </p>
               <p className="text-xs text-muted-foreground">
                 Automated Platform for Online Compliance

@@ -182,7 +182,7 @@ export function OutboundWebhooksManager() {
             <Webhook className="h-12 w-12 text-muted-foreground mb-4" />
             <h4 className="text-lg font-medium mb-2">Nenhum webhook configurado</h4>
             <p className="text-muted-foreground text-center mb-4">
-              Configure webhooks para integrar o APOC com seus sistemas externos
+              Configure webhooks para integrar o Compliance Sync com seus sistemas externos
             </p>
             <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
               <Plus className="h-4 w-4" />

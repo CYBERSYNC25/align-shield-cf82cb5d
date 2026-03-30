@@ -120,10 +120,10 @@ ${controls.length > 20 ? `\n  ... e mais ${controls.length - 20} controles\n` : 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Relatório gerado automaticamente pela plataforma APOC.
+  Relatório gerado automaticamente pela plataforma Compliance Sync.
   Este documento é uma visão somente-leitura do estado de compliance.
 
-  © ${now.getFullYear()} APOC - Automated Platform for Online Compliance
+  © ${now.getFullYear()} Compliance Sync - Plataforma de Compliance
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;

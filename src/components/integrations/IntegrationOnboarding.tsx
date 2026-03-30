@@ -50,7 +50,7 @@ const IntegrationOnboarding = () => {
   const steps = [
     {
       title: 'Escolha uma Integração',
-      description: 'Selecione qual serviço você deseja integrar ao APOC',
+      description: 'Selecione qual serviço você deseja integrar ao Compliance Sync',
       completed: currentStep > 0,
     },
     {

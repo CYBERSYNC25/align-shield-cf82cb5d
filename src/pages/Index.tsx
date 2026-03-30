@@ -113,7 +113,7 @@ const Index = () => {
 
       {/* Print Footer - Only visible when printing */}
       <div className="print-footer hidden print:block">
-        <p>Gerado automaticamente pela plataforma APOC Compliance</p>
+        <p>Gerado automaticamente pela plataforma Compliance Sync Compliance</p>
       </div>
     </div>
   );

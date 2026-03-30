@@ -161,7 +161,7 @@ export function useComplianceAlerts() {
           ruleTitle,
           severity: severity || 'medium',
           externalSystem,
-          description: `Alerta de compliance detectado pelo APOC.\n\nRegra: ${ruleId}\nSeveridade: ${severity || 'medium'}`,
+          description: `Alerta de compliance detectado pelo Compliance Sync.\n\nRegra: ${ruleId}\nSeveridade: ${severity || 'medium'}`,
         },
       });
 

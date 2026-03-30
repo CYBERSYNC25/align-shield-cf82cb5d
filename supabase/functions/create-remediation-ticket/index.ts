@@ -68,7 +68,7 @@ async function createJiraTicket(
               content: [
                 {
                   type: 'text',
-                  text: request.description || `Alerta de compliance detectado pelo APOC.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
+                  text: request.description || `Alerta de compliance detectado pelo Compliance Sync.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
                 },
               ],
             },
@@ -76,7 +76,7 @@ async function createJiraTicket(
         },
         issuetype: { name: 'Task' },
         priority: { name: SEVERITY_TO_JIRA_PRIORITY[request.severity] || 'Medium' },
-        labels: ['apoc', 'compliance', 'security'],
+        labels: ['compliance-sync', 'compliance', 'security'],
       },
     }),
   });
@@ -127,7 +127,7 @@ async function createLinearTicket(
       query,
       variables: {
         title: `[APOC] ${request.ruleTitle}`,
-        description: request.description || `Alerta de compliance detectado pelo APOC.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
+        description: request.description || `Alerta de compliance detectado pelo Compliance Sync.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
         teamId: config.teamId,
         priority: SEVERITY_TO_LINEAR_PRIORITY[request.severity] || 3,
       },
@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
         assigned_to: assignee || null,
         metadata: {
           severity,
-          created_via: 'apoc',
+          created_via: 'compliance-sync',
           is_simulated: !ticketUrl,
         },
       });

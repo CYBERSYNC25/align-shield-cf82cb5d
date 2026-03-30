@@ -10,7 +10,7 @@ const AuditorPortalHeader = () => {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
             <ShieldCheck className="h-5 w-5 text-primary" />
           </div>
-          <span className="font-bold text-lg tracking-wide text-foreground">APOC</span>
+          <span className="font-bold text-lg tracking-wide text-foreground">Compliance Sync</span>
         </div>
 
         {/* Read-Only Badge */}

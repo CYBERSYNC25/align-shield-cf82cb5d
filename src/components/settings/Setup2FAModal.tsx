@@ -114,7 +114,7 @@ use um destes códigos para entrar na sua conta.
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'apoc-backup-codes.txt';
+    a.download = 'compliance-sync-backup-codes.txt';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

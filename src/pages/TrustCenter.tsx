@@ -135,7 +135,7 @@ const TrustCenterContent = () => {
 
     // Cleanup
     return () => {
-      document.title = "APOC - Compliance Platform";
+      document.title = "Compliance Sync - Compliance Platform";
     };
   }, [data]);
 
@@ -321,7 +321,7 @@ const TrustCenterContent = () => {
           <p className="text-xs text-muted-foreground mt-2">
             Powered by{" "}
             <a 
-              href="https://apoc.com.br" 
+              href="https://compliancesync.com.br" 
               target="_blank" 
               rel="noopener noreferrer"
               className="font-medium hover:underline"

@@ -83,7 +83,7 @@ async function assumeRole(roleArn: string, sessionName: string, accessKeyId: str
 }
 
 function getRecommendation(code: string, msg: string): string {
-  if (msg.includes('not authorized to perform: sts:AssumeRole')) return 'Adicione o ARN do sistema APOC na Trust Policy da role.';
+  if (msg.includes('not authorized to perform: sts:AssumeRole')) return 'Adicione o ARN do sistema Compliance Sync na Trust Policy da role.';
   if (code === 'AccessDenied') return 'Verifique a Trust Policy da role AWS.';
   if (code === 'InvalidClientTokenId') return 'Credenciais AWS do sistema inválidas. Contate o admin.';
   return 'Verifique as configurações da role AWS.';
