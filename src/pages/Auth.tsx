@@ -25,7 +25,7 @@ const Auth = () => {
   const { status: rateLimitStatus, checkCanAttempt, recordAttempt, getTimeRemaining } = useLoginRateLimiter();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaToken, setCaptchaToken] = useState<string>(isDev ? 'dev-bypass' : '');
   const turnstileRef = useRef<any>(null);
   
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
