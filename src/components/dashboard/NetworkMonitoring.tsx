@@ -189,7 +189,7 @@ const NetworkMonitoring = () => {
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">Nenhum dado disponível</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Aguardando métricas do agente APOC
+                Aguardando métricas do agente Compliance Sync
               </p>
             </div>
           </div>

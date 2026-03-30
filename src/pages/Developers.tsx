@@ -364,7 +364,7 @@ export default function Developers() {
                     API v1
                   </Badge>
                 </div>
-                <h1 className="text-4xl font-bold">APOC Developer API</h1>
+                <h1 className="text-4xl font-bold">Compliance Sync Developer API</h1>
                 <p className="text-xl text-muted-foreground">
                   Integre compliance e segurança diretamente nos seus sistemas
                 </p>

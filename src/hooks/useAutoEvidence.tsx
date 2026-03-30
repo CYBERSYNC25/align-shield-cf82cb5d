@@ -167,11 +167,11 @@ export function useAutoEvidence(): AutoEvidenceResult {
     );
 
     if (stats.percentage === 100) {
-      return `✅ Este controle está em conformidade. O APOC verificou ${stats.total} recursos e 100% estão em conformidade: ${integrationSummaries.join(', ')}.`;
+      return `✅ Este controle está em conformidade. O Compliance Sync verificou ${stats.total} recursos e 100% estão em conformidade: ${integrationSummaries.join(', ')}.`;
     } else if (stats.failing > 0) {
-      return `⚠️ Atenção: O APOC identificou ${stats.failing} de ${stats.total} recursos não conformes (${stats.percentage}% em conformidade): ${integrationSummaries.join(', ')}.`;
+      return `⚠️ Atenção: O Compliance Sync identificou ${stats.failing} de ${stats.total} recursos não conformes (${stats.percentage}% em conformidade): ${integrationSummaries.join(', ')}.`;
     } else {
-      return `O APOC verificou ${stats.total} recursos: ${integrationSummaries.join(', ')}.`;
+      return `O Compliance Sync verificou ${stats.total} recursos: ${integrationSummaries.join(', ')}.`;
     }
   };
 

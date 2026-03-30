@@ -290,7 +290,7 @@ serve(async (req) => {
 
     // Assume role to get temporary credentials
     console.log('AWS Sync: Assuming role', roleArn);
-    const tempCredentials = await assumeRole(roleArn, 'APOCResourceSync', accessKeyId, secretAccessKey, region);
+    const tempCredentials = await assumeRole(roleArn, 'ComplianceSyncResourceSync', accessKeyId, secretAccessKey, region);
     console.log('AWS Sync: Got temporary credentials');
 
     // Extract account ID from role ARN

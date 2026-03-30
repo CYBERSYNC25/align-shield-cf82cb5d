@@ -65,7 +65,7 @@ const AnomaliesDetection = () => {
       if (status === 'resolved') {
         toast.success('Anomalia resolvida com sucesso');
         // Simular criação de ticket no Jira
-        const ticketId = `APOC-${Math.floor(1000 + Math.random() * 9000)}`;
+        const ticketId = `ComplianceSync-${Math.floor(1000 + Math.random() * 9000)}`;
         toast.info(`Ticket ${ticketId} criado no Jira automaticamente`, {
           description: `Acompanhe o progresso em jira.company.com/browse/${ticketId}`,
           duration: 5000

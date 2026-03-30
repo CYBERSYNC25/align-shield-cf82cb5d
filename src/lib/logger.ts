@@ -80,7 +80,7 @@ class Logger {
 }
 
 // Instância padrão
-export const logger = new Logger('APOC');
+export const logger = new Logger('Compliance Sync');
 
 // Factory para módulos específicos
 export const createLogger = (context: string) => new Logger(context);

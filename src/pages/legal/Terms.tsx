@@ -38,7 +38,7 @@ const Terms = () => {
             o nº [CNPJ], com sede em [Endereço].
           </li>
           <li>
-            <strong>"Plataforma"</strong>: o sistema de gestão de compliance APOC (Automated 
+            <strong>"Plataforma"</strong>: o sistema de gestão de compliance Compliance Sync (Automated 
             Platform for Online Compliance), disponível através do domínio compliancesync.systems e 
             seus subdomínios.
           </li>
@@ -122,7 +122,7 @@ const Terms = () => {
       </LegalSection>
 
       <LegalSection id="responsabilidades-apoc" title="4. Responsabilidades da Compliance Sync">
-        <p>A APOC compromete-se a:</p>
+        <p>A Compliance Sync compromete-se a:</p>
         <ul className="list-disc pl-6 space-y-2">
           <li>
             <strong>Disponibilidade:</strong> Manter a Plataforma disponível 99,5% do tempo, 
@@ -154,7 +154,7 @@ const Terms = () => {
       <LegalSection id="limitacao-responsabilidade" title="5. Limitação de Responsabilidade">
         <p>
           <strong>Isenção de Garantias:</strong> A Plataforma é fornecida "como está" e 
-          "conforme disponível". A APOC não garante que os Serviços serão ininterruptos, 
+          "conforme disponível". A Compliance Sync não garante que os Serviços serão ininterruptos, 
           livres de erros ou completamente seguros.
         </p>
 

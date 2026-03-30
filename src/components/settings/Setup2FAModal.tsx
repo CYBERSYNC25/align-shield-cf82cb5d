@@ -95,7 +95,7 @@ export const Setup2FAModal = ({ open, onOpenChange }: Setup2FAModalProps) => {
   const downloadBackupCodes = () => {
     if (!setupData) return;
     
-    const content = `APOC - Códigos de Backup MFA
+    const content = `Compliance Sync - Códigos de Backup MFA
 ================================
 Gerado em: ${new Date().toLocaleString('pt-BR')}
 

@@ -365,7 +365,7 @@ const IntegrationOnboarding = () => {
                   <Badge>1</Badge>
                   <h3 className="font-semibold">Criar IAM User</h3>
                   <p className="text-sm text-muted-foreground ml-6">
-                    Crie um novo usuário IAM apenas para integração com APOC
+                    Crie um novo usuário IAM apenas para integração com Compliance Sync
                   </p>
                 </div>
 

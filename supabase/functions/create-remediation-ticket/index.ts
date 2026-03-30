@@ -58,7 +58,7 @@ async function createJiraTicket(
     body: JSON.stringify({
       fields: {
         project: { key: config.projectKey },
-        summary: `[APOC] ${request.ruleTitle}`,
+        summary: `[ComplianceSync] ${request.ruleTitle}`,
         description: {
           type: 'doc',
           version: 1,
@@ -126,7 +126,7 @@ async function createLinearTicket(
     body: JSON.stringify({
       query,
       variables: {
-        title: `[APOC] ${request.ruleTitle}`,
+        title: `[ComplianceSync] ${request.ruleTitle}`,
         description: request.description || `Alerta de compliance detectado pelo Compliance Sync.\n\nRegra: ${request.ruleId}\nSeveridade: ${request.severity}`,
         teamId: config.teamId,
         priority: SEVERITY_TO_LINEAR_PRIORITY[request.severity] || 3,
@@ -206,7 +206,7 @@ Deno.serve(async (req) => {
             domain: config.domain,
             email: config.email,
             apiToken: config.apiToken,
-            projectKey: config.projectKey || 'APOC',
+            projectKey: config.projectKey || 'Compliance Sync',
           },
           { alertId, ruleId, ruleTitle, severity: severity || 'medium', description, externalSystem, assignee }
         );

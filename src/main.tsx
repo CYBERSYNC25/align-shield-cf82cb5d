@@ -8,7 +8,7 @@ function showBootstrapError(err: unknown) {
   const html = `<div style="padding: 2rem; font-family: sans-serif; max-width: 600px;"><h1>Erro ao carregar</h1><p>${message}</p><p>Verifique o console (F12) para mais detalhes.</p></div>`;
   if (rootEl) rootEl.innerHTML = html;
   else document.body.innerHTML = html;
-  console.error("[APOC] Bootstrap error:", err);
+  console.error("[ComplianceSync] Bootstrap error:", err);
 }
 
 setupGlobalErrorHandlers();

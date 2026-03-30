@@ -29,7 +29,7 @@ const Privacy = () => {
     >
       <LegalSection id="dados-coletados" title="1. Dados Coletados">
         <p>
-          A APOC coleta diferentes categorias de dados pessoais para fornecer e melhorar 
+          A Compliance Sync coleta diferentes categorias de dados pessoais para fornecer e melhorar 
           nossos Serviços. As categorias de dados incluem:
         </p>
 
@@ -110,7 +110,7 @@ const Privacy = () => {
 
       <LegalSection id="compartilhamento" title="3. Compartilhamento de Dados">
         <p>
-          A APOC não comercializa dados pessoais. Podemos compartilhar seus dados apenas 
+          A Compliance Sync não comercializa dados pessoais. Podemos compartilhar seus dados apenas 
           nas seguintes situações:
         </p>
 

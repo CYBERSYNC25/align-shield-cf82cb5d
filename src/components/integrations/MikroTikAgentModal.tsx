@@ -28,7 +28,7 @@ ip = 192.168.88.1
 user = admin
 password = sua_senha
 
-[APOC]
+[ComplianceSync]
 api_url = ${SUPABASE_URL}/functions/v1/ingest-metrics
 token = ${agentToken}
 anon_key = ${ANON_KEY}

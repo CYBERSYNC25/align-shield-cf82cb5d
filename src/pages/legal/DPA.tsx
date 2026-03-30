@@ -77,7 +77,7 @@ const DPA = () => {
             e meios do tratamento de dados pessoais.
           </li>
           <li>
-            <strong>"Operador":</strong> A APOC, que trata dados pessoais em nome 
+            <strong>"Operador":</strong> A Compliance Sync, que trata dados pessoais em nome 
             do Controlador, conforme suas instruções.
           </li>
           <li>
