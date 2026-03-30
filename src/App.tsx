@@ -190,6 +190,17 @@ const App = () => (
           <Route path="/legal/dpa" element={<DPA />} />
           {/* Redirect para manter compatibilidade com URLs antigas */}
           <Route path="/compliance-readiness" element={<Navigate to="/readiness" replace />} />
+          
+          {/* Admin Multi-Tenant Routes */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+          <Route path="/admin/clients" element={<AdminProtectedRoute><AdminClients /></AdminProtectedRoute>} />
+          <Route path="/admin/clients/:clientId" element={<AdminProtectedRoute><AdminClientDetail /></AdminProtectedRoute>} />
+          <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
+          <Route path="/admin/groups" element={<AdminProtectedRoute><AdminGroups /></AdminProtectedRoute>} />
+          <Route path="/admin/permissions" element={<AdminProtectedRoute><AdminPermissions /></AdminProtectedRoute>} />
+          <Route path="/admin/financial" element={<AdminProtectedRoute><AdminFinancial /></AdminProtectedRoute>} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
