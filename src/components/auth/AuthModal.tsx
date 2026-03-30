@@ -43,8 +43,8 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
 
   // CAPTCHA states
-  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
-  const [signupCaptchaToken, setSignupCaptchaToken] = useState('');
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
+  const [signupCaptchaToken, setSignupCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
   const loginTurnstileRef = useRef<any>(null);
   const signupTurnstileRef = useRef<any>(null);
 
