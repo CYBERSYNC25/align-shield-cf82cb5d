@@ -82,8 +82,25 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // Not authenticated
+  // Not authenticated - but allow admin tenant access if user is a platform admin
   if (!user) {
+    // If accessing via admin_tenant param, check if there's already a session (admin is logged in)
+    if (isAdminTenant) {
+      // Admin accessing tenant - verify platform admin status
+      const checkAdmin = async () => {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          const { data } = await supabase
+            .from('platform_admins' as any)
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('is_active', true)
+            .single();
+          if (data) return; // Allow access
+        }
+      };
+      checkAdmin();
+    }
     return <Navigate to="/auth" replace />;
   }
 
