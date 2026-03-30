@@ -79,7 +79,7 @@ const AdminFinancial = () => {
               </CardHeader>
               <CardContent>
                 <div className="flex gap-4 flex-wrap">
-                  {Object.entries(planCounts).map(([plan, count]) => (
+                  {Object.entries(planCounts).map(([plan, count]: [string, number]) => (
                     <div key={plan} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/50">
                       <Badge variant="outline" className="capitalize">{plan}</Badge>
                       <span className="font-bold">{count}</span>
