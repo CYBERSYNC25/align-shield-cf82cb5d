@@ -38,6 +38,16 @@ import Privacy from "./pages/legal/Privacy";
 import DPA from "./pages/legal/DPA";
 import Jobs from "./pages/Jobs";
 
+// Admin Multi-Tenant Pages
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminClients from "./pages/admin/AdminClients";
+import AdminClientDetail from "./pages/admin/AdminClientDetail";
+import AdminUsers from "./pages/admin/AdminUsers";
+import AdminGroups from "./pages/admin/AdminGroups";
+import AdminPermissions from "./pages/admin/AdminPermissions";
+import AdminFinancial from "./pages/admin/AdminFinancial";
+import AdminProtectedRoute from "./components/admin/AdminProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => (
