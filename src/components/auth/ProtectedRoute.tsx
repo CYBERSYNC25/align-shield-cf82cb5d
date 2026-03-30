@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState, useRef } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRoles } from '@/hooks/useUserRoles';
 import { useOnboardingWizard } from '@/hooks/useOnboardingWizard';
@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 import { MFARequiredBanner } from '@/components/auth/MFARequiredBanner';
 import { SessionTimeoutModal } from '@/components/auth/SessionTimeoutModal';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -24,9 +25,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const createSession = useCreateSession();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [hasRedirected, setHasRedirected] = useState(false);
   const [sessionCreated, setSessionCreated] = useState(false);
-  
+  const isAdminTenant = !!searchParams.get('admin_tenant');
+
   // Use ref to prevent multiple session creation attempts
   const sessionCreateAttempted = useRef(false);
 
@@ -79,8 +82,25 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     );
   }
 
-  // Not authenticated
+  // Not authenticated - but allow admin tenant access if user is a platform admin
   if (!user) {
+    // If accessing via admin_tenant param, check if there's already a session (admin is logged in)
+    if (isAdminTenant) {
+      // Admin accessing tenant - verify platform admin status
+      const checkAdmin = async () => {
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser) {
+          const { data } = await supabase
+            .from('platform_admins' as any)
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('is_active', true)
+            .single();
+          if (data) return; // Allow access
+        }
+      };
+      checkAdmin();
+    }
     return <Navigate to="/auth" replace />;
   }
 
