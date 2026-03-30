@@ -1,16 +1,18 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAdminLog } from '@/hooks/useAdminLog';
 import AdminLayout from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, ExternalLink, Building2, Mail, Phone, MapPin, FileText, Users } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Building2, Mail, Phone, MapPin, FileText, Users, DollarSign } from 'lucide-react';
 import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 const AdminClientDetail = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
+  const { logAction } = useAdminLog();
 
   const { data: client, isLoading } = useQuery({
     queryKey: ['admin-client-detail', clientId],
@@ -39,9 +41,10 @@ const AdminClientDetail = () => {
     enabled: !!clientId,
   });
 
-  const handleOpenTenant = () => {
-    // Open the tenant app in a new tab
-    window.open(`/dashboard?tenant=${clientId}`, '_blank');
+  const handleOpenTenant = async () => {
+    await logAction('open_tenant', 'tenant', clientId, { client_name: client?.name });
+    // Open tenant with admin impersonation token (no login required)
+    window.open(`/dashboard?admin_tenant=${clientId}`, '_blank');
   };
 
   if (isLoading) {
@@ -60,10 +63,11 @@ const AdminClientDetail = () => {
     );
   }
 
+  const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
   return (
     <AdminLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/admin/clients')}>
@@ -80,7 +84,6 @@ const AdminClientDetail = () => {
           </Button>
         </div>
 
-        {/* Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -116,14 +119,11 @@ const AdminClientDetail = () => {
               <InfoRow label="E-mail" value={client.contact_email || '—'} icon={<Mail className="h-4 w-4" />} />
               <InfoRow label="Telefone" value={client.contact_phone || '—'} icon={<Phone className="h-4 w-4" />} />
               <InfoRow label="Endereço" value={client.address || '—'} icon={<MapPin className="h-4 w-4" />} />
-              <InfoRow label="Valor Mensal" value={
-                new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(client.monthly_value) || 0)
-              } />
+              <InfoRow label="Valor Mensal" value={fmt(Number(client.monthly_value) || 0)} icon={<DollarSign className="h-4 w-4" />} />
             </CardContent>
           </Card>
         </div>
 
-        {/* Members */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
