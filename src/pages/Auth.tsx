@@ -229,15 +229,17 @@ const Auth = () => {
                     </p>
                   )}
                 </div>
-                <div className="flex justify-center">
-                  <Turnstile
-                    ref={turnstileRef}
-                    siteKey={TURNSTILE_SITE_KEY}
-                    onSuccess={(token) => setCaptchaToken(token)}
-                    onError={() => setCaptchaToken('')}
-                    onExpire={() => setCaptchaToken('')}
-                  />
-                </div>
+                {!isDev && (
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      siteKey={TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => setCaptchaToken(token)}
+                      onError={() => setCaptchaToken('')}
+                      onExpire={() => setCaptchaToken('')}
+                    />
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
