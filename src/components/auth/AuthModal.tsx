@@ -14,9 +14,10 @@ import { loginSchema, signUpSchema, type LoginInput, type SignUpInput } from '@/
 import { checkPasswordStrength } from '@/lib/password-security';
 import { Progress } from '@/components/ui/progress';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { isDevEnvironment } from '@/lib/environment';
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
-
+const isDev = isDevEnvironment();
 interface AuthModalProps {
   trigger?: React.ReactNode;
 }
@@ -42,8 +43,8 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
 
   // CAPTCHA states
-  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
-  const [signupCaptchaToken, setSignupCaptchaToken] = useState('');
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
+  const [signupCaptchaToken, setSignupCaptchaToken] = useState(isDev ? 'dev-bypass' : '');
   const loginTurnstileRef = useRef<any>(null);
   const signupTurnstileRef = useRef<any>(null);
 
@@ -61,14 +62,14 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       return;
     }
     
-    if (!loginCaptchaToken) {
+    if (!loginCaptchaToken && !isDev) {
       toast({ title: "Verificação necessária", description: "Complete a verificação de segurança", variant: "destructive" });
       return;
     }
 
     setLoading(true);
     try {
-      const { error } = await signIn(loginData.email, loginData.password, loginCaptchaToken);
+      const { error } = await signIn(loginData.email, loginData.password, loginCaptchaToken === 'dev-bypass' ? undefined : loginCaptchaToken);
       if (!error) {
         toast({ title: "Login realizado", description: "Bem-vindo ao Compliance Sync!" });
         setOpen(false);
@@ -100,7 +101,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       return;
     }
     
-    if (!signupCaptchaToken) {
+    if (!signupCaptchaToken && !isDev) {
       toast({ title: "Verificação necessária", description: "Complete a verificação de segurança", variant: "destructive" });
       return;
     }
@@ -110,7 +111,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
       const { error } = await signUp(signupData.email, signupData.password, {
         display_name: signupData.displayName,
         organization: signupData.organization
-      }, signupCaptchaToken);
+      }, signupCaptchaToken === 'dev-bypass' ? undefined : signupCaptchaToken);
       if (!error) {
         toast({ title: "Conta criada", description: "Verifique seu email." });
         setOpen(false);
@@ -191,16 +192,18 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                       </p>
                     )}
                   </div>
-                  <div className="flex justify-center">
-                    <Turnstile
-                      ref={loginTurnstileRef}
-                      siteKey={TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => setLoginCaptchaToken(token)}
-                      onError={() => setLoginCaptchaToken('')}
-                      onExpire={() => setLoginCaptchaToken('')}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading || !loginCaptchaToken}>
+                  {!isDev && (
+                    <div className="flex justify-center">
+                      <Turnstile
+                        ref={loginTurnstileRef}
+                        siteKey={TURNSTILE_SITE_KEY}
+                        onSuccess={(token) => setLoginCaptchaToken(token)}
+                        onError={() => setLoginCaptchaToken('')}
+                        onExpire={() => setLoginCaptchaToken('')}
+                      />
+                    </div>
+                  )}
+                  <Button type="submit" className="w-full" disabled={loading || (!isDev && !loginCaptchaToken)}>
                     {loading ? "Entrando..." : "Entrar"}
                   </Button>
                 </form>
@@ -352,16 +355,18 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                     )}
                   </div>
                   
-                  <div className="flex justify-center">
-                    <Turnstile
-                      ref={signupTurnstileRef}
-                      siteKey={TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => setSignupCaptchaToken(token)}
-                      onError={() => setSignupCaptchaToken('')}
-                      onExpire={() => setSignupCaptchaToken('')}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted || !signupCaptchaToken}>
+                  {!isDev && (
+                    <div className="flex justify-center">
+                      <Turnstile
+                        ref={signupTurnstileRef}
+                        siteKey={TURNSTILE_SITE_KEY}
+                        onSuccess={(token) => setSignupCaptchaToken(token)}
+                        onError={() => setSignupCaptchaToken('')}
+                        onExpire={() => setSignupCaptchaToken('')}
+                      />
+                    </div>
+                  )}
+                  <Button type="submit" className="w-full" disabled={loading || !termsAccepted || (!isDev && !signupCaptchaToken)}>
                     {loading ? "Criando..." : "Criar conta"}
                   </Button>
                 </form>

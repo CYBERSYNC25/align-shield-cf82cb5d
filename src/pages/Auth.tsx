@@ -14,9 +14,10 @@ import { loginSchema } from '@/lib/auth-schemas';
 import { useLoginRateLimiter } from '@/hooks/useLoginRateLimiter';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
+import { isDevEnvironment } from '@/lib/environment';
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
-
+const isDev = isDevEnvironment();
 const Auth = () => {
   const { user, signIn, loading } = useAuth();
   const { toast } = useToast();
@@ -24,7 +25,7 @@ const Auth = () => {
   const { status: rateLimitStatus, checkCanAttempt, recordAttempt, getTimeRemaining } = useLoginRateLimiter();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string>('');
+  const [captchaToken, setCaptchaToken] = useState<string>(isDev ? 'dev-bypass' : '');
   const turnstileRef = useRef<any>(null);
   
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
@@ -72,7 +73,7 @@ const Auth = () => {
       return;
     }
     
-    if (!captchaToken) {
+    if (!captchaToken && !isDev) {
       toast({
         title: "Verificação necessária",
         description: "Por favor, complete a verificação de segurança",
@@ -83,7 +84,8 @@ const Auth = () => {
     
     setIsLoading(true);
     
-    const { error } = await signIn(loginData.email, loginData.password, captchaToken);
+    const captchaToSend = captchaToken === 'dev-bypass' ? undefined : captchaToken;
+    const { error } = await signIn(loginData.email, loginData.password, captchaToSend);
     
     if (error) {
       await recordAttempt(loginData.email, false, error.message);
@@ -227,16 +229,18 @@ const Auth = () => {
                     </p>
                   )}
                 </div>
-                <div className="flex justify-center">
-                  <Turnstile
-                    ref={turnstileRef}
-                    siteKey={TURNSTILE_SITE_KEY}
-                    onSuccess={(token) => setCaptchaToken(token)}
-                    onError={() => setCaptchaToken('')}
-                    onExpire={() => setCaptchaToken('')}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
+                {!isDev && (
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      siteKey={TURNSTILE_SITE_KEY}
+                      onSuccess={(token) => setCaptchaToken(token)}
+                      onError={() => setCaptchaToken('')}
+                      onExpire={() => setCaptchaToken('')}
+                    />
+                  </div>
+                )}
+                <Button type="submit" className="w-full" disabled={isLoading || (!isDev && !captchaToken)}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>

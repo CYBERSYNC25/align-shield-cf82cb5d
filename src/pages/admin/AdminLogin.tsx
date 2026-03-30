@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -14,6 +15,10 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // MFA state
+  const [showMfaChallenge, setShowMfaChallenge] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +51,22 @@ const AdminLogin = () => {
         return;
       }
 
-      navigate('/admin/dashboard');
+      // Check if user has MFA enabled
+      const { data: mfaSettings } = await supabase
+        .from('user_mfa_settings')
+        .select('enabled_at')
+        .eq('user_id', authData.user.id)
+        .maybeSingle();
+
+      if (mfaSettings?.enabled_at) {
+        // Show MFA challenge
+        setPendingUserId(authData.user.id);
+        setShowMfaChallenge(true);
+        setLoading(false);
+      } else {
+        // No MFA, proceed to dashboard
+        navigate('/admin/dashboard');
+      }
     } catch (error: any) {
       toast({
         title: 'Erro ao fazer login',
@@ -56,6 +76,12 @@ const AdminLogin = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMfaVerified = () => {
+    setShowMfaChallenge(false);
+    setPendingUserId(null);
+    navigate('/admin/dashboard');
   };
 
   return (
@@ -99,6 +125,15 @@ const AdminLogin = () => {
           </form>
         </CardContent>
       </Card>
+
+      {/* MFA Challenge Modal */}
+      <MFAChallengeModal
+        open={showMfaChallenge}
+        onOpenChange={setShowMfaChallenge}
+        onVerified={handleMfaVerified}
+        actionDescription="acessar o painel administrativo"
+        action="login"
+      />
     </div>
   );
 };
