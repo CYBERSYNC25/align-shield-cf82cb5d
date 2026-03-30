@@ -25,9 +25,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const createSession = useCreateSession();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [hasRedirected, setHasRedirected] = useState(false);
   const [sessionCreated, setSessionCreated] = useState(false);
-  
+  const isAdminTenant = !!searchParams.get('admin_tenant');
+
   // Use ref to prevent multiple session creation attempts
   const sessionCreateAttempted = useRef(false);
 
