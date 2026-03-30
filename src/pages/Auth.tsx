@@ -240,7 +240,7 @@ const Auth = () => {
                     />
                   </div>
                 )}
-                <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
+                <Button type="submit" className="w-full" disabled={isLoading || (!isDev && !captchaToken)}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
                 </Button>
               </form>
