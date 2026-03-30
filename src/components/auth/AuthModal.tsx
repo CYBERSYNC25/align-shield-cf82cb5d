@@ -14,9 +14,10 @@ import { loginSchema, signUpSchema, type LoginInput, type SignUpInput } from '@/
 import { checkPasswordStrength } from '@/lib/password-security';
 import { Progress } from '@/components/ui/progress';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { isDevEnvironment } from '@/lib/environment';
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
-
+const isDev = isDevEnvironment();
 interface AuthModalProps {
   trigger?: React.ReactNode;
 }
