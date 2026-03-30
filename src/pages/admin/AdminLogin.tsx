@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
+import { isDevEnvironment } from '@/lib/environment';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -25,9 +26,11 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
+      const captchaToken = isDevEnvironment() ? 'dev-bypass' : undefined;
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
+        options: captchaToken ? { captchaToken } : {},
       });
 
       if (authError) throw authError;
