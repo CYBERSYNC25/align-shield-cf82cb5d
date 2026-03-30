@@ -96,8 +96,6 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
         toast({ title: "Conta criada", description: "Verifique seu email." });
         setOpen(false);
       } else {
-        signupTurnstileRef.current?.reset();
-        setSignupCaptchaToken('');
       }
     } finally {
       setLoading(false);
