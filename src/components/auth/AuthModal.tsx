@@ -193,7 +193,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                     )}
                   </div>
                   <div className="flex justify-center">
-                    <CaptchaField onTokenChange={setLoginCaptchaToken} turnstileRef={loginTurnstileRef} />
+                    <CaptchaField onTokenChange={setLoginCaptchaToken} turnstileRef={loginTurnstileRef} failedAttempts={loginFailedAttempts} />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !loginCaptchaToken}>
                     {loading ? "Entrando..." : "Entrar"}

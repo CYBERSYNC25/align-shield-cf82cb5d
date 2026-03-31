@@ -147,7 +147,7 @@ const AdminLogin = () => {
               />
             </div>
             <div className="flex justify-center">
-              <CaptchaField onTokenChange={setCaptchaToken} turnstileRef={turnstileRef} />
+              <CaptchaField onTokenChange={setCaptchaToken} turnstileRef={turnstileRef} failedAttempts={failedAttempts} />
             </div>
             <Button type="submit" className="w-full" disabled={loading || !captchaToken}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
