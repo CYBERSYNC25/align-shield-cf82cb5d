@@ -92,6 +92,8 @@ const AdminLogin = () => {
         navigate('/admin/dashboard');
       }
     } catch (error: any) {
+      const newFailedCount = failedAttempts + 1;
+      setFailedAttempts(newFailedCount);
       turnstileRef.current?.reset();
       setCaptchaToken(getDefaultCaptchaToken());
       toast({
