@@ -39,6 +39,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
+  const [loginFailedAttempts, setLoginFailedAttempts] = useState(0);
 
   // CAPTCHA states
   const [loginCaptchaToken, setLoginCaptchaToken] = useState(getDefaultCaptchaToken);
@@ -72,6 +73,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
         toast({ title: "Login realizado", description: "Bem-vindo ao Compliance Sync!" });
         setOpen(false);
       } else {
+        setLoginFailedAttempts(prev => prev + 1);
         loginTurnstileRef.current?.reset();
         setLoginCaptchaToken(getDefaultCaptchaToken());
       }
@@ -191,7 +193,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                     )}
                   </div>
                   <div className="flex justify-center">
-                    <CaptchaField onTokenChange={setLoginCaptchaToken} turnstileRef={loginTurnstileRef} />
+                    <CaptchaField onTokenChange={setLoginCaptchaToken} turnstileRef={loginTurnstileRef} failedAttempts={loginFailedAttempts} />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !loginCaptchaToken}>
                     {loading ? "Entrando..." : "Entrar"}
@@ -346,7 +348,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                   </div>
                   
                   <div className="flex justify-center">
-                    <CaptchaField onTokenChange={setSignupCaptchaToken} turnstileRef={signupTurnstileRef} />
+                    <CaptchaField onTokenChange={setSignupCaptchaToken} turnstileRef={signupTurnstileRef} failedAttempts={999} />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !termsAccepted || !signupCaptchaToken}>
                     {loading ? "Criando..." : "Criar conta"}

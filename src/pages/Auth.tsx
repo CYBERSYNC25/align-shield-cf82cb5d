@@ -25,6 +25,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(getDefaultCaptchaToken);
   const turnstileRef = useRef<any>(null);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [showLockoutAlert, setShowLockoutAlert] = useState(false);
@@ -104,6 +105,10 @@ const Auth = () => {
         description: errorMessage,
         variant: "destructive"
       });
+      
+      // Track failed attempts for conditional captcha
+      const newFailedCount = failedAttempts + 1;
+      setFailedAttempts(newFailedCount);
       
       // Reset CAPTCHA after failed attempt
       turnstileRef.current?.reset();
@@ -227,7 +232,7 @@ const Auth = () => {
                   )}
                 </div>
                 <div className="flex justify-center">
-                  <CaptchaField onTokenChange={setCaptchaToken} turnstileRef={turnstileRef} />
+                  <CaptchaField onTokenChange={setCaptchaToken} turnstileRef={turnstileRef} failedAttempts={failedAttempts} />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
