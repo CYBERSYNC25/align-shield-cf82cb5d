@@ -25,6 +25,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(getDefaultCaptchaToken);
   const turnstileRef = useRef<any>(null);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [showLockoutAlert, setShowLockoutAlert] = useState(false);
