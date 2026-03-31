@@ -115,8 +115,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   return (
     <>
+      {isAdminTenant && <AdminTenantBanner />}
       {requiresMfaSetup && <MFARequiredBanner variant="warning" />}
-      {children}
+      <div className={isAdminTenant ? 'pt-10' : ''}>
+        {children}
+      </div>
       
       {/* Session timeout warning modal */}
       <SessionTimeoutModal
