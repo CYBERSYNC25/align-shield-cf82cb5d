@@ -73,6 +73,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
         toast({ title: "Login realizado", description: "Bem-vindo ao Compliance Sync!" });
         setOpen(false);
       } else {
+        setLoginFailedAttempts(prev => prev + 1);
         loginTurnstileRef.current?.reset();
         setLoginCaptchaToken(getDefaultCaptchaToken());
       }
