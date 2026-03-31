@@ -1,6 +1,5 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Turnstile } from '@marsidev/react-turnstile';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,14 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
-
-const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
+import { CaptchaField } from '@/components/auth/CaptchaField';
+import { getDefaultCaptchaToken, normalizeCaptchaToken } from '@/lib/turnstile';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaToken, setCaptchaToken] = useState(getDefaultCaptchaToken);
   const navigate = useNavigate();
   const { toast } = useToast();
   const turnstileRef = useRef<any>(null);
@@ -39,10 +38,12 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
+      const normalizedCaptchaToken = normalizeCaptchaToken(captchaToken);
+
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
-        options: { captchaToken },
+        options: normalizedCaptchaToken ? { captchaToken: normalizedCaptchaToken } : {},
       });
 
       if (authError) throw authError;
@@ -57,7 +58,7 @@ const AdminLogin = () => {
       if (adminError || !adminData) {
         await supabase.auth.signOut();
         turnstileRef.current?.reset();
-        setCaptchaToken('');
+        setCaptchaToken(getDefaultCaptchaToken());
         toast({
           title: 'Acesso negado',
           description: 'Você não possui permissão para acessar o painel administrativo.',
@@ -91,7 +92,7 @@ const AdminLogin = () => {
       }
     } catch (error: any) {
       turnstileRef.current?.reset();
-      setCaptchaToken('');
+      setCaptchaToken(getDefaultCaptchaToken());
       toast({
         title: 'Erro ao fazer login',
         description: error.message || 'Verifique suas credenciais.',
@@ -143,13 +144,7 @@ const AdminLogin = () => {
               />
             </div>
             <div className="flex justify-center">
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={TURNSTILE_SITE_KEY}
-                onSuccess={(token) => setCaptchaToken(token)}
-                onError={() => setCaptchaToken('')}
-                onExpire={() => setCaptchaToken('')}
-              />
+              <CaptchaField onTokenChange={setCaptchaToken} turnstileRef={turnstileRef} />
             </div>
             <Button type="submit" className="w-full" disabled={loading || !captchaToken}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}

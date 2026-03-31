@@ -7,15 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Shield, AlertCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Turnstile } from '@marsidev/react-turnstile';
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { MFAChallengeModal } from '@/components/auth/MFAChallengeModal';
+import { CaptchaField } from '@/components/auth/CaptchaField';
 import { loginSchema } from '@/lib/auth-schemas';
 import { useLoginRateLimiter } from '@/hooks/useLoginRateLimiter';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
-
-const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
+import { getDefaultCaptchaToken } from '@/lib/turnstile';
 
 const Auth = () => {
   const { user, signIn, loading } = useAuth();
@@ -24,7 +23,7 @@ const Auth = () => {
   const { status: rateLimitStatus, checkCanAttempt, recordAttempt, getTimeRemaining } = useLoginRateLimiter();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState('');
+  const [captchaToken, setCaptchaToken] = useState(getDefaultCaptchaToken);
   const turnstileRef = useRef<any>(null);
   
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
@@ -108,7 +107,7 @@ const Auth = () => {
       
       // Reset CAPTCHA after failed attempt
       turnstileRef.current?.reset();
-      setCaptchaToken('');
+      setCaptchaToken(getDefaultCaptchaToken());
       setIsLoading(false);
     } else {
       await recordAttempt(loginData.email, true);
@@ -228,13 +227,7 @@ const Auth = () => {
                   )}
                 </div>
                 <div className="flex justify-center">
-                  <Turnstile
-                    ref={turnstileRef}
-                    siteKey={TURNSTILE_SITE_KEY}
-                    onSuccess={(token) => setCaptchaToken(token)}
-                    onError={() => setCaptchaToken('')}
-                    onExpire={() => setCaptchaToken('')}
-                  />
+                  <CaptchaField onTokenChange={setCaptchaToken} turnstileRef={turnstileRef} />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
                   {isLoading ? 'Entrando...' : 'Entrar'}

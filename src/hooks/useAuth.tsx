@@ -31,6 +31,7 @@ import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { createLogger } from '@/lib/logger'
+import { normalizeCaptchaToken } from '@/lib/turnstile'
 
 const logger = createLogger('useAuth')
 
@@ -138,9 +139,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * - Exibe toast de sucesso/erro
    */
   const signIn = async (email: string, password: string, captchaToken?: string) => {
+    const normalizedCaptchaToken = normalizeCaptchaToken(captchaToken)
+
     const { error } = await supabase.auth.signInWithPassword({ 
       email, password, 
-      options: captchaToken ? { captchaToken } : {} 
+      options: normalizedCaptchaToken ? { captchaToken: normalizedCaptchaToken } : {} 
     })
     
     if (error) {
@@ -179,12 +182,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const signUp = async (email: string, password: string, metadata?: any, captchaToken?: string) => {
     const redirectUrl = `${window.location.origin}/`;
+    const normalizedCaptchaToken = normalizeCaptchaToken(captchaToken)
     
     const { error } = await supabase.auth.signUp({ 
       email, 
       password,
       options: {
-        ...(captchaToken ? { captchaToken } : {}),
+        ...(normalizedCaptchaToken ? { captchaToken: normalizedCaptchaToken } : {}),
         emailRedirectTo: redirectUrl,
         data: metadata
       }

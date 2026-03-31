@@ -1,8 +1,9 @@
 /**
- * Retorna true quando estamos em ambiente de desenvolvimento/preview
- * onde o Cloudflare Turnstile não funciona (domínio não whitelistado).
- * 
- * O captcha real só roda no domínio de produção publicado.
+ * Retorna true apenas em ambientes locais/preview onde o Cloudflare
+ * Turnstile costuma falhar por hostname não autorizado.
+ *
+ * O domínio publicado (.lovable.app ou domínio customizado) continua
+ * usando o captcha real em produção.
  */
 export const isDevEnvironment = (): boolean => {
   const hostname = window.location.hostname;
@@ -10,7 +11,6 @@ export const isDevEnvironment = (): boolean => {
     hostname === 'localhost' ||
     hostname === '127.0.0.1' ||
     hostname.endsWith('.lovableproject.com') ||
-    hostname.endsWith('.lovable.app') ||
     hostname.endsWith('.lovable.dev')
   );
 };

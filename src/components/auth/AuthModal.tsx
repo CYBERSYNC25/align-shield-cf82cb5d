@@ -13,9 +13,8 @@ import { LogIn, Shield, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { loginSchema, signUpSchema, type LoginInput, type SignUpInput } from '@/lib/auth-schemas';
 import { checkPasswordStrength } from '@/lib/password-security';
 import { Progress } from '@/components/ui/progress';
-import { Turnstile } from '@marsidev/react-turnstile';
-
-const TURNSTILE_SITE_KEY = '0x4AAAAAACdV0TZoJOxiK1FC';
+import { CaptchaField } from '@/components/auth/CaptchaField';
+import { getDefaultCaptchaToken } from '@/lib/turnstile';
 
 interface AuthModalProps {
   trigger?: React.ReactNode;
@@ -42,8 +41,8 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
 
   // CAPTCHA states
-  const [loginCaptchaToken, setLoginCaptchaToken] = useState('');
-  const [signupCaptchaToken, setSignupCaptchaToken] = useState('');
+  const [loginCaptchaToken, setLoginCaptchaToken] = useState(getDefaultCaptchaToken);
+  const [signupCaptchaToken, setSignupCaptchaToken] = useState(getDefaultCaptchaToken);
   const loginTurnstileRef = useRef<any>(null);
   const signupTurnstileRef = useRef<any>(null);
 
@@ -74,7 +73,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
         setOpen(false);
       } else {
         loginTurnstileRef.current?.reset();
-        setLoginCaptchaToken('');
+        setLoginCaptchaToken(getDefaultCaptchaToken());
       }
     } finally {
       setLoading(false);
@@ -116,7 +115,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
         setOpen(false);
       } else {
         signupTurnstileRef.current?.reset();
-        setSignupCaptchaToken('');
+        setSignupCaptchaToken(getDefaultCaptchaToken());
       }
     } finally {
       setLoading(false);
@@ -192,13 +191,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                     )}
                   </div>
                   <div className="flex justify-center">
-                    <Turnstile
-                      ref={loginTurnstileRef}
-                      siteKey={TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => setLoginCaptchaToken(token)}
-                      onError={() => setLoginCaptchaToken('')}
-                      onExpire={() => setLoginCaptchaToken('')}
-                    />
+                    <CaptchaField onTokenChange={setLoginCaptchaToken} turnstileRef={loginTurnstileRef} />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !loginCaptchaToken}>
                     {loading ? "Entrando..." : "Entrar"}
@@ -353,13 +346,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
                   </div>
                   
                   <div className="flex justify-center">
-                    <Turnstile
-                      ref={signupTurnstileRef}
-                      siteKey={TURNSTILE_SITE_KEY}
-                      onSuccess={(token) => setSignupCaptchaToken(token)}
-                      onError={() => setSignupCaptchaToken('')}
-                      onExpire={() => setSignupCaptchaToken('')}
-                    />
+                    <CaptchaField onTokenChange={setSignupCaptchaToken} turnstileRef={signupTurnstileRef} />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading || !termsAccepted || !signupCaptchaToken}>
                     {loading ? "Criando..." : "Criar conta"}
