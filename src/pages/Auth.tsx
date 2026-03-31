@@ -232,7 +232,7 @@ const Auth = () => {
                   )}
                 </div>
                 <div className="flex justify-center">
-                  <CaptchaField onTokenChange={setCaptchaToken} turnstileRef={turnstileRef} />
+                  <CaptchaField onTokenChange={setCaptchaToken} turnstileRef={turnstileRef} failedAttempts={failedAttempts} />
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading || !captchaToken}>
                   {isLoading ? 'Entrando...' : 'Entrar'}
