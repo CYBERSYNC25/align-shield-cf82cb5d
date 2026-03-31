@@ -106,6 +106,10 @@ const Auth = () => {
         variant: "destructive"
       });
       
+      // Track failed attempts for conditional captcha
+      const newFailedCount = failedAttempts + 1;
+      setFailedAttempts(newFailedCount);
+      
       // Reset CAPTCHA after failed attempt
       turnstileRef.current?.reset();
       setCaptchaToken(getDefaultCaptchaToken());
