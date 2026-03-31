@@ -10,6 +10,7 @@ import LoadingSpinner from '@/components/common/LoadingSpinner';
 import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 import { MFARequiredBanner } from '@/components/auth/MFARequiredBanner';
 import { SessionTimeoutModal } from '@/components/auth/SessionTimeoutModal';
+import AdminTenantBanner from '@/components/admin/AdminTenantBanner';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
