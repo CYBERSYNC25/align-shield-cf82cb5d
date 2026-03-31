@@ -39,6 +39,7 @@ const AuthModal = ({ trigger }: AuthModalProps) => {
   const [loginErrors, setLoginErrors] = useState<Record<string, string>>({});
   const [signupErrors, setSignupErrors] = useState<Record<string, string>>({});
   const [passwordStrength, setPasswordStrength] = useState<any>(null);
+  const [loginFailedAttempts, setLoginFailedAttempts] = useState(0);
 
   // CAPTCHA states
   const [loginCaptchaToken, setLoginCaptchaToken] = useState(getDefaultCaptchaToken);
