@@ -1,5 +1,5 @@
 import { Turnstile } from '@marsidev/react-turnstile';
-import { shouldBypassTurnstile, TURNSTILE_SITE_KEY } from '@/lib/turnstile';
+import { TURNSTILE_SITE_KEY } from '@/lib/turnstile';
 
 interface CaptchaFieldProps {
   onTokenChange: (token: string) => void;
@@ -7,14 +7,6 @@ interface CaptchaFieldProps {
 }
 
 export const CaptchaField = ({ onTokenChange, turnstileRef }: CaptchaFieldProps) => {
-  if (shouldBypassTurnstile()) {
-    return (
-      <div className="w-full rounded-md border border-border bg-muted/50 px-4 py-3 text-center text-sm text-muted-foreground">
-        Verificação de segurança liberada automaticamente no ambiente de preview.
-      </div>
-    );
-  }
-
   return (
     <Turnstile
       ref={turnstileRef}
