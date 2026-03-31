@@ -16,6 +16,7 @@ const AdminLogin = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState(getDefaultCaptchaToken);
+  const [failedAttempts, setFailedAttempts] = useState(0);
   const navigate = useNavigate();
   const { toast } = useToast();
   const turnstileRef = useRef<any>(null);
