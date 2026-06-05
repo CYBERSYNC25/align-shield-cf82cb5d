@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CAPTCHA_THRESHOLD, TURNSTILE_SITE_KEY } from '@/lib/turnstile';
+import { CAPTCHA_THRESHOLD, shouldBypassTurnstile, TURNSTILE_SITE_KEY } from '@/lib/turnstile';
 
 interface CaptchaFieldProps {
   onTokenChange: (token: string) => void;
@@ -14,12 +14,19 @@ export const CaptchaField = ({ onTokenChange, turnstileRef, failedAttempts = 0 }
   const [hasError, setHasError] = useState(false);
   const [retryKey, setRetryKey] = useState(0);
 
+  const bypassCaptcha = shouldBypassTurnstile();
   const shouldShowExplicitCaptcha = failedAttempts >= CAPTCHA_THRESHOLD;
 
   useEffect(() => {
+    if (bypassCaptcha) {
+      onTokenChange('bypass');
+      setHasError(false);
+      return;
+    }
+
     onTokenChange('');
     setHasError(false);
-  }, [onTokenChange, retryKey, shouldShowExplicitCaptcha]);
+  }, [bypassCaptcha, onTokenChange, retryKey, shouldShowExplicitCaptcha]);
 
   const handleSuccess = useCallback((token: string) => {
     setHasError(false);
@@ -39,6 +46,10 @@ export const CaptchaField = ({ onTokenChange, turnstileRef, failedAttempts = 0 }
     setHasError(false);
     setRetryKey((prev) => prev + 1);
   }, []);
+
+  if (bypassCaptcha) {
+    return null;
+  }
 
   if (hasError) {
     return (

@@ -9,14 +9,32 @@ export const TURNSTILE_SITE_KEY =
 export const CAPTCHA_THRESHOLD = 3;
 
 /**
- * Com o Bot Protection do Supabase ativo, o login sempre precisa de um captcha_token.
- * Por isso não fazemos bypass no preview/app; o token deve ser gerado em todos os logins.
+ * Domínios de produção onde o Turnstile deve ser ativado.
+ * Em qualquer outro domínio (preview, localhost, etc.) o captcha é ignorado
+ * pois o Cloudflare Turnstile rejeita hostnames não whitelistados (erro 110200).
  */
-export const shouldBypassTurnstile = (): boolean => false;
+const PRODUCTION_HOSTS = ['apoc.com.br', 'align-shield.lovable.app'];
 
-export const getDefaultCaptchaToken = (): string => '';
+export const shouldBypassTurnstile = (): boolean => {
+  const host = window.location.hostname;
+  return !PRODUCTION_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+};
 
+/**
+ * Retorna um token padrão.
+ * Em ambientes bypass retorna 'bypass' para que o botão de login fique habilitado.
+ */
+export const getDefaultCaptchaToken = (): string => {
+  return shouldBypassTurnstile() ? 'bypass' : '';
+};
+
+/**
+ * Normaliza o token antes de enviar ao Supabase.
+ * Tokens internos ('bypass') são convertidos em undefined para que
+ * nenhum captchaToken inválido seja enviado ao backend.
+ */
 export const normalizeCaptchaToken = (captchaToken?: string): string | undefined => {
   const normalizedToken = captchaToken?.trim();
-  return normalizedToken || undefined;
+  if (!normalizedToken || normalizedToken === 'bypass') return undefined;
+  return normalizedToken;
 };
